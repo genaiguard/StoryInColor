@@ -30,20 +30,18 @@ export default function Home() {
     }
   }
 
-  // Handle initial hash in URL and scroll to section on page load
   useEffect(() => {
     const hash = window.location.hash
     if (hash) {
-      const sectionId = hash.substring(1) // Remove the # character
+      const sectionId = hash.substring(1)
       setTimeout(() => {
         scrollToSection(sectionId)
-      }, 500) // Small delay to ensure page is fully loaded
+      }, 500)
     }
 
-    // Update active section on scroll
     const handleScroll = () => {
       const sections = ["examples", "how-it-works", "pricing", "testimonials", "faq"]
-      const scrollPosition = window.scrollY + 100 // Add offset for header
+      const scrollPosition = window.scrollY + 100
 
       for (const section of sections) {
         const element = document.getElementById(section)
