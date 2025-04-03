@@ -51,9 +51,9 @@ firebase-export-*
 # Server-side code
 /functions/
 
-# Documentation (commented out to keep README files)
-# README.md
-# **/README.md
+# Documentation - exclude all README files
+README.md
+**/README.md
 
 # Scripts
 setup-email-secrets.sh
