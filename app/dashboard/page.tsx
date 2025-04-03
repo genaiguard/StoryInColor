@@ -71,10 +71,6 @@ export default function DashboardPage() {
         const orderedQuery = query(orderedRef, where("status", "==", "ordered"), orderBy("updatedAt", "desc"))
         const orderedSnap = await getDocs(orderedQuery)
 
-        // Log only counts without project details
-        console.log(`Total preview projects: ${previewSnap.docs.length}`);
-        console.log(`Total ordered projects: ${orderedSnap.docs.length}`);
-
         // Process preview projects
         const previewPromises = previewSnap.docs.map(async (doc) => {
           const data = doc.data();
@@ -86,7 +82,7 @@ export default function DashboardPage() {
               const thumbnailRef = ref(storage, data.thumbnailPath);
               thumbnailUrl = await getDownloadURL(thumbnailRef);
             } catch (error) {
-              // Don't log the error details
+              // Error handled silently
             }
           }
           
@@ -112,7 +108,7 @@ export default function DashboardPage() {
               const thumbnailRef = ref(storage, data.thumbnailPath);
               thumbnailUrl = await getDownloadURL(thumbnailRef);
             } catch (error) {
-              // Don't log the error details
+              // Error handled silently
             }
           }
           
@@ -138,10 +134,6 @@ export default function DashboardPage() {
         // Filter out deleted projects
         const filteredPreviewDocs = previewDocs.filter(doc => !doc.deleted);
         const filteredOrderedDocs = orderedDocs.filter(doc => !doc.deleted);
-
-        // Log only counts without project details
-        console.log(`After filtering deleted - Preview projects: ${filteredPreviewDocs.length}`);
-        console.log(`After filtering deleted - Ordered projects: ${filteredOrderedDocs.length}`);
 
         // Set state with the projects
         setPreviewProjects(filteredPreviewDocs);
