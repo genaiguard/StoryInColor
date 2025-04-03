@@ -1,0 +1,71 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+/functions/node_modules
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+**/.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.cursor/
+
+# Firebase
+/functions/lib
+.firebase/
+firebase-debug.log
+ui-debug.log
+.runtimeconfig.json
+firebase-export-*
+/functions/.env
+
+# Additional exclusions
+# Server-side code
+/functions/
+
+# Documentation (commented out to keep README files)
+# README.md
+# **/README.md
+
+# Scripts
+setup-email-secrets.sh
+**/setup-email-secrets.sh
+
+# Backup files
+*.bak
+*~
+*.swp
+*.swo
+
+# Build artifacts
+.cache/
+dist/
+build/ 
