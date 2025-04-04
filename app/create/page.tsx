@@ -27,10 +27,12 @@ interface ProjectData {
   createdAt?: any;
   pages?: any[];
   thumbnailPath?: string;
+  artStyle: string;
 }
 
 const steps = [
   { id: "options", label: "Product Options" },
+  { id: "style", label: "Art Style" },
   { id: "upload", label: "Upload Photos" },
   { id: "arrange", label: "Arrange Pages" },
 ]
@@ -59,7 +61,7 @@ function CreatePageContent() {
   const [error, setError] = useState("")
   
   const { user, initialized } = useFirebase()
-  const { pages, setPages, productType, setProductType, loadState, convertFileToPreview, debugState } = useUpload()
+  const { pages, setPages, productType, setProductType, artStyle, setArtStyle, loadState, convertFileToPreview, debugState } = useUpload()
 
   // Clear pages when creating a new book (no projectId)
   useEffect(() => {
@@ -105,7 +107,6 @@ function CreatePageContent() {
         const db = getFirestore()
         
         // Load project info
-        console.log("Loading project")
         
         // ... rest of the code
       } catch (error) {
@@ -119,8 +120,6 @@ function CreatePageContent() {
   // New project creation (no projectId)
   useEffect(() => {
     if (projectId || !user || !initialized) return
-    
-    console.log("Creating new project")
     
     // Reset upload state for new project
     setPages([])
@@ -151,6 +150,7 @@ function CreatePageContent() {
       const projectData: ProjectData = {
         title: bookTitle,
         productType,
+        artStyle,
         status: "preview",
         updatedAt: serverTimestamp(),
       }
@@ -250,20 +250,17 @@ function CreatePageContent() {
           projectId: actualProjectId,
           title: bookTitle,
           productType,
+          artStyle,
           pages: filteredPages
         });
-        
-        console.log("Project submission email notification sent");
       } catch (emailError) {
-        console.error("Error sending project notification email:", emailError);
         // Don't fail the overall submission if email fails
       }
       
       // Redirect to dashboard
       router.push("/dashboard")
     } catch (error) {
-      console.error("Error saving project:", error)
-      toast.error("Failed to save project. Please try again.")
+      setError("Failed to save project. Please try again.")
     } finally {
       setSubmitting(false)
     }
@@ -305,7 +302,6 @@ function CreatePageContent() {
 
       // Only process image files
       if (!file.type.startsWith("image/")) {
-        console.warn(`File ${file.name} is not an image and will be skipped.`)
         continue
       }
 
@@ -333,7 +329,7 @@ function CreatePageContent() {
         // Add to pages
         newPages.push(page)
       } catch (error) {
-        console.error("Error processing file:", error)
+        // Error processing file
       }
     }
 
@@ -630,6 +626,85 @@ function CreatePageContent() {
                     className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-2 text-base font-medium rounded-lg shadow-sm transition-all hover:shadow-md"
                     onClick={goToNextStep}
                     disabled={!bookTitle.trim()}
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {currentStep === "style" && (
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold mb-2">Choose Your Art Style for "{bookTitle}"</h2>
+                  <p className="text-gray-500">
+                    Select the artistic style you want for your coloring pages.
+                  </p>
+                </div>
+
+                <div className="mb-8">
+                  <RadioGroup value={artStyle} onValueChange={setArtStyle} className="grid gap-6 md:grid-cols-2">
+                    <div className="relative">
+                      <RadioGroupItem value="classic" id="classic" className="peer sr-only" />
+                      <Label
+                        htmlFor="classic"
+                        className="flex flex-col rounded-lg border-2 bg-white p-6 hover:border-orange-500 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-50"
+                      >
+                        <div className="flex justify-center mb-4">
+                          <PathImg
+                            src="/images/Classic.png"
+                            alt="Classic coloring page example"
+                            width={150}
+                            height={150}
+                            className="h-auto"
+                          />
+                        </div>
+                        <div className="mb-4 text-center">
+                          <h3 className="text-lg font-bold">Classic Coloring Page</h3>
+                          <p className="text-sm text-gray-500">Convert your image into a traditional coloring book illustration with clean, bold outlines and simple details.</p>
+                        </div>
+                        <div className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-white opacity-0 peer-data-[state=checked]:opacity-100">
+                          <Check className="h-4 w-4" />
+                        </div>
+                      </Label>
+                    </div>
+                    
+                    <div className="relative">
+                      <RadioGroupItem value="ghibli" id="ghibli" className="peer sr-only" />
+                      <Label
+                        htmlFor="ghibli"
+                        className="flex flex-col rounded-lg border-2 bg-white p-6 hover:border-orange-500 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-50"
+                      >
+                        <div className="flex justify-center mb-4">
+                          <PathImg
+                            src="/images/Ghibli-Inspired.PNG"
+                            alt="Ghibli-inspired coloring page example"
+                            width={150}
+                            height={150}
+                            className="h-auto"
+                          />
+                        </div>
+                        <div className="mb-4 text-center">
+                          <h3 className="text-lg font-bold">Ghibli-Inspired Coloring Page</h3>
+                          <p className="text-sm text-gray-500">Transform your image into a whimsical coloring page featuring gentle lines and charming Studio Ghibli-style details.</p>
+                        </div>
+                        <div className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-white opacity-0 peer-data-[state=checked]:opacity-100">
+                          <Check className="h-4 w-4" />
+                        </div>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="flex justify-between">
+                  <Button variant="outline" className="px-6" onClick={goToPreviousStep}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+
+                  <Button
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-2 text-base font-medium rounded-lg shadow-sm transition-all hover:shadow-md"
+                    onClick={goToNextStep}
                   >
                     Continue
                   </Button>

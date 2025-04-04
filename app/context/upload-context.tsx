@@ -22,6 +22,8 @@ type UploadContextType = {
   setPages: React.Dispatch<React.SetStateAction<PageData[]>>
   productType: string
   setProductType: (type: string) => void
+  artStyle: string
+  setArtStyle: (style: string) => void
   uploadProgress: number
   setUploadProgress: (progress: number) => void
   convertFileToPreview: (file: File) => Promise<string>
@@ -34,7 +36,7 @@ type UploadContextType = {
 const UploadContext = createContext<UploadContextType | undefined>(undefined)
 
 // Helper function to create a preview thumbnail
-const createPreviewThumbnail = async (file: File, maxWidth = 1024, quality = 0.6): Promise<string> => {
+const createPreviewThumbnail = async (file: File, maxWidth = 1024, quality = 0.85): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -89,15 +91,21 @@ const createPreviewThumbnail = async (file: File, maxWidth = 1024, quality = 0.6
 export function UploadProvider({ children }: { children: ReactNode }) {
   const [pages, setPages] = useState<PageData[]>([])
   const [productType, setProductType] = useState<string>("standard")
+  const [artStyle, setArtStyle] = useState<string>("classic")
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [isInitialized, setIsInitialized] = useState(false)
   const initializedRef = useRef(false)
   const productTypeRef = useRef(productType)
+  const artStyleRef = useRef(artStyle)
 
-  // Update ref when productType changes
+  // Update refs when states change
   useEffect(() => {
     productTypeRef.current = productType
   }, [productType])
+  
+  useEffect(() => {
+    artStyleRef.current = artStyle
+  }, [artStyle])
 
   // Use useCallback for functions to prevent unnecessary re-renders
 
@@ -106,6 +114,13 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     if (type !== productTypeRef.current) {
       // Minimal logging
       setProductType(type)
+    }
+  }, [])
+
+  // Safe setter for art style that prevents unnecessary re-renders
+  const setArtStyleSafe = useCallback((style: string) => {
+    if (style !== artStyleRef.current) {
+      setArtStyle(style)
     }
   }, [])
 
@@ -135,6 +150,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     try {
       // Store basic info in sessionStorage
       sessionStorage.setItem("productType", productType);
+      sessionStorage.setItem("artStyle", artStyle);
       sessionStorage.setItem("uploadProgress", String(uploadProgress));
       
       // Create a version of pages without the full image previews
@@ -173,7 +189,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         console.error("Even minimal state persistence failed");
       }
     }
-  }, [pages, productType, uploadProgress]);
+  }, [pages, productType, artStyle, uploadProgress]);
 
   // Load state from storage
   const loadState = useCallback(() => {
@@ -181,11 +197,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       try {
         // Load basic info
         const savedProductType = sessionStorage.getItem("productType")
+        const savedArtStyle = sessionStorage.getItem("artStyle")
         const savedProgress = sessionStorage.getItem("uploadProgress")
         const savedPagesJson = sessionStorage.getItem("uploadPages")
 
         if (savedProductType) {
           setProductTypeSafe(savedProductType)
+        }
+        
+        if (savedArtStyle) {
+          setArtStyleSafe(savedArtStyle)
         }
 
         if (savedProgress) {
@@ -210,18 +231,19 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         console.error("Error loading state");
       }
     }
-  }, [setProductTypeSafe, setPages, setUploadProgress])
+  }, [setProductTypeSafe, setArtStyleSafe, setPages, setUploadProgress])
 
   // Debug function to log current state
   const debugState = useCallback(() => {
     // Simplified debug output without actual data content
     console.log({
       productType,
+      artStyle,
       pagesCount: pages.length,
       uploadProgress,
       isInitialized
     });
-  }, [productType, pages.length, uploadProgress, isInitialized])
+  }, [productType, artStyle, pages.length, uploadProgress, isInitialized])
 
   // Load state on initial render only once
   useEffect(() => {
@@ -247,7 +269,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       
       return () => clearTimeout(saveTimeout);
     }
-  }, [pages, productType, uploadProgress, isInitialized])  // Remove persistState dependency
+  }, [pages, productType, artStyle, uploadProgress, isInitialized])  // Remove persistState dependency
 
   return (
     <UploadContext.Provider
@@ -256,6 +278,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         setPages,
         productType,
         setProductType: setProductTypeSafe,
+        artStyle,
+        setArtStyle: setArtStyleSafe,
         uploadProgress,
         setUploadProgress,
         convertFileToPreview,
