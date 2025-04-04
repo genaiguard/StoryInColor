@@ -648,18 +648,18 @@ function CreatePageContent() {
                       <RadioGroupItem value="classic" id="classic" className="peer sr-only" />
                       <Label
                         htmlFor="classic"
-                        className="flex flex-col rounded-lg border-2 bg-white p-6 hover:border-orange-500 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-50"
+                        className="flex flex-col rounded-lg border-2 bg-white p-6 hover:border-orange-500 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-50 h-full"
                       >
-                        <div className="flex justify-center mb-4">
+                        <div className="flex justify-center mb-4 h-40 items-center">
                           <PathImg
                             src="/images/Classic.png"
                             alt="Classic coloring page example"
                             width={150}
                             height={150}
-                            className="h-auto"
+                            className="h-auto max-h-40 object-contain"
                           />
                         </div>
-                        <div className="mb-4 text-center">
+                        <div className="mb-4 text-center flex-grow">
                           <h3 className="text-lg font-bold">Classic Coloring Page</h3>
                           <p className="text-sm text-gray-500">Convert your image into a traditional coloring book illustration with clean, bold outlines and simple details.</p>
                         </div>
@@ -673,18 +673,18 @@ function CreatePageContent() {
                       <RadioGroupItem value="ghibli" id="ghibli" className="peer sr-only" />
                       <Label
                         htmlFor="ghibli"
-                        className="flex flex-col rounded-lg border-2 bg-white p-6 hover:border-orange-500 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-50"
+                        className="flex flex-col rounded-lg border-2 bg-white p-6 hover:border-orange-500 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-50 h-full"
                       >
-                        <div className="flex justify-center mb-4">
+                        <div className="flex justify-center mb-4 h-40 items-center">
                           <PathImg
                             src="/images/Ghibli-Inspired.PNG"
                             alt="Ghibli-inspired coloring page example"
                             width={150}
                             height={150}
-                            className="h-auto"
+                            className="h-auto max-h-40 object-contain"
                           />
                         </div>
-                        <div className="mb-4 text-center">
+                        <div className="mb-4 text-center flex-grow">
                           <h3 className="text-lg font-bold">Ghibli-Inspired Coloring Page</h3>
                           <p className="text-sm text-gray-500">Transform your image into a whimsical coloring page featuring gentle lines and charming Studio Ghibli-style details.</p>
                         </div>
