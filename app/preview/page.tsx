@@ -159,13 +159,10 @@ function PreviewPageContent() {
         let processedImageUrl = null
         if (processedStatus && firstPage.processedImagePath) {
           try {
-            console.log("Trying to get processed image URL");
             const storage = getConfiguredStorage()
             // Use the enhanced function with retry capability
             processedImageUrl = await getDownloadURLWithRetry(firstPage.processedImagePath);
-            console.log("Successfully got image URL");
           } catch (imageError) {
-            console.error("Failed to load processed image:", imageError);
             // Continue without the image
           }
         }
@@ -287,15 +284,12 @@ function PreviewPageContent() {
       // Always normalize product type to lowercase
       // Use a fallback if previewData is not available
       const productType = (previewData?.productType || defaultProductType).toLowerCase();
-      console.log("Using product type for checkout:", { productType });
       
       // Use actual product name for better display in Stripe checkout
       const displayName = formatProductName(productType);
       const bookTitle = previewData?.title || defaultBookTitle;
-      console.log("Using display name for checkout:", { displayName, bookTitle });
       
       // Call Firebase Function to create Stripe checkout session
-      console.log("Getting Firebase functions");
       const functions = getFunctions();
       const functionUrl = `https://us-central1-storyincolor-ai.cloudfunctions.net/createCheckoutSession`;
       
@@ -310,8 +304,6 @@ function PreviewPageContent() {
         title: bookTitle
       };
       
-      console.log("Calling createCheckoutSession with params", checkoutParams);
-      
       const response = await fetch(functionUrl, {
         method: 'POST',
         credentials: 'omit',  // Don't send credentials as we're sending the token in headers
@@ -325,7 +317,6 @@ function PreviewPageContent() {
       if (!response.ok) {
         // Specifically handle authentication errors
         if (response.status === 401) {
-          console.error("Authentication failed with Firebase. Trying to refresh session.");
           // Force sign out and back in if needed
           if (window.confirm("Your session has expired. Would you like to log in again?")) {
             await user.getIdToken(true); // Force refresh token
@@ -338,18 +329,14 @@ function PreviewPageContent() {
       const result = await response.json();
       
       // Redirect to Stripe checkout
-      console.log("Checkout session created", result);
       const sessionId = result.sessionId;
       
       // Load Stripe
-      console.log("Loading Stripe with publishable key");
       const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
       
       if (!stripe) {
         throw new Error('Failed to load Stripe');
       }
-      
-      console.log("Redirecting to Stripe checkout", { sessionId });
       
       // Show a toast notification with instructions for Apple Pay users
       toast.info(
@@ -363,11 +350,9 @@ function PreviewPageContent() {
       });
       
       if (error) {
-        console.error("Stripe redirect error", error);
         throw error;
       }
     } catch (error) {
-      console.error("Error creating checkout session:", error);
       toast.error("Failed to initiate checkout. Please try again.");
       setError("Failed to initiate checkout. Please try again.");
     } finally {
@@ -495,20 +480,14 @@ function PreviewPageContent() {
         if (pageData.imagePath) {
           filesToDelete.push(pageData.imagePath);
           const imageRef = ref(storage, pageData.imagePath);
-          deletePromises.push(deleteObject(imageRef).catch(err => {
-            console.warn(`Could not delete file ${pageData.imagePath}:`, err.message);
-            return null;
-          }));
+          deletePromises.push(deleteObject(imageRef).catch(() => null));
         }
         
         // Check for processed image storage path
         if (pageData.processedImagePath) {
           filesToDelete.push(pageData.processedImagePath);
           const processedRef = ref(storage, pageData.processedImagePath);
-          deletePromises.push(deleteObject(processedRef).catch(err => {
-            console.warn(`Could not delete file ${pageData.processedImagePath}:`, err.message);
-            return null;
-          }));
+          deletePromises.push(deleteObject(processedRef).catch(() => null));
         }
       });
       
@@ -516,10 +495,7 @@ function PreviewPageContent() {
       if (projectData.thumbnailPath) {
         filesToDelete.push(projectData.thumbnailPath);
         const thumbnailRef = ref(storage, projectData.thumbnailPath);
-        deletePromises.push(deleteObject(thumbnailRef).catch(err => {
-          console.warn(`Could not delete thumbnail ${projectData.thumbnailPath}:`, err.message);
-          return null;
-        }));
+        deletePromises.push(deleteObject(thumbnailRef).catch(() => null));
       }
       
       // Wait for all deletes to complete
