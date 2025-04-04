@@ -48,6 +48,7 @@ export const createProject = async (userId: string, projectData: Omit<Project, "
     userId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    deleted: false
   }
   
   const docRef = await addDoc(projectsRef, newProject)
@@ -97,6 +98,7 @@ export const getProjectsByStatus = async (userId: string, status: Project["statu
   const q = query(
     projectsRef,
     where("status", "==", status),
+    where("deleted", "==", false),
     orderBy("updatedAt", "desc")
   )
   
@@ -114,6 +116,7 @@ export const getAllProjects = async (userId: string): Promise<Project[]> => {
   
   const q = query(
     projectsRef,
+    where("deleted", "==", false),
     orderBy("updatedAt", "desc")
   )
   

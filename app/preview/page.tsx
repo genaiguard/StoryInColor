@@ -511,7 +511,8 @@ function PreviewPageContent() {
       console.log("Marking project as deleted in database");
       await updateDoc(projectRef, {
         deleted: true,
-        deletedAt: new Date()
+        deletedAt: new Date(),
+        thumbnailPath: null // Clear the thumbnail path to avoid future reference
       });
       
       console.log("Project marked as deleted successfully");
