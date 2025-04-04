@@ -597,7 +597,7 @@ function CreatePageContent() {
                         <RadioGroupItem value={option.id} id={option.id} className="peer sr-only" />
                         <Label
                           htmlFor={option.id}
-                          className="flex flex-col rounded-lg border-2 bg-white p-6 hover:border-orange-500 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-50"
+                          className="flex flex-col rounded-lg border-2 bg-white p-6 hover:border-orange-500 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-50 h-full"
                         >
                           <div className="flex justify-center mb-4">
                             <PathImg
