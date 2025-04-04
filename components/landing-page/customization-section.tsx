@@ -4,17 +4,18 @@ import { PathImg } from "@/components/ui/pathed-image"
 
 export default function CustomizationSection() {
   return (
-    <section className="py-12 md:py-16 lg:py-20 bg-[#f7f4f3]">
+    <section className="py-12 md:py-16 lg:py-20 bg-white">
       <div className="container mx-auto max-w-7xl px-6 md:px-8">
         <div className="grid gap-8 md:grid-cols-2 md:gap-12 items-center">
           <div className="order-2 md:order-1">
             <div className="relative overflow-hidden rounded-lg shadow-md">
-              <PathImg
-                src="/images/customize-interface.png"
-                alt="StoryInColor customization interface showing a coloring book page being created"
-                width={700}
-                height={500}
+              <video 
+                src="/images/VideoDemo.mp4" 
+                controls
                 className="w-full h-auto"
+                autoPlay
+                muted
+                loop
               />
             </div>
           </div>
