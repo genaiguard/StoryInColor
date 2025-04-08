@@ -9,10 +9,17 @@ const nextConfig = {
   output: 'export',
   images: {
     unoptimized: true,
+    formats: ['image/webp', 'image/avif'],
+    domains: ['storyincolor.com'],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'firebasestorage.googleapis.com',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'storyincolor.com',
         pathname: '**',
       },
     ],

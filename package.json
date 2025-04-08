@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "optimize-images": "node scripts/optimize-images.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -45,6 +46,7 @@
     "cmdk": "1.0.4",
     "date-fns": "2.29.3",
     "embla-carousel-react": "8.5.1",
+    "firebase": "^10.8.0",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
     "next": "15.2.4",
@@ -58,10 +60,9 @@
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "uuid": "^9.0.1",
     "vaul": "^0.9.6",
-    "zod": "^3.24.1",
-    "firebase": "^10.8.0",
-    "uuid": "^9.0.1"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22",
@@ -69,6 +70,7 @@
     "@types/react-dom": "^19",
     "@types/uuid": "^9.0.8",
     "postcss": "^8",
+    "sharp": "^0.33.2",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"
   }

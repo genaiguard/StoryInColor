@@ -5,15 +5,12 @@ import { usePathname } from 'next/navigation'
 
 interface PathImgProps {
   src: string
-  alt: string
+  alt?: string
   width?: number
   height?: number
   className?: string
-  fill?: boolean
   priority?: boolean
-  quality?: number
-  sizes?: string
-  onError?: (e: any) => void
+  [key: string]: any // For additional props
 }
 
 /**
@@ -25,54 +22,27 @@ export function PathImg({
   width,
   height,
   className,
-  fill = false,
   priority = false,
-  quality,
-  sizes,
-  onError,
   ...props
 }: PathImgProps) {
-  // Adjust the path for static images in public directory
-  let adjustedSrc = src;
+  // Determine if this is likely an above-the-fold image that should be eager loaded
+  const isAboveTheFold = priority || 
+                         src.includes('best-6') || 
+                         src.includes('hero') || 
+                         src.includes('dog-coloring-hero');
   
-  // Only add the basePath for local public images that don't have a domain
-  if (
-    src && 
-    src.startsWith('/') && 
-    !src.startsWith('//') && 
-    !src.startsWith('http')
-  ) {
-    // Check if we're on GitHub Pages (not custom domain)
-    if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
-      // For GitHub Pages, add the repo name prefix
-      adjustedSrc = `/StoryInColor${src}`;
-    } else {
-      // For custom domain or local development, use the path as is
-      adjustedSrc = src;
-    }
-  }
-  
-  // For Firebase storage or other external URLs, use as is
   return (
     <Image
-      src={adjustedSrc}
-      alt={alt}
+      src={src}
+      alt={alt || ""}
       width={width}
       height={height}
       className={className}
-      fill={fill}
-      priority={priority}
-      quality={quality}
-      sizes={sizes}
-      onError={onError || ((e) => {
-        // Default error handler - use basic placeholder path for both environments
-        if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
-          e.currentTarget.src = '/StoryInColor/placeholder.svg';
-        } else {
-          e.currentTarget.src = '/placeholder.svg';
-        }
-      })}
+      loading={isAboveTheFold ? "eager" : "lazy"}
+      priority={isAboveTheFold}
+      quality={80}
+      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
       {...props}
     />
-  )
+  );
 } 

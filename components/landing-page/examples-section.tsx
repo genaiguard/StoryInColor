@@ -69,10 +69,10 @@ export default function ExamplesSection() {
           <div className="flex flex-col space-y-3">
             <div className="relative overflow-hidden rounded-lg shadow-md">
               <PathImg
-                src="/images/bali-coloring-book.jpeg"
+                src="/images/bali-coloring-book.webp"
                 alt="Bali vacation coloring book showing a couple standing next to a Ganesha statue, with the original photo on a smartphone"
-                width={600}
-                height={600}
+                width={400}
+                height={400}
                 className="w-full h-auto"
               />
             </div>
@@ -85,7 +85,7 @@ export default function ExamplesSection() {
           <div className="flex flex-col space-y-3">
             <div className="relative overflow-hidden rounded-lg shadow-md">
               <PathImg
-                src="/images/family-trip-coloring.png"
+                src="/images/family-trip-coloring.webp"
                 alt="Family trip coloring book cover showing parents and children on vacation"
                 width={400}
                 height={400}
@@ -99,7 +99,7 @@ export default function ExamplesSection() {
           <div className="flex flex-col space-y-3">
             <div className="relative overflow-hidden rounded-lg shadow-md">
               <PathImg
-                src="/images/hero-graduation.png"
+                src="/images/hero-graduation.webp"
                 alt="Woman holding graduation coloring book showing how photos become coloring pages"
                 width={400}
                 height={400}
@@ -115,7 +115,7 @@ export default function ExamplesSection() {
           <div className="flex flex-col space-y-3">
             <div className="relative overflow-hidden rounded-lg shadow-md">
               <PathImg
-                src="/images/countryside-coloring.png"
+                src="/images/countryside-coloring.webp"
                 alt="Coloring book page showing two people in sun hats walking toward a vine-covered cottage"
                 width={400}
                 height={400}
@@ -129,7 +129,7 @@ export default function ExamplesSection() {
           <div className="flex flex-col space-y-3">
             <div className="relative overflow-hidden rounded-lg shadow-md">
               <PathImg
-                src="/images/city-skyline-couple.png"
+                src="/images/city-skyline-couple.webp"
                 alt="Coloring book page showing a couple taking a selfie with a city skyline and Ferris wheel in the background"
                 width={400}
                 height={400}
@@ -145,7 +145,7 @@ export default function ExamplesSection() {
           <div className="flex flex-col space-y-3">
             <div className="relative overflow-hidden rounded-lg shadow-md">
               <PathImg
-                src="/images/coloring-bali-temple.png"
+                src="/images/coloring-bali-temple.webp"
                 alt="Person coloring a page of a woman at a Balinese temple, with the original photo shown on a smartphone"
                 width={400}
                 height={400}

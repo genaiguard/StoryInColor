@@ -72,11 +72,12 @@ export default function PetPortraitsSection() {
           <div className="mt-8 md:mt-0">
             <div className="relative rounded-lg overflow-hidden shadow-lg">
               <PathImg
-                src="/images/dog-coloring-hero.png"
+                src="/images/dog-coloring-hero.webp"
                 alt="A side-by-side comparison showing an original color photo of a golden retriever and its converted line art version suitable for coloring"
                 width={600}
                 height={500}
                 className="w-full h-auto"
+                priority={true}
               />
             </div>
           </div>

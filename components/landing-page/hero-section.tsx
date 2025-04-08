@@ -32,11 +32,12 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
           </div>
           <div className="relative flex items-center justify-center lg:justify-end">
             <PathImg
-              src="/images/best-6.png"
+              src="/images/best-6.webp"
               alt="Coloring book page of a family at the beach alongside the original framed photo and colored pencils"
               width={600}
               height={600}
               className="w-full h-auto"
+              priority={true}
             />
           </div>
         </div>

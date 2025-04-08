@@ -26,7 +26,7 @@ export default function PricingSection() {
             </div>
             <div className="mb-4 flex justify-center">
               <PathImg
-                src="/images/product-standard.png"
+                src="/images/product-standard.webp"
                 alt="Standard coloring booklet option - softcover with 10 pages"
                 width={120}
                 height={120}
@@ -100,7 +100,7 @@ export default function PricingSection() {
             </div>
             <div className="mb-4 flex justify-center">
               <PathImg
-                src="/images/product-premium.png"
+                src="/images/product-premium.webp"
                 alt="Premium coloring book option - hardcover with 30 pages"
                 width={120}
                 height={120}
@@ -175,7 +175,7 @@ export default function PricingSection() {
             </div>
             <div className="mb-4 flex justify-center">
               <PathImg
-                src="/images/product-pdf.png"
+                src="/images/product-pdf.webp"
                 alt="PDF Download option - digital coloring book"
                 width={120}
                 height={120}

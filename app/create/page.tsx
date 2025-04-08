@@ -410,21 +410,21 @@ function CreatePageContent() {
       id: "standard",
       title: "Standard",
       description: "10-page coloring booklet with softcover binding",
-      image: "/images/product-standard.png",
+      image: "/images/product-standard.webp",
       maxPages: 10,
     },
     {
       id: "premium",
       title: "Premium",
       description: "30-page coloring book with hardcover binding",
-      image: "/images/product-premium.png",
+      image: "/images/product-premium.webp",
       maxPages: 30,
     },
     {
       id: "pdf",
       title: "Digital",
       description: "Digital coloring book to print at home",
-      image: "/images/product-pdf.png",
+      image: "/images/product-pdf.webp",
       maxPages: 10,
     },
   ]
@@ -652,7 +652,7 @@ function CreatePageContent() {
                       >
                         <div className="flex justify-center mb-4 h-40 items-center">
                           <PathImg
-                            src="/images/Classic.png"
+                            src="/images/Classic.webp"
                             alt="Classic coloring page example"
                             width={150}
                             height={150}
@@ -677,7 +677,7 @@ function CreatePageContent() {
                       >
                         <div className="flex justify-center mb-4 h-40 items-center">
                           <PathImg
-                            src="/images/Ghibli-Inspired.PNG"
+                            src="/images/Ghibli-Inspired.webp"
                             alt="Ghibli-inspired coloring page example"
                             width={150}
                             height={150}
