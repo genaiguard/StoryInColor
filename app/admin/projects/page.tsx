@@ -15,7 +15,10 @@ import {
   FileUp, 
   RefreshCw, 
   Search, 
-  UploadCloud 
+  UploadCloud,
+  Check,
+  Mail,
+  CheckCircle
 } from "lucide-react"
 import { useFirebase } from "@/app/firebase/firebase-provider"
 import { 
@@ -35,6 +38,8 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 import { getConfiguredStorage, compressProcessedImage, getSignedDownloadURL } from "@/app/firebase/storage-helpers"
 import { PathImg } from "@/components/ui/pathed-image"
 import { toast } from "sonner"
+import { getFunctions, httpsCallable } from "firebase/functions"
+import { getAuth, onAuthStateChanged } from "firebase/auth"
 
 // Define types
 interface ProjectInfo {
@@ -66,6 +71,9 @@ export default function AdminProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<ProjectInfo | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [initialized, setInitialized] = useState(false);
+  const [notifiedProjects, setNotifiedProjects] = useState<Record<string, boolean>>({});
+  const [isNotifying, setIsNotifying] = useState(false);
   
   // Get search params for direct project loading
   const searchParams = useSearchParams();
@@ -74,15 +82,15 @@ export default function AdminProjectsPage() {
   
   // Initialize Firebase context
   const firebaseContext = useFirebase();
-  const { user, initialized } = firebaseContext;
+  const { user, initialized: firebaseInitialized } = firebaseContext;
   
   // Check if current user is an admin
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
   
   // Load projects from Firestore
   useEffect(() => {
-    if (!initialized || !user || !isAdmin) {
-      if (initialized && user && !isAdmin) {
+    if (!firebaseInitialized || !user || !isAdmin) {
+      if (firebaseInitialized && user && !isAdmin) {
         setError("You don't have permission to access this page.");
       }
       setLoading(false);
@@ -214,7 +222,7 @@ export default function AdminProjectsPage() {
     };
     
     loadProjects();
-  }, [initialized, user, isAdmin, projectId, userId]);
+  }, [firebaseInitialized, user, isAdmin, projectId, userId]);
   
   // Modified function to load a single project with direct URLs
   const loadSingleProject = async (db: any, userId: string, projectId: string) => {
@@ -600,7 +608,7 @@ export default function AdminProjectsPage() {
   );
   
   // If user is not an admin, show access denied
-  if (initialized && user && !isAdmin) {
+  if (firebaseInitialized && user && !isAdmin) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-50">
         <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
@@ -632,7 +640,7 @@ export default function AdminProjectsPage() {
   }
   
   // If user is not logged in, show not signed in
-  if (initialized && !user) {
+  if (firebaseInitialized && !user) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-50">
         <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
@@ -662,6 +670,59 @@ export default function AdminProjectsPage() {
       </div>
     );
   }
+
+  // Send notification email to customer about processed image
+  const handleNotifyCustomer = async (project: ProjectInfo) => {
+    if (!user || !project.userEmail) {
+      toast.error("Cannot send notification: Missing user email");
+      return;
+    }
+    
+    // Ask for confirmation before sending
+    if (!window.confirm(`Send email notification to ${project.userEmail}?`)) {
+      return;
+    }
+    
+    setIsNotifying(true);
+    
+    try {
+      // Get the functions instance
+      const functions = getFunctions();
+      
+      // Use httpsCallable to call the cloud function
+      const sendProcessedNotification = httpsCallable(functions, 'sendProcessingCompleteNotification');
+      
+      // Call the function with required data
+      const result = await sendProcessedNotification({
+        projectId: project.id,
+        userId: project.userId,
+        userEmail: project.userEmail,
+        projectTitle: project.title || "Your Coloring Book"
+      });
+      
+      // Mark as notified in our local state
+      setNotifiedProjects(prev => ({
+        ...prev,
+        [project.id]: true
+      }));
+      
+      // Update the project database with notification status
+      const db = getFirestore();
+      const projectRef = doc(db, `users/${project.userId}/projects/${project.id}`);
+      
+      await updateDoc(projectRef, {
+        notificationSent: true,
+        notificationSentAt: new Date() // Using JS Date instead of serverTimestamp
+      });
+      
+      toast.success(`Notification email sent to ${project.userEmail}`);
+    } catch (error: any) {
+      console.error("Error sending notification:", error);
+      toast.error(`Failed to send notification: ${error.message || "Unknown error"}`);
+    } finally {
+      setIsNotifying(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
@@ -757,6 +818,10 @@ export default function AdminProjectsPage() {
               uploading={uploading}
               selectedProject={selectedProject}
               uploadProgress={uploadProgress}
+              handleNotifyCustomer={handleNotifyCustomer}
+              isNotifying={isNotifying}
+              notifiedProjects={notifiedProjects}
+              user={user}
             />
           ) : (
             /* Show tabs view for all projects */
@@ -993,14 +1058,22 @@ function SingleProjectView({
   handleUploadProcessed, 
   uploading, 
   selectedProject, 
-  uploadProgress 
+  uploadProgress,
+  handleNotifyCustomer,
+  isNotifying,
+  notifiedProjects,
+  user
 }: { 
   project: ProjectInfo; 
   handleDownloadOriginal: (project: ProjectInfo) => Promise<void>; 
-  handleUploadProcessed: (event: React.ChangeEvent<HTMLInputElement>, project: ProjectInfo) => Promise<void>; 
+  handleUploadProcessed: (event: React.ChangeEvent<HTMLInputElement>, project: ProjectInfo) => Promise<void>;
   uploading: boolean; 
   selectedProject: ProjectInfo | null; 
   uploadProgress: number;
+  handleNotifyCustomer: (project: ProjectInfo) => Promise<void>;
+  isNotifying: boolean;
+  notifiedProjects: Record<string, boolean>;
+  user: any;
 }) {
   const isProcessed = project.hasProcessedImage;
   const [originalImageError, setOriginalImageError] = useState(false);
@@ -1131,7 +1204,34 @@ function SingleProjectView({
                   </Link>
                 </Button>
                 
-                <div className="relative">
+                {/* Notify Customer Button */}
+                <Button
+                  variant={notifiedProjects[project.id] ? "outline" : "default"}
+                  className={notifiedProjects[project.id] ? 
+                    "border-blue-500 text-blue-500 hover:bg-blue-50" : 
+                    "bg-blue-600 hover:bg-blue-700 text-white"}
+                  onClick={() => handleNotifyCustomer(project)}
+                  disabled={isNotifying || !project.userEmail}
+                >
+                  {isNotifying ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-b-2 border-current rounded-full mr-2"></div>
+                      Sending...
+                    </>
+                  ) : notifiedProjects[project.id] ? (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Customer Notified
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Notify Customer
+                    </>
+                  )}
+                </Button>
+                
+                <div className="relative md:col-span-2">
                   <Button 
                     variant="outline" 
                     className="border-orange-500 text-orange-500 hover:bg-orange-50 w-full"
