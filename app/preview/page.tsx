@@ -10,7 +10,7 @@ import { ArrowLeft, Eye, AlertTriangle, CheckCircle, CreditCard, Lock, Trash2 } 
 import { useFirebase } from "@/app/firebase/firebase-provider"
 import { getFirestore, doc, getDoc, collection, query, getDocs, orderBy, limit, updateDoc, serverTimestamp, where, deleteDoc } from "firebase/firestore"
 import { ref, getDownloadURL, deleteObject, listAll } from "firebase/storage"
-import { getConfiguredStorage, getDownloadURLWithRetry } from "@/app/firebase/storage-helpers"
+import { getConfiguredStorage, getSignedDownloadURL } from "@/app/firebase/storage-helpers"
 import { toast } from "sonner"
 import { PathImg } from "@/components/ui/pathed-image"
 import { getFunctions } from "firebase/functions"
@@ -130,7 +130,7 @@ function PreviewPageContent() {
               try {
                 const storage = getConfiguredStorage();
                 console.log("Fetching processedImageUrl from path:", firstPage.processedImagePath);
-                processedImageUrl = await getDownloadURLWithRetry(firstPage.processedImagePath);
+                processedImageUrl = await getSignedDownloadURL(firstPage.processedImagePath);
               } catch (imageError) {
                 console.error("Error fetching processed image:", imageError);
                 // Continue without the image

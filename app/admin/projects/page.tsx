@@ -497,7 +497,7 @@ export default function AdminProjectsPage() {
             processed: true,
             processedImagePath: processedImagePath,
             processedImageUrl: downloadURL,
-            processedAt: serverTimestamp()
+            processedAt: new Date()
           };
           
           console.log("Updating Firestore document");
