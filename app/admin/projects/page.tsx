@@ -1211,7 +1211,7 @@ function SingleProjectView({
                     "border-blue-500 text-blue-500 hover:bg-blue-50" : 
                     "bg-blue-600 hover:bg-blue-700 text-white"}
                   onClick={() => handleNotifyCustomer(project)}
-                  disabled={isNotifying || !project.userEmail}
+                  disabled={isNotifying}
                 >
                   {isNotifying ? (
                     <>
