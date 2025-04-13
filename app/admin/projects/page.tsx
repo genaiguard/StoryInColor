@@ -689,16 +689,37 @@ export default function AdminProjectsPage() {
       // Get the functions instance
       const functions = getFunctions();
       
-      // Use httpsCallable to call the cloud function
-      const sendProcessedNotification = httpsCallable(functions, 'sendProcessingCompleteNotification');
+      // Try the longer function name first
+      const sendProcessingNotification = httpsCallable(functions, 'sendProcessingCompleteNotification');
       
-      // Call the function with required data
-      const result = await sendProcessedNotification({
+      // Ensure we have the email
+      if (!project.userEmail) {
+        console.error("Missing user email in project data:", project);
+        toast.error("Missing user email - cannot send notification");
+        return;
+      }
+      
+      const notificationData = {
         projectId: project.id,
         userId: project.userId,
         userEmail: project.userEmail,
         projectTitle: project.title || "Your Coloring Book"
-      });
+      };
+      
+      console.log("Sending notification with data:", notificationData);
+      
+      try {
+        // First try the main function name
+        const result = await sendProcessingNotification(notificationData);
+        console.log("Notification result:", result);
+      } catch (primaryError) {
+        console.error("Error with primary function, trying fallback:", primaryError);
+        
+        // If that fails, try the alternate function name
+        const sendProcessedNotification = httpsCallable(functions, 'sendProcessedNotification');
+        const result = await sendProcessedNotification(notificationData);
+        console.log("Notification result from fallback:", result);
+      }
       
       // Mark as notified in our local state
       setNotifiedProjects(prev => ({
@@ -718,6 +739,7 @@ export default function AdminProjectsPage() {
       toast.success(`Notification email sent to ${project.userEmail}`);
     } catch (error: any) {
       console.error("Error sending notification:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
       toast.error(`Failed to send notification: ${error.message || "Unknown error"}`);
     } finally {
       setIsNotifying(false);
