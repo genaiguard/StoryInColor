@@ -104,19 +104,73 @@ function PreviewPageContent() {
 
         console.log("Project document found");
         const projectData = projectSnap.data()
-
-        // Get the first page from the project
-        const pagesRef = collection(db, "users", user.uid, "projects", projectId, "pages")
-        const pagesQuery = query(pagesRef, orderBy("pageNumber"), limit(1))
-        console.log("Trying to fetch project pages");
-        const pagesSnap = await getDocs(pagesQuery).catch(err => {
-          console.error("Error fetching project pages:", err);
-          throw new Error(`Failed to get project pages: ${err.message}`);
-        });
-
-        if (pagesSnap.empty) {
-          console.log("No pages found yet - this is expected for new projects");
-          // Create fallback data instead of showing an error
+        
+        // Check if the project has a pages array
+        if (projectData.pages && Array.isArray(projectData.pages) && projectData.pages.length > 0) {
+          console.log("Using pages array from project document");
+          
+          // Get the first page from the array
+          const firstPage = projectData.pages.find(page => page.pageNumber === 1) || projectData.pages[0];
+          const pageId = firstPage.id || "";
+          
+          // Check if the page has been processed
+          const processedStatus = firstPage.processed || false;
+          setIsProcessed(processedStatus);
+          
+          // Get the processed image URL if available
+          let processedImageUrl = null;
+          if (processedStatus) {
+            // First check if the processed image URL is directly available in the page data
+            if (firstPage.processedImageUrl) {
+              console.log("Using direct processedImageUrl from page data");
+              processedImageUrl = firstPage.processedImageUrl;
+            } 
+            // Otherwise try to get it from the processedImagePath
+            else if (firstPage.processedImagePath) {
+              try {
+                const storage = getConfiguredStorage();
+                console.log("Fetching processedImageUrl from path:", firstPage.processedImagePath);
+                processedImageUrl = await getDownloadURLWithRetry(firstPage.processedImagePath);
+              } catch (imageError) {
+                console.error("Error fetching processed image:", imageError);
+                // Continue without the image
+              }
+            }
+          }
+          
+          // Always normalize product type to lowercase for consistency
+          const productType = (projectData.productType || "standard").toLowerCase();
+          console.log("Final product type:", productType);
+          
+          // Create preview data object with all necessary fallbacks
+          const previewDataObject = {
+            id: projectId,
+            title: projectData.title || "Untitled Project",
+            productType: productType,
+            date: projectData.createdAt ? new Date(projectData.createdAt.toDate()).toLocaleDateString() : "Unknown date",
+            price: getProductPrice(productType),
+            pageId: pageId,
+            processedImageUrl: processedImageUrl,
+          };
+          
+          // Set the preview data
+          setPreviewData(previewDataObject);
+          
+          // Debug log the preview data
+          console.log("Preview data set successfully:", {
+            id: previewDataObject.id,
+            productType: previewDataObject.productType,
+            price: previewDataObject.price,
+            hasImage: !!previewDataObject.processedImageUrl
+          });
+          
+          setIsLoading(false);
+          return;
+        } 
+        // If no pages array in project, show fallback
+        else {
+          console.log("No pages array found in project document");
+          // Create fallback data
           const defaultProductType = (projectData.productType || "standard").toLowerCase();
           console.log("Using default product type:", defaultProductType);
           
@@ -146,52 +200,6 @@ function PreviewPageContent() {
           setIsLoading(false);
           return;
         }
-
-        console.log("Project pages found");
-        const firstPage = pagesSnap.docs[0].data()
-        const pageId = pagesSnap.docs[0].id
-
-        // Check if the page has been processed
-        const processedStatus = firstPage.processed || false
-        setIsProcessed(processedStatus)
-
-        // Get the processed image URL if available
-        let processedImageUrl = null
-        if (processedStatus && firstPage.processedImagePath) {
-          try {
-            const storage = getConfiguredStorage()
-            // Use the enhanced function with retry capability
-            processedImageUrl = await getDownloadURLWithRetry(firstPage.processedImagePath);
-          } catch (imageError) {
-            // Continue without the image
-          }
-        }
-
-        // Always normalize product type to lowercase for consistency
-        const productType = (projectData.productType || "standard").toLowerCase();
-        console.log("Final product type:", productType);
-
-        // Create preview data object with all necessary fallbacks
-        const previewDataObject = {
-          id: projectId,
-          title: projectData.title || "Untitled Project",
-          productType: productType,
-          date: projectData.createdAt ? new Date(projectData.createdAt.toDate()).toLocaleDateString() : "Unknown date",
-          price: getProductPrice(productType),
-          pageId: pageId,
-          processedImageUrl: processedImageUrl,
-        };
-        
-        // Set the preview data
-        setPreviewData(previewDataObject);
-        
-        // Debug log the preview data
-        console.log("Preview data set successfully:", {
-          id: previewDataObject.id,
-          productType: previewDataObject.productType,
-          price: previewDataObject.price,
-          hasImage: !!previewDataObject.processedImageUrl
-        });
       } catch (error) {
         console.error("Error loading preview data:", error)
         setError("Failed to load preview data. Please try again.")

@@ -18,8 +18,16 @@
       "User-Agent", 
       "x-goog-*",
       "Access-Control-Allow-Origin",
+      "Access-Control-Allow-Methods",
+      "Access-Control-Allow-Headers",
+      "Access-Control-Max-Age",
+      "Access-Control-Allow-Credentials",
+      "Access-Control-Expose-Headers",
       "Origin",
-      "Accept"
+      "Accept",
+      "ETag",
+      "Cache-Control",
+      "X-Requested-With"
     ]
   }
 ] 

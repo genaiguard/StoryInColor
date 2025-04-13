@@ -1,9 +1,21 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Admin access (more permissive)
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'ipekcioglu@me.com';
+    }
+
+    // Allow admin full access to everything
+    match /{document=**} {
+      allow read: if isAdmin();
+    }
+    
     // Allow users to read and write their own data
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow admin to read and write all user data
+      allow read, write: if isAdmin();
     }
     
     // Public data can be read by anyone but only written by authenticated users

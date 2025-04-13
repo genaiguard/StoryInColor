@@ -88,23 +88,18 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
         try {
           // Auth needs special handling for different local development URLs
           if (window.location.hostname === 'localhost') {
-            // Connect to Auth emulator for localhost
-            connectAuthEmulator(auth, 'http://localhost:9099');
+            // Emulators are commented out for troubleshooting
+            // connectAuthEmulator(auth, 'http://localhost:9099');
+            // connectFirestoreEmulator(db, 'localhost', 8080);
+            // connectStorageEmulator(storage, 'localhost', 9199);
             
-            // Connect to Firestore emulator
-            connectFirestoreEmulator(db, 'localhost', 8080);
-            
-            // Connect to Storage emulator
-            connectStorageEmulator(storage, 'localhost', 9199);
-            
-            // Don't log specific emulator information
+            console.log("Emulator connections disabled for troubleshooting");
           } else {
             // For local IP address development (like 192.168.x.x)
-            // No emulator connection needed, but we need to handle CORS in a different way
-            // You'll need to add your local IP to Firebase Auth authorized domains
+            console.log("Using production Firebase instance for development");
           }
         } catch (emulatorError) {
-          console.warn("Connection error");
+          console.warn("Connection error", emulatorError);
         }
       }
       
@@ -137,14 +132,38 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
   // Auth functions
   const signIn = async (email: string, password: string) => {
     if (!initialized) throw new Error("Firebase is not initialized")
-    const auth = getAuth()
-    await signInWithEmailAndPassword(auth, email, password)
+    try {
+      const auth = getAuth()
+      await signInWithEmailAndPassword(auth, email, password)
+    } catch (error: any) {
+      console.error("Sign In Error:", error.code, error.message);
+      
+      // Handle network errors with more information
+      if (error.code === 'auth/network-request-failed') {
+        throw new Error("Network connection failed. Please check your internet connection and try again.");
+      }
+      
+      // Re-throw the original error for other handlers
+      throw error;
+    }
   }
 
   const signUp = async (email: string, password: string) => {
     if (!initialized) throw new Error("Firebase is not initialized")
-    const auth = getAuth()
-    await createUserWithEmailAndPassword(auth, email, password)
+    try {
+      const auth = getAuth()
+      await createUserWithEmailAndPassword(auth, email, password)
+    } catch (error: any) {
+      console.error("Sign Up Error:", error.code, error.message);
+      
+      // Handle network errors with more information
+      if (error.code === 'auth/network-request-failed') {
+        throw new Error("Network connection failed. Please check your internet connection and try again.");
+      }
+      
+      // Re-throw the original error for other handlers
+      throw error;
+    }
   }
 
   const googleSignIn = async () => {
