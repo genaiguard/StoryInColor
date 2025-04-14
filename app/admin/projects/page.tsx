@@ -40,6 +40,9 @@ import { PathImg } from "@/components/ui/pathed-image"
 import { toast } from "sonner"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { getAuth, onAuthStateChanged } from "firebase/auth"
+import { getApp } from "firebase/app"
+import { useAuth } from "@/app/firebase/auth-provider"
+import { useIsAdmin } from "@/app/firebase/admin-provider"
 
 // Define types
 interface ProjectInfo {
@@ -65,7 +68,7 @@ const ADMIN_EMAILS = ['ipekcioglu@me.com']; // Add any additional admin emails h
 export default function AdminProjectsPage() {
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("pending");
   const [selectedProject, setSelectedProject] = useState<ProjectInfo | null>(null);
@@ -80,12 +83,42 @@ export default function AdminProjectsPage() {
   const projectId = searchParams.get("id");
   const userId = searchParams.get("userId");
   
-  // Initialize Firebase context
-  const firebaseContext = useFirebase();
-  const { user, initialized: firebaseInitialized } = firebaseContext;
+  // Get current user
+  const { user, firebaseInitialized } = useAuth();
   
-  // Check if current user is an admin
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
+  // Check if user is admin
+  const { isAdmin } = useIsAdmin(user);
+  
+  // Debug Firebase initialization
+  useEffect(() => {
+    if (firebaseInitialized) {
+      console.log("Firebase is initialized");
+      try {
+        const app = getApp();
+        console.log("Firebase app config:", app.options);
+        
+        // Test Functions initialization
+        try {
+          const functions = getFunctions();
+          console.log("Firebase Functions initialized successfully");
+          
+          // Test if we can create callables
+          try {
+            const testCallable = httpsCallable(functions, 'sendProcessingCompleteNotification');
+            console.log("Function reference created successfully:", testCallable);
+          } catch (callableError) {
+            console.error("Error creating function reference:", callableError);
+          }
+        } catch (functionsError) {
+          console.error("Error initializing Firebase Functions:", functionsError);
+        }
+      } catch (appError) {
+        console.error("Error getting Firebase app:", appError);
+      }
+    } else {
+      console.log("Firebase is NOT initialized yet");
+    }
+  }, [firebaseInitialized]);
   
   // Load projects from Firestore
   useEffect(() => {
@@ -673,13 +706,18 @@ export default function AdminProjectsPage() {
 
   // Send notification email to customer about processed image
   const handleNotifyCustomer = async (project: ProjectInfo) => {
+    console.log("Starting notification process for project:", project.id);
+    
     if (!user || !project.userEmail) {
-      toast.error("Cannot send notification: Missing user email");
+      const errorMsg = "Cannot send notification: Missing user email";
+      console.error(errorMsg, { user, projectEmail: project.userEmail });
+      toast.error(errorMsg);
       return;
     }
     
     // Ask for confirmation before sending
     if (!window.confirm(`Send email notification to ${project.userEmail}?`)) {
+      console.log("Notification cancelled by user");
       return;
     }
     
@@ -688,59 +726,78 @@ export default function AdminProjectsPage() {
     try {
       // Get the functions instance
       const functions = getFunctions();
+      console.log("Firebase functions initialized");
       
-      // Try the longer function name first
-      const sendProcessingNotification = httpsCallable(functions, 'sendProcessingCompleteNotification');
-      
-      // Ensure we have the email
-      if (!project.userEmail) {
-        console.error("Missing user email in project data:", project);
-        toast.error("Missing user email - cannot send notification");
-        return;
-      }
-      
+      // Prepare notification data
       const notificationData = {
         projectId: project.id,
         userId: project.userId,
         userEmail: project.userEmail,
-        projectTitle: project.title || "Your Coloring Book"
+        projectTitle: project.title || "Your Coloring Book",
+        productType: project.productType || "standard",
+        artStyle: project.artStyle || "classic"
       };
       
-      console.log("Sending notification with data:", notificationData);
+      console.log("Notification data prepared:", notificationData);
       
+      let result;
+      let success = false;
+      
+      // Try the first function name
       try {
-        // First try the main function name
-        const result = await sendProcessingNotification(notificationData);
-        console.log("Notification result:", result);
+        console.log("Trying primary function: sendProcessingCompleteNotification");
+        const sendPrimaryNotification = httpsCallable(functions, 'sendProcessingCompleteNotification');
+        result = await sendPrimaryNotification(notificationData);
+        success = true;
+        console.log("Primary function succeeded:", result.data);
       } catch (primaryError) {
-        console.error("Error with primary function, trying fallback:", primaryError);
+        console.error("Primary function failed:", primaryError);
         
-        // If that fails, try the alternate function name
-        const sendProcessedNotification = httpsCallable(functions, 'sendProcessedNotification');
-        const result = await sendProcessedNotification(notificationData);
-        console.log("Notification result from fallback:", result);
+        // Try the fallback function name
+        try {
+          console.log("Trying fallback function: sendProcessedNotification");
+          const sendFallbackNotification = httpsCallable(functions, 'sendProcessedNotification');
+          result = await sendFallbackNotification(notificationData);
+          success = true;
+          console.log("Fallback function succeeded:", result.data);
+        } catch (fallbackError) {
+          console.error("Fallback function also failed:", fallbackError);
+          throw fallbackError; // Re-throw to be caught by outer catch
+        }
       }
       
-      // Mark as notified in our local state
-      setNotifiedProjects(prev => ({
-        ...prev,
-        [project.id]: true
-      }));
-      
-      // Update the project database with notification status
-      const db = getFirestore();
-      const projectRef = doc(db, `users/${project.userId}/projects/${project.id}`);
-      
-      await updateDoc(projectRef, {
-        notificationSent: true,
-        notificationSentAt: new Date() // Using JS Date instead of serverTimestamp
-      });
-      
-      toast.success(`Notification email sent to ${project.userEmail}`);
+      if (success && result) {
+        // Mark as notified in our local state
+        setNotifiedProjects(prev => ({
+          ...prev,
+          [project.id]: true
+        }));
+        
+        // Update the project database with notification status
+        const db = getFirestore();
+        const projectRef = doc(db, `users/${project.userId}/projects/${project.id}`);
+        
+        await updateDoc(projectRef, {
+          notificationSent: true,
+          notificationSentAt: new Date() // Using JS Date instead of serverTimestamp
+        });
+        
+        console.log("Project updated in database. Notification complete!");
+        toast.success(`Notification email sent to ${project.userEmail}`);
+      } else {
+        console.error("Both functions failed or returned invalid results");
+        toast.error("Failed to send notification - both attempts failed");
+      }
     } catch (error: any) {
       console.error("Error sending notification:", error);
-      console.error("Error details:", JSON.stringify(error, null, 2));
-      toast.error(`Failed to send notification: ${error.message || "Unknown error"}`);
+      
+      // Try to extract useful error information
+      const errorMessage = error.message || "Unknown error";
+      const errorCode = error.code || "unknown";
+      const errorDetails = error.details ? JSON.stringify(error.details) : "No details";
+      
+      console.error("Error details:", { errorCode, errorMessage, errorDetails });
+      toast.error(`Failed to send notification: ${errorMessage}`);
     } finally {
       setIsNotifying(false);
     }
@@ -1232,7 +1289,10 @@ function SingleProjectView({
                   className={notifiedProjects[project.id] ? 
                     "border-blue-500 text-blue-500 hover:bg-blue-50" : 
                     "bg-blue-600 hover:bg-blue-700 text-white"}
-                  onClick={() => handleNotifyCustomer(project)}
+                  onClick={() => {
+                    console.log("Notify button clicked for project:", project.id);
+                    handleNotifyCustomer(project);
+                  }}
                   disabled={isNotifying}
                 >
                   {isNotifying ? (
@@ -1252,24 +1312,6 @@ function SingleProjectView({
                     </>
                   )}
                 </Button>
-                
-                <div className="relative md:col-span-2">
-                  <Button 
-                    variant="outline" 
-                    className="border-orange-500 text-orange-500 hover:bg-orange-50 w-full"
-                    disabled={uploading}
-                  >
-                    <UploadCloud className="mr-2 h-4 w-4" />
-                    Replace Processed Image
-                  </Button>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    onChange={(e) => handleUploadProcessed(e, project)}
-                    disabled={uploading}
-                  />
-                </div>
               </div>
             </>
           ) : isProcessed && (processedImageError || !project.processedImageUrl) ? (
