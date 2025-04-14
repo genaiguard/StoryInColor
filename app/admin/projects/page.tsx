@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -41,8 +41,6 @@ import { toast } from "sonner"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { getAuth, onAuthStateChanged } from "firebase/auth"
 import { getApp } from "firebase/app"
-import { useAuth } from "@/app/firebase/auth-provider"
-import { useIsAdmin } from "@/app/firebase/admin-provider"
 
 // Define types
 interface ProjectInfo {
@@ -83,11 +81,12 @@ export default function AdminProjectsPage() {
   const projectId = searchParams.get("id");
   const userId = searchParams.get("userId");
   
-  // Get current user
-  const { user, firebaseInitialized } = useAuth();
+  // Initialize Firebase context
+  const firebaseContext = useFirebase();
+  const { user, initialized: firebaseInitialized } = firebaseContext;
   
-  // Check if user is admin
-  const { isAdmin } = useIsAdmin(user);
+  // Check if current user is an admin
+  const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
   
   // Debug Firebase initialization
   useEffect(() => {
