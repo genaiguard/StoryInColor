@@ -60,6 +60,21 @@ interface ProjectInfo {
   artStyle?: string;
 }
 
+// Add missing interface definitions from admin/page.tsx
+interface AuthUserData {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  createdAt: string;
+}
+
+interface GetUserDataResponse {
+  success: boolean;
+  userData?: AuthUserData;
+  message?: string;
+  error?: string;
+}
+
 // Admin emails allowed to access this interface
 const ADMIN_EMAILS = ['ipekcioglu@me.com']; // Add any additional admin emails here
 
@@ -218,12 +233,22 @@ export default function AdminProjectsPage() {
           // Get user email
           let userEmail = '';
           try {
-            const userDoc = await getDoc(doc(db, "users", userId));
-            if (userDoc.exists()) {
-              userEmail = userDoc.data().email || '';
+            // Call the Cloud Function to get user data from Auth
+            const functions = getFunctions();
+            const getUserDataFn = httpsCallable<{ userId: string }, GetUserDataResponse>(
+              functions, 
+              'getAuthUserData'
+            );
+            const result = await getUserDataFn({ userId });
+            if (result.data.success && result.data.userData) {
+              userEmail = result.data.userData.email || 'No email in Auth';
+            } else {
+              console.error('Error fetching user auth data:', result.data.message);
+              userEmail = 'Error calling function'; // Indicate function call error
             }
           } catch (err) {
-            console.error("Error fetching user email:", err);
+            console.error("Error calling getAuthUserData function:", err);
+            userEmail = 'Error calling function'; // Indicate function call error
           }
           
           projectsData.push({
@@ -310,12 +335,22 @@ export default function AdminProjectsPage() {
       
       let userEmail = '';
       try {
-        const userDoc = await getDoc(doc(db, "users", userId));
-        if (userDoc.exists()) {
-          userEmail = userDoc.data().email || '';
+        // Call the Cloud Function to get user data from Auth
+        const functions = getFunctions();
+        const getUserDataFn = httpsCallable<{ userId: string }, GetUserDataResponse>(
+          functions, 
+          'getAuthUserData'
+        );
+        const result = await getUserDataFn({ userId });
+        if (result.data.success && result.data.userData) {
+          userEmail = result.data.userData.email || 'No email in Auth';
+        } else {
+          console.error('Error fetching user auth data:', result.data.message);
+          userEmail = 'Error calling function'; // Indicate function call error
         }
       } catch (err) {
-        console.error("Error fetching user email:", err);
+        console.error("Error calling getAuthUserData function:", err);
+        userEmail = 'Error calling function'; // Indicate function call error
       }
       
       return {
@@ -830,7 +865,7 @@ export default function AdminProjectsPage() {
             <div>
               {projectId && userId ? (
                 <>
-                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Project Details</h1>
+                  <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Project Details: <span className="font-mono text-xl">{projectId}</span></h1>
                   <p className="text-gray-500">Manage this project and process images</p>
                 </>
               ) : (
@@ -1170,6 +1205,10 @@ function SingleProjectView({
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-1">Title</h3>
                 <p className="text-base font-medium">{project.title}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-1">User ID</h3>
+                <p className="text-base font-mono">{project.userId}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-1">Created Date</h3>
