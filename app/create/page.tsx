@@ -66,6 +66,8 @@ function CreatePageContent() {
   // Clear pages when creating a new book (no projectId)
   useEffect(() => {
     if (!projectId) {
+      // Log pages state *before* clearing
+      console.log('CreatePage: useEffect [projectId] - Clearing state. Pages BEFORE clear:', JSON.stringify(pages));
       // Clear any existing pages when starting a fresh project
       setPages([])
       setUploadedFiles([])
@@ -76,7 +78,7 @@ function CreatePageContent() {
       }
       console.log("Cleared previous pages")
     }
-  }, [projectId, setPages])
+  }, [projectId])
 
   // Memoize this function to prevent unnecessary renders
   const goToNextStep = useCallback(() => {
