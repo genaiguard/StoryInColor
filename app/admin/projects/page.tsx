@@ -707,15 +707,15 @@ export default function AdminProjectsPage() {
   const handleNotifyCustomer = async (project: ProjectInfo) => {
     console.log("Starting notification process for project:", project.id);
     
-    if (!user || !project.userEmail) {
-      const errorMsg = "Cannot send notification: Missing user email";
-      console.error(errorMsg, { user, projectEmail: project.userEmail });
+    if (!user) {
+      const errorMsg = "Cannot send notification: Not authenticated";
+      console.error(errorMsg);
       toast.error(errorMsg);
       return;
     }
     
     // Ask for confirmation before sending
-    if (!window.confirm(`Send email notification to ${project.userEmail}?`)) {
+    if (!window.confirm(`Send email notification for project "${project.title}"?`)) {
       console.log("Notification cancelled by user");
       return;
     }
@@ -727,11 +727,10 @@ export default function AdminProjectsPage() {
       const functions = getFunctions();
       console.log("Firebase functions initialized");
       
-      // Prepare notification data
+      // Prepare notification data - only send required IDs, let the server get the email
       const notificationData = {
         projectId: project.id,
         userId: project.userId,
-        userEmail: project.userEmail,
         projectTitle: project.title || "Your Coloring Book",
         productType: project.productType || "standard",
         artStyle: project.artStyle || "classic"
@@ -782,12 +781,12 @@ export default function AdminProjectsPage() {
         });
         
         console.log("Project updated in database. Notification complete!");
-        toast.success(`Notification email sent to ${project.userEmail}`);
+        toast.success(`Notification email sent successfully`);
       } else {
         console.error("Both functions failed or returned invalid results");
         toast.error("Failed to send notification - both attempts failed");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error sending notification:", error);
       
       // Try to extract useful error information
