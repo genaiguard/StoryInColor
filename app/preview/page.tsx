@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, useRef, Suspense, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -46,10 +46,12 @@ function PreviewPageContent() {
   const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [isRedirecting, setIsRedirecting] = useState(false)
 
   // Initialize Firebase context
   const firebaseContext = useFirebase()
-  const { user, initialized } = firebaseContext || { user: null, initialized: false }
+  const { user, initialized: firebaseInitialized } = firebaseContext || { user: null, initialized: false }
 
   // Debug hook to see when previewData changes
   useEffect(() => {
@@ -58,19 +60,30 @@ function PreviewPageContent() {
     }
   }, [projectId, previewData]);
 
+  // Effect to handle redirecting unauthenticated users
+  useEffect(() => {
+    if (firebaseInitialized && !user && projectId) {
+      // If firebase is ready, user is not logged in, and we have a project ID
+      setIsRedirecting(true) // Set redirecting state
+      const redirectUrl = `/login?redirect=${encodeURIComponent(`/preview?id=${projectId}`)}`;
+      console.log("User not logged in, redirecting to:", redirectUrl);
+      router.push(redirectUrl);
+    }
+  }, [firebaseInitialized, user, router, projectId]);
+
   // Load project data from Firebase
   useEffect(() => {
     // Skip Firebase calls during SSR
     if (typeof window === "undefined") return
 
     const loadPreviewData = async () => {
-      if (!initialized || !user || !projectId) {
+      if (!firebaseInitialized || !user || !projectId) {
         if (!projectId) {
           setError("No project ID provided")
         } else if (!user) {
           setError("Please log in to view this project")
           console.error("No user available when trying to load preview for project", projectId);
-        } else if (!initialized) {
+        } else if (!firebaseInitialized) {
           setError("Firebase is initializing, please wait")
           console.error("Firebase not initialized when trying to load preview for project", projectId);
         }
@@ -223,7 +236,7 @@ function PreviewPageContent() {
     }
 
     loadPreviewData()
-  }, [initialized, user, projectId])
+  }, [firebaseInitialized, user, projectId])
 
   // Helper function to get product price based on type
   const getProductPrice = (productType: string): string => {
@@ -571,35 +584,19 @@ function PreviewPageContent() {
     )
   }
 
-  if (isLoading) {
+  if (loading || !firebaseInitialized || isRedirecting) {
     return (
-      <div className="flex min-h-screen flex-col bg-gray-50">
-        <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
-          <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 md:px-6">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")}>
-                <ArrowLeft className="h-5 w-5" />
-                <span className="sr-only">Back to Dashboard</span>
-              </Button>
-              <Link href="/" className="flex items-center gap-2">
-                <span className="text-xl font-bold">
-                  Story<span className="text-orange-500">InColor</span>
-                </span>
-              </Link>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 py-6 md:py-8 px-4">
-          <div className="container mx-auto max-w-7xl">
-            <div className="flex flex-col items-center justify-center h-[60vh]">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
-              <p className="text-gray-500">Loading your preview...</p>
-            </div>
-          </div>
-        </main>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
+        {isRedirecting ? (
+          <p className="text-gray-500">Redirecting to login...</p>
+        ) : (
+          <>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            <p className="mt-4 text-gray-500">Loading project preview...</p>
+          </>
+        )}
       </div>
-    )
+    );
   }
 
   return (
