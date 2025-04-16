@@ -177,8 +177,10 @@ function PreviewPageContent() {
             hasImage: !!previewDataObject.processedImageUrl
           });
           
+          // Explicitly set loading false here on success
           setIsLoading(false);
-          return;
+          
+          return; // Exit after successfully setting data from pages array
         } 
         // If no pages array in project, show fallback
         else {
@@ -210,8 +212,10 @@ function PreviewPageContent() {
             price: previewDataObject.price
           });
           
+          // Explicitly set loading false here after setting fallback data
           setIsLoading(false);
-          return;
+          
+          return; // Exit after setting fallback data
         }
       } catch (error) {
         console.error("Error loading preview data:", error)
@@ -548,6 +552,9 @@ function PreviewPageContent() {
       setIsDeleting(false);
     }
   }
+
+  // Log state variables just before the loading check
+  console.log('[Preview Render Check]', { loading, firebaseInitialized, isRedirecting });
 
   if (!projectId) {
     return (
