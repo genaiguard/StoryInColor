@@ -88,10 +88,12 @@ function PreviewPageContent() {
           console.error("Firebase not initialized when trying to load preview for project", projectId);
         }
         setIsLoading(false)
+        setLoading(false) // Update both loading states
         return
       }
 
       setIsLoading(true)
+      setLoading(true) // Set both loading states
       setError("")
 
       try {
@@ -112,6 +114,7 @@ function PreviewPageContent() {
           console.error("Project document not found");
           setError("Project not found")
           setIsLoading(false)
+          setLoading(false) // Update both loading states
           return
         }
 
@@ -180,6 +183,7 @@ function PreviewPageContent() {
           // Explicitly set loading false here on success
           console.log("[loadPreviewData] Success (from pages)! Setting loading = false.");
           setIsLoading(false);
+          setLoading(false); // Update both loading states
           
           return; // Exit after successfully setting data from pages array
         } 
@@ -216,6 +220,7 @@ function PreviewPageContent() {
           // Explicitly set loading false here after setting fallback data
           console.log("[loadPreviewData] Success (fallback)! Setting loading = false.");
           setIsLoading(false);
+          setLoading(false); // Update both loading states
           
           return; // Exit after setting fallback data
         }
@@ -239,6 +244,7 @@ function PreviewPageContent() {
       } finally {
         console.log("[loadPreviewData] Finally block reached. Setting loading = false.");
         setIsLoading(false)
+        setLoading(false) // Update both loading states
       }
     }
 
