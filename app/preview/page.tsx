@@ -178,6 +178,7 @@ function PreviewPageContent() {
           });
           
           // Explicitly set loading false here on success
+          console.log("[loadPreviewData] Success (from pages)! Setting loading = false.");
           setIsLoading(false);
           
           return; // Exit after successfully setting data from pages array
@@ -213,6 +214,7 @@ function PreviewPageContent() {
           });
           
           // Explicitly set loading false here after setting fallback data
+          console.log("[loadPreviewData] Success (fallback)! Setting loading = false.");
           setIsLoading(false);
           
           return; // Exit after setting fallback data
@@ -235,6 +237,7 @@ function PreviewPageContent() {
           setPreviewData(fallbackData);
         }
       } finally {
+        console.log("[loadPreviewData] Finally block reached. Setting loading = false.");
         setIsLoading(false)
       }
     }
