@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # Needed for pushing to the repo
+  contents: write
   pages: write
   id-token: write
 
@@ -18,24 +18,15 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout public repo
+      - name: Checkout private repo (source code)
         uses: actions/checkout@v4
-        with:
-          path: public-repo
-      
-      - name: Checkout private repo
-        uses: actions/checkout@v4
-        with:
-          repository: genaiguard/StoryInColor_PRIVATE
-          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
-          path: private-repo
-      
+        
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: 'npm'
-          cache-dependency-path: private-repo/package-lock.json
+          cache-dependency-path: package-lock.json
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -44,16 +35,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            private-repo/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('private-repo/package-lock.json') }}-${{ hashFiles('private-repo/**/*.[jt]s', 'private-repo/**/*.[jt]sx') }}
+            .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('private-repo/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-
       
       - name: Install dependencies
-        run: cd private-repo && npm ci
+        run: npm ci
       
       - name: Build with Next.js
-        run: cd private-repo && npm run build
+        run: npm run build
         env:
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -67,17 +58,24 @@ jobs:
       - name: Prepare static files for GitHub Pages
         run: |
           # Ensure .nojekyll file exists
-          touch private-repo/out/.nojekyll
+          touch out/.nojekyll
           
           # Copy 404 page if it exists
-          if [ -f "private-repo/public/404.html" ]; then
-            cp private-repo/public/404.html private-repo/out/404.html
+          if [ -f "public/404.html" ]; then
+            cp public/404.html out/404.html
           fi
           
           # Copy CNAME file if it exists
-          if [ -f "private-repo/public/CNAME" ]; then
-            cp private-repo/public/CNAME private-repo/out/CNAME
+          if [ -f "public/CNAME" ]; then
+            cp public/CNAME out/CNAME
           fi
+      
+      - name: Checkout public repo
+        uses: actions/checkout@v4
+        with:
+          repository: genaiguard/StoryInColor
+          token: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          path: public-repo
       
       - name: Clean public repo
         run: |
@@ -86,7 +84,7 @@ jobs:
       
       - name: Copy built files to public repo
         run: |
-          cp -r private-repo/out/* public-repo/
+          cp -r out/* public-repo/
       
       - name: Commit and push to public repo
         run: |
