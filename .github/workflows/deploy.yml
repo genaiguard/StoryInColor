@@ -53,14 +53,16 @@ jobs:
           # Ensure .nojekyll file exists
           touch out/.nojekyll
           
+          # Ensure CNAME file exists and has correct content
+          echo "storyincolor.com" > out/CNAME
+          
+          # List files for debugging
+          echo "Contents of out directory:"
+          ls -la out/
+          
           # Copy 404 page if it exists
           if [ -f "public/404.html" ]; then
             cp public/404.html out/404.html
-          fi
-          
-          # Copy CNAME file if it exists
-          if [ -f "public/CNAME" ]; then
-            cp public/CNAME out/CNAME
           fi
       
       - name: Checkout public repo
@@ -78,6 +80,10 @@ jobs:
       - name: Copy built files to public repo
         run: |
           cp -r out/* public-repo/
+          
+          # Verify files were copied correctly
+          echo "Contents of public-repo directory:"
+          ls -la public-repo/
       
       - name: Commit and push to public repo
         run: |

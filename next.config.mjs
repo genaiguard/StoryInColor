@@ -29,16 +29,17 @@ const nextConfig = {
   skipTrailingSlashRedirect: true,
 }
 
-// Handle GitHub Pages deployment paths
+// The most important part - ensure all asset paths work correctly
 const isGithubActions = process.env.GITHUB_ACTIONS || false
 
-// For deployment with custom domain, ensure paths are correctly set
 if (isGithubActions) {
-  // When running in GitHub Actions, use absolute URLs for assets
+  console.log('🔧 Building for GitHub Pages with custom domain')
+  // For GitHub Pages with custom domain, keep paths absolute
   nextConfig.basePath = ''
-  // This is critical - it ensures resources are loaded from the domain root
-  nextConfig.assetPrefix = '/'
+  // Don't use a trailing slash for asset prefix
+  nextConfig.assetPrefix = ''
 } else {
+  console.log('🔧 Building for local development')
   // For local development
   nextConfig.basePath = ''
   nextConfig.assetPrefix = ''
