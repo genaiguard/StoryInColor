@@ -79,7 +79,8 @@ jobs:
       
       - name: Copy built files to public repo
         run: |
-          cp -r out/* public-repo/
+          # Use out/. to ensure dotfiles are copied as well
+          cp -r out/. public-repo/
           
           # Verify files were copied correctly
           echo "Contents of public-repo directory:"
