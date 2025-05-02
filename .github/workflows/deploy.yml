@@ -1,5 +1,7 @@
 name: Deploy to GitHub Pages
 
+# Updated workflow for deployment from private to public repo
+
 on:
   push:
     branches: [main]
