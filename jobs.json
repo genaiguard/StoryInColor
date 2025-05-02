@@ -1,0 +1,190 @@
+{
+  "total_count": 2,
+  "jobs": [
+    {
+      "id": 41559449246,
+      "run_id": 14800977503,
+      "workflow_name": "Deploy to GitHub Pages",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/genaiguard/StoryInColor_PRIVATE/actions/runs/14800977503",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOOZL7Vc8AAAAJrSLeng",
+      "head_sha": "ef7f7d96310b025df3658695b3f742b50a7125d1",
+      "url": "https://api.github.com/repos/genaiguard/StoryInColor_PRIVATE/actions/jobs/41559449246",
+      "html_url": "https://github.com/genaiguard/StoryInColor_PRIVATE/actions/runs/14800977503/job/41559449246",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2025-05-02T18:22:24Z",
+      "started_at": "2025-05-02T18:22:27Z",
+      "completed_at": "2025-05-02T18:22:35Z",
+      "name": "build-and-deploy",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2025-05-02T18:22:28Z",
+          "completed_at": "2025-05-02T18:22:30Z"
+        },
+        {
+          "name": "Checkout public repo",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2025-05-02T18:22:30Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Checkout private repo",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 3,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Setup Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 4,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Setup Pages",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 5,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Restore cache",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Build with Next.js",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 8,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Prepare static files for GitHub Pages",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Clean public repo",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Copy built files to public repo",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 11,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Commit and push to public repo",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Upload artifact for GitHub Pages",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:32Z"
+        },
+        {
+          "name": "Post Checkout private repo",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25,
+          "started_at": "2025-05-02T18:22:32Z",
+          "completed_at": "2025-05-02T18:22:33Z"
+        },
+        {
+          "name": "Post Checkout public repo",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26,
+          "started_at": "2025-05-02T18:22:33Z",
+          "completed_at": "2025-05-02T18:22:33Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27,
+          "started_at": "2025-05-02T18:22:33Z",
+          "completed_at": "2025-05-02T18:22:33Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/genaiguard/StoryInColor_PRIVATE/check-runs/41559449246",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000000324,
+      "runner_name": "GitHub Actions 1000000324",
+      "runner_group_id": 0,
+      "runner_group_name": ""
+    },
+    {
+      "id": 41559458618,
+      "run_id": 14800977503,
+      "workflow_name": "Deploy to GitHub Pages",
+      "head_branch": "main",
+      "run_url": "https://api.github.com/repos/genaiguard/StoryInColor_PRIVATE/actions/runs/14800977503",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOOZL7Vc8AAAAJrSMDOg",
+      "head_sha": "ef7f7d96310b025df3658695b3f742b50a7125d1",
+      "url": "https://api.github.com/repos/genaiguard/StoryInColor_PRIVATE/actions/jobs/41559458618",
+      "html_url": "https://github.com/genaiguard/StoryInColor_PRIVATE/actions/runs/14800977503/job/41559458618",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2025-05-02T18:22:35Z",
+      "started_at": "2025-05-02T18:22:35Z",
+      "completed_at": "2025-05-02T18:22:35Z",
+      "name": "deploy",
+      "steps": [
+
+      ],
+      "check_run_url": "https://api.github.com/repos/genaiguard/StoryInColor_PRIVATE/check-runs/41559458618",
+      "labels": [
+
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    }
+  ]
+}
