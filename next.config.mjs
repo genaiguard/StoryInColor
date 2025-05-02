@@ -24,17 +24,20 @@ const nextConfig = {
       },
     ],
   },
+  // These are crucial for proper path resolution with a custom domain
+  trailingSlash: false,
+  skipTrailingSlashRedirect: true,
 }
 
 // Handle GitHub Pages deployment paths
-const repo = 'StoryInColor'
 const isGithubActions = process.env.GITHUB_ACTIONS || false
 
-// For production with custom domain, don't use basePath
+// For deployment with custom domain, ensure paths are correctly set
 if (isGithubActions) {
-  // Empty base path for deployment - will work for both custom domain and GitHub Pages
+  // When running in GitHub Actions, use absolute URLs for assets
   nextConfig.basePath = ''
-  nextConfig.assetPrefix = ''
+  // This is critical - it ensures resources are loaded from the domain root
+  nextConfig.assetPrefix = '/'
 } else {
   // For local development
   nextConfig.basePath = ''
