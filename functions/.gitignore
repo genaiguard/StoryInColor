@@ -1,0 +1,18 @@
+# Compiled JavaScript files
+lib/
+node_modules/
+
+# TypeScript definitions for compiled files
+*.d.ts
+
+# Firebase
+.firebase/
+.runtimeconfig.json
+*.log
+
+# Local environment variables
+.env
+.env.local
+
+# Secret files
+*secret* 

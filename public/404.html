@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>StoryInColor - Page not found</title>
+  <script>
+    // SPA redirect script for GitHub Pages
+    (function() {
+      var path = window.location.pathname;
+      var repoName = '/StoryInColor';
+      
+      // Check if the path starts with the repo name and remove it
+      if (path.indexOf(repoName) === 0) {
+        path = path.replace(repoName, '');
+      }
+      
+      // Handle empty path
+      if (path === '') path = '/';
+      
+      // Redirect to the index.html with the path as a parameter
+      var query = window.location.search.replace(/^\?/, '&');
+      window.location.href = repoName + '/?p=' + encodeURIComponent(path) + 
+                             (query ? '&q=' + encodeURIComponent(query.substring(1)) : '') +
+                             window.location.hash;
+    })();
+  </script>
+</head>
+<body>
+  Redirecting...
+</body>
+</html> 

@@ -1,0 +1,257 @@
+import * as AWS from 'aws-sdk';
+import { defineSecret } from 'firebase-functions/params';
+
+// Define AWS secrets
+const awsAccessKeyId = defineSecret('AWS_ACCESS_KEY_ID');
+const awsSecretAccessKey = defineSecret('AWS_SECRET_ACCESS_KEY');
+const awsRegion = defineSecret('AWS_REGION');
+const senderEmail = defineSecret('SENDER_EMAIL_ADDRESS');
+
+// Interface for AWS SES errors
+interface AWSError {
+  code?: string;
+  message?: string;
+  [key: string]: any;
+}
+
+// Configure AWS SES
+export const configureSES = () => {
+  console.log(`[AWS SES] Configuring SES with region: ${awsRegion.value()}`);
+  
+  const ses = new AWS.SES({
+    accessKeyId: awsAccessKeyId.value(),
+    secretAccessKey: awsSecretAccessKey.value(),
+    region: awsRegion.value() || 'us-east-1',
+  });
+  
+  console.log('[AWS SES] SES client configured successfully');
+  return ses;
+};
+
+// Send welcome email
+export const sendWelcomeEmail = async (email: string, name?: string) => {
+  console.log(`[AWS SES] Preparing to send welcome email to ${email}, name: ${name || 'not provided'}`);
+  
+  try {
+    const ses = configureSES();
+    
+    // Construct email params
+    const params = {
+      Source: senderEmail.value(),
+      Destination: { ToAddresses: [email] },
+      Message: {
+        Subject: { Data: 'Welcome to StoryInColor!' },
+        Body: {
+          Html: {
+            Data: generateWelcomeEmailTemplate(name || 'there')
+          }
+        }
+      }
+    };
+    
+    console.log('[AWS SES] Email parameters prepared:', JSON.stringify({
+      source: params.Source,
+      destination: params.Destination,
+      subject: params.Message.Subject.Data
+    }));
+    
+    try {
+      console.log('[AWS SES] Sending email via SES.sendEmail()');
+      const result = await ses.sendEmail(params).promise();
+      console.log(`[AWS SES] Email successfully sent, MessageId: ${result.MessageId}`);
+      return true;
+    } catch (error) {
+      const sesError = error as AWSError;
+      console.error('[AWS SES] SES sending error:', sesError);
+      if (sesError.code) {
+        console.error(`[AWS SES] Error code: ${sesError.code}, message: ${sesError.message}`);
+      }
+      throw sesError;
+    }
+  } catch (err) {
+    const error = err as Error;
+    console.error('[AWS SES] General error sending welcome email:', error);
+    return false;
+  }
+};
+
+// Send project submission email function REMOVED
+
+// Send contact form email
+export const sendContactFormEmail = async (
+  name: string,
+  email: string,
+  subject: string,
+  message: string
+) => {
+  console.log(`[AWS SES] Preparing to send contact form email from ${name} (${email})`);
+  
+  const ses = configureSES();
+  
+  const params = {
+    Source: senderEmail.value(),
+    Destination: { 
+      ToAddresses: [senderEmail.value(), 'ipekcioglu@me.com'], // Send to both admin and your personal email
+    },
+    ReplyToAddresses: [email], // Allow replying directly to the sender
+    Message: {
+      Subject: { Data: `Contact Form: ${subject}` },
+      Body: {
+        Html: {
+          Data: generateContactFormTemplate(name, email, subject, message)
+        }
+      }
+    }
+  };
+  
+  try {
+    const result = await ses.sendEmail(params).promise();
+    console.log(`[AWS SES] Contact form email sent, MessageId: ${result.MessageId}`);
+    return true;
+  } catch (err) {
+    const error = err as AWSError;
+    console.error('[AWS SES] Error sending contact form email:', error);
+    if (error.code) {
+      console.error(`[AWS SES] Error code: ${error.code}, message: ${error.message}`);
+    }
+    return false;
+  }
+};
+
+// Send project processed email
+export const sendProjectProcessedEmail = async (
+  email: string, 
+  projectDetails: {
+    projectId: string,
+    title: string
+  }
+) => {
+  console.log(`[AWS SES] Preparing to send project processed email to ${email}`);
+  
+  const ses = configureSES();
+  
+  const params = {
+    Source: senderEmail.value(),
+    Destination: { 
+      ToAddresses: [email],
+      BccAddresses: ['info@ipekai.com'] // Only keeping the original BCC address
+    },
+    Message: {
+      Subject: { Data: `Your StoryInColor Book "${projectDetails.title}" Is Ready!` },
+      Body: {
+        Html: {
+          Data: generateProjectProcessedTemplate(projectDetails)
+        }
+      }
+    }
+  };
+  
+  // Add explicit logging for BCC address
+  console.log(`[AWS SES] Email configuration with BCC: ToAddresses=${params.Destination.ToAddresses.join(',')} BccAddresses=${params.Destination.BccAddresses ? params.Destination.BccAddresses.join(',') : 'none'}`);
+  
+  try {
+    const result = await ses.sendEmail(params).promise();
+    console.log(`[AWS SES] Project processed email sent to ${email}, MessageId: ${result.MessageId}`);
+    // Log full result details without sensitive data
+    console.log('[AWS SES] SES response received');
+    return true;
+  } catch (err) {
+    const error = err as AWSError;
+    console.error('[AWS SES] Error sending project processed email:', error);
+    if (error.code) {
+      console.error(`[AWS SES] Error code: ${error.code}, message: ${error.message}`);
+    }
+    return false;
+  }
+};
+
+// Email template generators
+function generateWelcomeEmailTemplate(name: string): string {
+  return `
+    <html>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #f97316;">Welcome to StoryInColor, ${name}!</h1>
+        </div>
+        
+        <p>Thank you for joining our platform! We're excited to help you create personalized coloring books from your photos.</p>
+        
+        <p>With StoryInColor, you can:</p>
+        <ul>
+          <li>Upload your favorite photos</li>
+          <li>Create stunning coloring book pages automatically</li>
+          <li>Choose from different book formats</li>
+          <li>Order printed copies or download digital versions</li>
+        </ul>
+        
+        <div style="background-color: #f8f4e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Ready to get started?</strong> Go to your dashboard and create your first coloring book!</p>
+        </div>
+        
+        <p>If you have any questions, please don't hesitate to contact our support team.</p>
+        
+        <p>Best regards,<br/>The StoryInColor Team</p>
+      </body>
+    </html>
+  `;
+}
+
+// Generate contact form email template
+function generateContactFormTemplate(name: string, email: string, subject: string, message: string): string {
+  return `
+    <html>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #f97316;">New Contact Form Submission</h1>
+        </div>
+        
+        <p><strong>From:</strong> ${name} (${email})</p>
+        <p><strong>Subject:</strong> ${subject}</p>
+        
+        <div style="background-color: #f8f4e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h2 style="margin-top: 0; color: #f97316;">Message:</h2>
+          <p>${message.replace(/\n/g, '<br/>')}</p>
+        </div>
+        
+        <p>You can reply directly to this email to respond to the sender.</p>
+      </body>
+    </html>
+  `;
+}
+
+// Generate project processed email template
+function generateProjectProcessedTemplate(projectDetails: any): string {
+  const projectUrl = `https://storyincolor.com/dashboard?projectId=${projectDetails.projectId}`;
+  
+  return `
+    <html>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #f97316;">Your Coloring Pages Are Ready!</h1>
+        </div>
+        
+        <p>Great news! Your personalized coloring pages PDF for "${projectDetails.title}" has been generated and is ready for download.</p>
+        
+        <div style="background-color: #f8f4e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <h2 style="margin-top: 0; color: #f97316;">Project Details</h2>
+          <p><strong>Title:</strong> ${projectDetails.title}</p>
+        </div>
+        
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${projectUrl}" 
+             style="background-color: #f97316; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            View Your Coloring Pages
+          </a>
+        </p>
+        
+        <p>Click the button above to go to your dashboard where you can download the PDF.</p>
+        
+        <p>Thank you for creating with StoryInColor!</p>
+        
+        <p>Best regards,<br/>The StoryInColor Team</p>
+      </body>
+    </html>
+  `;
+}
+
+// Helper function formatProductName block REMOVED 

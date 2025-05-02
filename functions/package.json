@@ -1,0 +1,38 @@
+{
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "lint": "eslint .",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "deploy-gc": "firebase deploy --only functions:processImageWithOpenAI --runtime-env-vars '{\"NODE_OPTIONS\":\"--expose-gc\"}' --config='{\"functions\":{\"predeploy\":[\"npm run build\"],\"runtime_options\":{\"memory\":\"4GiB\"}}}'",
+    "deploy-image-function": "npm run build && firebase deploy --only functions:processImageWithOpenAI",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "@google-cloud/storage": "^7.16.0",
+    "@types/cors": "^2.8.17",
+    "@types/pdfkit": "^0.13.9",
+    "aws-sdk": "^2.1692.0",
+    "cors": "^2.8.5",
+    "firebase-admin": "^11.11.1",
+    "firebase-functions": "^6.3.2",
+    "openai": "^4.96.2",
+    "pdfkit": "^0.17.0",
+    "sharp": "^0.34.1",
+    "stripe": "^14.19.0"
+  },
+  "devDependencies": {
+    "@types/sharp": "^0.31.1",
+    "typescript": "^5.1.6"
+  },
+  "private": true
+}

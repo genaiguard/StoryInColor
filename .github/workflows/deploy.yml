@@ -1,0 +1,114 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # Needed for pushing to the repo
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout public repo
+        uses: actions/checkout@v4
+        with:
+          path: public-repo
+      
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+        with:
+          repository: genaiguard/StoryInColor_PRIVATE
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: private-repo
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: 'npm'
+          cache-dependency-path: private-repo/package-lock.json
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            private-repo/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('private-repo/package-lock.json') }}-${{ hashFiles('private-repo/**/*.[jt]s', 'private-repo/**/*.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('private-repo/package-lock.json') }}-
+      
+      - name: Install dependencies
+        run: cd private-repo && npm ci
+      
+      - name: Build with Next.js
+        run: cd private-repo && npm run build
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+      
+      - name: Prepare static files for GitHub Pages
+        run: |
+          # Ensure .nojekyll file exists
+          touch private-repo/out/.nojekyll
+          
+          # Copy 404 page if it exists
+          if [ -f "private-repo/public/404.html" ]; then
+            cp private-repo/public/404.html private-repo/out/404.html
+          fi
+          
+          # Copy CNAME file if it exists
+          if [ -f "private-repo/public/CNAME" ]; then
+            cp private-repo/public/CNAME private-repo/out/CNAME
+          fi
+      
+      - name: Clean public repo
+        run: |
+          cd public-repo
+          find . -mindepth 1 -not -path "./.git*" -delete
+      
+      - name: Copy built files to public repo
+        run: |
+          cp -r private-repo/out/* public-repo/
+      
+      - name: Commit and push to public repo
+        run: |
+          cd public-repo
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A  # Use -A to properly track file deletions
+          git commit -m "Update GitHub Pages deployment [skip ci]" || echo "No changes to commit"
+          git push
+      
+      - name: Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public-repo
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-and-deploy
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 

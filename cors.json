@@ -1,0 +1,33 @@
+[
+  {
+    "origin": [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "https://storyincolor.com",
+      "http://storyincolor.com",
+      "https://*.github.io",
+      "https://*.firebaseapp.com",
+      "https://*.web.app"
+    ],
+    "method": ["GET", "HEAD", "PUT", "POST", "DELETE", "OPTIONS"],
+    "maxAgeSeconds": 3600,
+    "responseHeader": [
+      "Content-Type", 
+      "Authorization", 
+      "Content-Length", 
+      "User-Agent", 
+      "x-goog-*",
+      "Access-Control-Allow-Origin",
+      "Access-Control-Allow-Methods",
+      "Access-Control-Allow-Headers",
+      "Access-Control-Max-Age",
+      "Access-Control-Allow-Credentials",
+      "Access-Control-Expose-Headers",
+      "Origin",
+      "Accept",
+      "ETag",
+      "Cache-Control",
+      "X-Requested-With"
+    ]
+  }
+] 

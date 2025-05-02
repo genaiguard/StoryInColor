@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "storyincolor-ai"
+  },
+  "targets": {
+    "storyincolor-ai": {
+      "storage": {
+        "default": [
+          "storyincolor-storage"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
