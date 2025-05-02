@@ -19,17 +19,6 @@ import { getAnalytics, isSupported } from "firebase/analytics"
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore"
 import { getStorage, connectStorageEmulator } from "firebase/storage"
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-}
-
 // Development environment detection
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -58,22 +47,36 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
 
   // Initialize Firebase
   useEffect(() => {
+    // Define config object inside useEffect to ensure it uses build-time values
+    const effectiveFirebaseConfig = {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+    };
+
     try {
       // Check if all required config values are present
-      if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
-        console.warn("Firebase config is incomplete. Authentication features will not work.")
-        setLoading(false)
-        return
+      if (!effectiveFirebaseConfig.apiKey || !effectiveFirebaseConfig.authDomain || !effectiveFirebaseConfig.projectId) {
+        console.warn("Firebase config is incomplete. Authentication features will not work.", effectiveFirebaseConfig);
+        setLoading(false);
+        // Set initialized to false if config is missing, otherwise subsequent calls might think it's initialized
+        setInitialized(false);
+        return;
       }
 
       // Check if Firebase app has already been initialized
-      const apps = getApps()
-      let firebaseApp
+      const apps = getApps();
+      let firebaseApp;
 
       if (apps.length === 0) {
-        firebaseApp = initializeApp(firebaseConfig)
+        // Initialize using the config derived from build-time env vars
+        firebaseApp = initializeApp(effectiveFirebaseConfig);
       } else {
-        firebaseApp = apps[0]
+        firebaseApp = apps[0];
       }
 
       setApp(firebaseApp)
@@ -106,7 +109,7 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
       setInitialized(true)
 
       // Initialize Analytics if running in browser and measurement ID is available
-      if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
+      if (typeof window !== 'undefined' && effectiveFirebaseConfig.measurementId) {
         isSupported().then(supported => {
           if (supported) {
             getAnalytics(firebaseApp)
