@@ -66,7 +66,7 @@ export default function PetPortraitsSection() {
               </div>
             </div>
             <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-base font-medium" asChild>
-              <Link href="/login">Create Your Pet Portrait Book</Link>
+              <Link href="/login">Create Your Pet Portrait Pages</Link>
             </Button>
           </div>
           <div className="mt-8 md:mt-0">

@@ -6,17 +6,17 @@ export default function FAQSection() {
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Frequently Asked Questions</h2>
             <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Everything you need to know about our custom coloring books
+              Everything you need to know about our custom coloring pages
             </p>
           </div>
         </div>
 
         <div className="mx-auto max-w-3xl mt-12 space-y-6">
           <div className="rounded-lg border bg-white p-6">
-            <h3 className="text-lg font-bold">How long does it take to receive my coloring book?</h3>
+            <h3 className="text-lg font-bold">How long does it take to receive my coloring pages?</h3>
             <p className="mt-2 text-gray-700">
-              Production typically takes 2-3 business days. Shipping time depends on your selected shipping method: 7-10
-              days for standard shipping or 3-5 days for expedited shipping.
+              Your custom coloring pages are generated into a PDF file almost instantly after purchase.
+              You'll receive a download link via email and can also access it from your dashboard.
             </p>
           </div>
 
@@ -32,7 +32,7 @@ export default function FAQSection() {
           <div className="rounded-lg border bg-white p-6">
             <h3 className="text-lg font-bold">Can I create coloring books of my pets?</h3>
             <p className="mt-2 text-gray-700">
-              Pet portraits make wonderful coloring books. Our AI technology works great with dogs, cats, and other
+              Pet portraits make wonderful coloring pages. Our AI technology works great with dogs, cats, and other
               pets. Just upload clear photos of your furry friends, and we'll transform them into delightful coloring
               pages.
             </p>
@@ -41,16 +41,7 @@ export default function FAQSection() {
           <div className="rounded-lg border bg-white p-6">
             <h3 className="text-lg font-bold">Can I preview my coloring book before ordering?</h3>
             <p className="mt-2 text-gray-700">
-              Yes! You can preview each page of your coloring book before finalizing your order. This allows you to make
-              adjustments or replace photos if needed.
-            </p>
-          </div>
-
-          <div className="rounded-lg border bg-white p-6">
-            <h3 className="text-lg font-bold">What if I'm not satisfied with my coloring book?</h3>
-            <p className="mt-2 text-gray-700">
-              We offer a 100% satisfaction guarantee. If you're not happy with your coloring book, please contact us
-              within 14 days of receiving your order, and we'll make it right.
+              Yes! You can preview your custom coloring pages. This allows you to make adjustments or replace photos if needed.
             </p>
           </div>
         </div>

@@ -16,11 +16,10 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
                 <span className="bg-gradient-to-r from-purple-600 via-red-500 to-orange-500 bg-clip-text text-transparent">
                   Photos
                 </span>
-                <span className="text-[#111827]"> Into Custom Coloring Books</span>
+                <span className="text-[#111827]"> Into Custom Coloring Pages</span>
               </h1>
               <p className="max-w-[600px] text-gray-700 md:text-xl">
-                Upload your vacation photos and we'll create a beautiful physical coloring book that's shipped directly
-                to your door.
+                Upload your vacation photos and we'll create beautiful custom coloring pages you can download and print instantly.
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
@@ -28,12 +27,12 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
                 <Link href="/login?register=true">Start Creating</Link>
               </Button>
             </div>
-            <p className="text-sm text-gray-500">No credit card required to preview your book</p>
+            <p className="text-sm text-gray-500">No credit card required to preview your pages</p>
           </div>
           <div className="relative flex items-center justify-center lg:justify-end">
             <PathImg
               src="/images/best-6.webp"
-              alt="Coloring book page of a family at the beach alongside the original framed photo and colored pencils"
+              alt="Coloring page of a family at the beach alongside the original framed photo and colored pencils"
               width={600}
               height={600}
               className="w-full h-auto"

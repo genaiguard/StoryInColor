@@ -103,8 +103,27 @@ export const createStripeCheckout = onCall<{projectId: string, origin?: string}>
       
       // Initialize Stripe
       console.log("[Stripe] Initializing Stripe client.");
-      const stripe = new Stripe(STRIPE_SECRET_KEY.value(), {
-        apiVersion: '2022-11-15' as any,
+      
+      // Fetch the secret and apply stronger validation
+      let stripeKey = STRIPE_SECRET_KEY.value();
+      
+      // Check if key matches expected format pattern (sk_live_... or sk_test_...)
+      const isValidStripeKeyFormat = /^sk_(live|test)_[A-Za-z0-9_]+$/.test(stripeKey);
+      console.log(`[Stripe] Secret key format valid: ${isValidStripeKeyFormat}`);
+      
+      if (!isValidStripeKeyFormat) {
+        console.error('[Stripe] API key has invalid format - this will cause auth errors');
+        // Try to sanitize by removing all non-ASCII characters
+        const originalLength = stripeKey.length;
+        stripeKey = stripeKey.replace(/[^\x20-\x7E]/g, '');
+        console.log(`[Stripe] Sanitized key: removed ${originalLength - stripeKey.length} non-ASCII chars`);
+      }
+      
+      // Log a sanitized version (first 8 chars) for debugging
+      console.log(`[Stripe] Secret key prefix: ${stripeKey.substring(0, 8)}... (length: ${stripeKey.length})`);
+      
+      const stripe = new Stripe(stripeKey, {
+        apiVersion: '2023-10-16', // Updated to a newer version
       });
 
       // Calculate price using DB pageCount
@@ -112,8 +131,8 @@ export const createStripeCheckout = onCall<{projectId: string, origin?: string}>
       const productName = `${projectTitle} (${pageCount} Pages)`; // Use DB title and count
       console.log(`[Product Logic] Details: Name='${productName}', Amount=${unitAmount} cents`);
 
-      // Shipping address is likely always needed for physical books
-      const collectShipping = true; // Assume always collect for custom books
+      // Don't collect shipping for digital products
+      const collectShipping = false; // Digital products don't need shipping addresses
       console.log(`[Product Logic] Shipping address collection required: ${collectShipping}`);
 
       // Create line items using DB values
@@ -137,7 +156,7 @@ export const createStripeCheckout = onCall<{projectId: string, origin?: string}>
       // Create checkout session
       console.log("[Stripe] Creating checkout session...");
       const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
+        payment_method_types: ['card'], // Only accept card payments
         payment_method_options: {
           card: {
             setup_future_usage: 'off_session',
@@ -147,13 +166,16 @@ export const createStripeCheckout = onCall<{projectId: string, origin?: string}>
         payment_intent_data: {
           capture_method: 'automatic',
         },
+        billing_address_collection: 'auto', // Only collect minimal billing address
         line_items: lineItems,
         mode: 'payment',
+        locale: 'en', // Force English locale to prevent localization issues
         shipping_address_collection: collectShipping
           ? { allowed_countries: ['US', 'CA', 'GB', 'AU', 'DE', 'FR', 'IT', 'ES', 'JP', 'CN'] }
           : undefined,
         client_reference_id: projectId,
         customer_email: userEmail || undefined,
+        // Properly configure invoice creation
         invoice_creation: {
           enabled: true,
           invoice_data: {
@@ -213,14 +235,39 @@ export const stripeWebhook = onRequest(
 
       try {
           console.log("[Webhook] Initializing Stripe client for verification.");
-          const stripe = new Stripe(STRIPE_SECRET_KEY.value(), { apiVersion: '2022-11-15' as any });
+          // Fetch the secret and apply stronger validation
+          let stripeKey = STRIPE_SECRET_KEY.value();
+          
+          // Check if key matches expected format pattern (sk_live_... or sk_test_...)
+          const isValidStripeKeyFormat = /^sk_(live|test)_[A-Za-z0-9_]+$/.test(stripeKey);
+          console.log(`[Webhook] Secret key format valid: ${isValidStripeKeyFormat}`);
+          
+          if (!isValidStripeKeyFormat) {
+            console.error('[Webhook] API key has invalid format - this will cause auth errors');
+            // Try to sanitize by removing all non-ASCII characters
+            const originalLength = stripeKey.length;
+            stripeKey = stripeKey.replace(/[^\x20-\x7E]/g, '');
+            console.log(`[Webhook] Sanitized key: removed ${originalLength - stripeKey.length} non-ASCII chars`);
+          }
+          
+          // Log a sanitized version for debugging
+          console.log(`[Webhook] Secret key prefix: ${stripeKey.substring(0, 8)}... (length: ${stripeKey.length})`);
+          
+          const stripe = new Stripe(stripeKey, {
+            apiVersion: '2023-10-16' // Updated to a newer version
+          });
 
           let event: Stripe.Event;
           try {
               // Use rawBody for verification
               const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body));
               console.log("[Webhook] Constructing event...");
-              event = stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET.value());
+              
+              // Trim the webhook secret to remove any whitespace
+              const webhookSecret = STRIPE_WEBHOOK_SECRET.value().trim();
+              console.log(`[Webhook] Using webhook secret (length: ${webhookSecret.length})`);
+              
+              event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
               console.log(`[Webhook] Event constructed successfully: ${event.id}, Type: ${event.type}`);
           } catch (err) {
               console.error('[Webhook Error] Signature verification failed:', err);

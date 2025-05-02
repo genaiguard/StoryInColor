@@ -12,7 +12,7 @@ export default function CustomizationSection() {
               Easy Customization
             </h2>
             <p className="text-gray-700 md:text-lg mb-6">
-              Our intuitive interface makes it simple to create your perfect coloring book in minutes.
+              Our intuitive interface makes it simple to create your perfect coloring pages in minutes.
             </p>
           </div>
 
@@ -103,7 +103,7 @@ export default function CustomizationSection() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <span>Choose between softcover, hardcover, or digital options</span>
+              <span>Instantly download your pages as a PDF</span>
             </div>
             <div className="flex items-start">
               <svg

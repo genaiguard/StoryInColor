@@ -9,7 +9,7 @@ export default function ExamplesSection() {
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Perfect For Your Memories</h2>
             <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Create personalized coloring books from your favorite moments
+              Create personalized coloring pages from your favorite moments
             </p>
           </div>
         </div>
@@ -93,14 +93,14 @@ export default function ExamplesSection() {
               />
             </div>
             <h3 className="text-lg font-bold">Family Vacation</h3>
-            <p className="text-sm text-gray-500">Create personalized coloring books from your favorite family trips</p>
+            <p className="text-sm text-gray-500">Create personalized coloring pages from your favorite family trips</p>
           </div>
 
           <div className="flex flex-col space-y-3">
             <div className="relative overflow-hidden rounded-lg shadow-md">
               <PathImg
                 src="/images/hero-graduation.webp"
-                alt="Woman holding graduation coloring book showing how photos become coloring pages"
+                alt="Woman holding graduation coloring page example showing how photos become coloring pages"
                 width={400}
                 height={400}
                 className="w-full h-auto"
@@ -108,7 +108,7 @@ export default function ExamplesSection() {
             </div>
             <h3 className="text-lg font-bold">Graduation</h3>
             <p className="text-sm text-gray-500">
-              Commemorate academic achievements with custom graduation coloring books
+              Commemorate academic achievements with custom graduation coloring pages
             </p>
           </div>
 
@@ -116,7 +116,7 @@ export default function ExamplesSection() {
             <div className="relative overflow-hidden rounded-lg shadow-md">
               <PathImg
                 src="/images/countryside-coloring.webp"
-                alt="Coloring book page showing two people in sun hats walking toward a vine-covered cottage"
+                alt="Coloring page showing two people in sun hats walking toward a vine-covered cottage"
                 width={400}
                 height={400}
                 className="w-full h-auto"
@@ -130,7 +130,7 @@ export default function ExamplesSection() {
             <div className="relative overflow-hidden rounded-lg shadow-md">
               <PathImg
                 src="/images/city-skyline-couple.webp"
-                alt="Coloring book page showing a couple taking a selfie with a city skyline and Ferris wheel in the background"
+                alt="Coloring page showing a couple taking a selfie with a city skyline and Ferris wheel in the background"
                 width={400}
                 height={400}
                 className="w-full h-auto"
@@ -154,7 +154,7 @@ export default function ExamplesSection() {
             </div>
             <h3 className="text-lg font-bold">Your Memories Next</h3>
             <p className="text-sm text-gray-500">
-              Upload your photos and create your own custom coloring book to enjoy
+              Upload your photos and create your own custom coloring pages to enjoy
             </p>
           </div>
         </div>

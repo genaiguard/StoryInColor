@@ -6,7 +6,7 @@ export default function TestimonialsSection() {
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">What Our Customers Say</h2>
             <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Hear from people who have turned their memories into coloring books
+              Hear from people who have turned their memories into coloring pages
             </p>
           </div>
         </div>
@@ -19,13 +19,13 @@ export default function TestimonialsSection() {
               </div>
               <div>
                 <h4 className="font-semibold">Sarah T.</h4>
-                <p className="text-sm text-gray-500">Family Vacation Book</p>
+                <p className="text-sm text-gray-500">Family Vacation Pages</p>
               </div>
             </div>
             <div className="mt-4">
               <p className="text-gray-700">
-                "I created a coloring book from our trip to Hawaii and my kids absolutely love it! The quality is
-                amazing and it's such a unique way to remember our vacation."
+                "Turned our Hawaii trip photos into printable pages for the kids. They had a blast coloring them! 
+                Such a fun way to relive the memories. The line art came out great."
               </p>
             </div>
             <div className="mt-4 flex">
@@ -52,13 +52,13 @@ export default function TestimonialsSection() {
               </div>
               <div>
                 <h4 className="font-semibold">Michael R.</h4>
-                <p className="text-sm text-gray-500">Anniversary Gift</p>
+                <p className="text-sm text-gray-500">Anniversary Pages</p>
               </div>
             </div>
             <div className="mt-4">
               <p className="text-gray-700">
-                "I surprised my wife with a coloring book of our wedding photos for our anniversary. She was so touched
-                by the thoughtful gift. The quality exceeded my expectations!"
+                "Made some custom coloring sheets from our wedding pics for our anniversary. My wife was so surprised 
+                and loved the unique gift! The detail captured in the drawings was seriously impressive."
               </p>
             </div>
             <div className="mt-4 flex">
@@ -85,13 +85,13 @@ export default function TestimonialsSection() {
               </div>
               <div>
                 <h4 className="font-semibold">Jennifer L.</h4>
-                <p className="text-sm text-gray-500">Pet Portrait Book</p>
+                <p className="text-sm text-gray-500">Pet Portrait Pages</p>
               </div>
             </div>
             <div className="mt-4">
               <p className="text-gray-700">
-                "I created a coloring book of our golden retriever for my daughter's birthday. She absolutely loves
-                coloring pictures of her best friend. The detail in the line drawings is amazing!"
+                "Got these downloadable pages made from photos of our golden retriever for my daughter's birthday. 
+                She went crazy for them, loves coloring pictures of her furry buddy! The artwork really captured him perfectly."
               </p>
             </div>
             <div className="mt-4 flex">
