@@ -37,6 +37,7 @@ type DashboardProject = BaseProject & {
   pdfUrl?: string; // URL to download the PDF if available
   processingStatus?: string; // More detailed status for UI display
   deleted?: boolean; // Add deleted flag
+  isEmpty?: boolean; // Whether the project is effectively empty (default title + no pages)
 };
 
 // Map Firestore statuses to simplified dashboard statuses
@@ -127,15 +128,19 @@ export default function DashboardPage() {
               : undefined,
             pdfUrl: data.pdfUrl,
             processingStatus: data.processingStatus,
-            deleted: data.deleted === true
+            deleted: data.deleted === true,
+            isEmpty: (data.title === "My Coloring Pages" || !data.title) && (!data.pages || data.pages.length === 0)
           } as DashboardProject;
         });
 
         // Resolve all promises
         const allDocs = await Promise.all(projectPromises);
 
-        // Filter out deleted projects
-        const filteredDocs = allDocs.filter(doc => !doc.deleted);
+        // Filter out deleted projects and empty drafts
+        const filteredDocs = allDocs.filter(doc => 
+          !doc.deleted && 
+          !(doc.status === 'draft' && doc.isEmpty)
+        );
 
         // Set the single state
         setProjects(filteredDocs);
