@@ -14,6 +14,7 @@ import * as fs from 'fs'; // Import fs for file operations
 import * as os from 'os'; // Import os for temp directory access
 import * as path from 'path'; // Import path for file path operations
 import { rebuildFirestoreFromStorage } from './recovery-utils'; // Import recovery utility
+import { CREDIT_PACKAGES } from './credit-packages';
 
 // Export the recovery utility
 export { rebuildFirestoreFromStorage };
@@ -283,6 +284,77 @@ export const stripeWebhook = onRequest(
               console.log(`[Webhook] Payment method: ${session.payment_method_types?.join(', ')}`);
               console.log(`[Webhook] Full session object: ${JSON.stringify(session)}`);
 
+              // Check if this is a credit purchase
+              if (session.metadata?.type === 'credit_purchase') {
+                  // Handle credit purchase
+                  console.log(`[Webhook] Processing credit purchase`);
+                  
+                  const userId = session.metadata?.userId;
+                  const packageId = session.metadata?.packageId;
+                  const creditAmount = session.metadata?.creditAmount ? parseInt(session.metadata.creditAmount, 10) : 0;
+                  const priceInCents = session.metadata?.priceInCents ? parseInt(session.metadata.priceInCents, 10) : 0;
+                  
+                  if (!userId || !packageId || creditAmount <= 0) {
+                      console.error('[Webhook Error] Missing userId, packageId, or valid creditAmount in session metadata.', session.metadata);
+                      res.status(200).send({ received: true, error: 'Missing required metadata for credit purchase' });
+                      return;
+                  }
+                  
+                  // Only process if payment is successful
+                  if (session.payment_status === 'paid') {
+                      try {
+                          console.log(`[Credits] Adding ${creditAmount} credits for user ${userId}`);
+                          const db = admin.firestore();
+                          const userCreditsRef = db.collection('userCredits').doc(userId);
+                          
+                          // Get current user credits or create if not exists
+                          const userCreditsDoc = await userCreditsRef.get();
+                          if (!userCreditsDoc.exists) {
+                              // Create new user credits document
+                              await userCreditsRef.set({
+                                  balance: creditAmount,
+                                  used: 0,
+                                  purchaseHistory: [{
+                                      packageId,
+                                      creditAmount,
+                                      pricePaid: priceInCents,
+                                      purchaseDate: admin.firestore.FieldValue.serverTimestamp()
+                                  }],
+                                  usageHistory: [],
+                                  lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+                              });
+                          } else {
+                              // Update existing user credits document
+                              // We don't need the existing data for an increment operation
+                              await userCreditsRef.update({
+                                  balance: admin.firestore.FieldValue.increment(creditAmount),
+                                  purchaseHistory: admin.firestore.FieldValue.arrayUnion({
+                                      packageId,
+                                      creditAmount,
+                                      pricePaid: priceInCents,
+                                      purchaseDate: admin.firestore.FieldValue.serverTimestamp()
+                                  }),
+                                  lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+                              });
+                          }
+                          
+                          console.log(`[Credits] Successfully added ${creditAmount} credits for user ${userId}`);
+                      } catch (error) {
+                          console.error(`[Credits Error] Failed to add credits: ${error}`);
+                          // Still return success to Stripe but log the error
+                          res.status(200).send({ received: true, error: 'Failed to add credits' });
+                          return;
+                      }
+                  } else {
+                      console.log(`[Credits] Payment not completed: ${session.payment_status}`);
+                  }
+                  
+                  // Acknowledge receipt of the event
+                  res.status(200).send({ received: true, type: 'credit_purchase' });
+                  return;
+              }
+              
+              // Continue with existing project checkout logic
               const userId = session.metadata?.userId;
               const projectId = session.metadata?.projectId;
               const pageCount = session.metadata?.pageCount ? parseInt(session.metadata.pageCount, 10) : 0;
@@ -409,7 +481,7 @@ export const stripeWebhook = onRequest(
                               console.log(`[PDF] Adding pages to PDF document`);
                               
                               // Function to download and process image
-                              async function downloadImage(storagePath: string) {
+                              async function downloadImage(storagePath: string): Promise<Buffer> {
                                   console.log(`[PDF] Downloading image from ${storagePath}`);
                                   const file = bucket.file(storagePath);
                                   const [buffer] = await file.download();
@@ -847,21 +919,31 @@ function cleanupMemory(): Promise<void> {
 // --- Watermarking Helper ---
 async function applyWatermark(originalImageBuffer: Buffer): Promise<Buffer> {
     console.log(`[applyWatermark] Starting. Input buffer size: ${originalImageBuffer.length}`);
-    const watermarkText = "Preview - storyincolor.com";
     // Adjust SVG size and style for a more prominent watermark
     // Try simplifying the SVG drastically for parsing robustness - using inline styles
     const watermarkSvg = `<svg width="1024" height="1024" viewBox="0 0 1024 1024">
-        <text 
-          x="50%" 
-          y="50%" 
-          text-anchor="middle" 
-          dominant-baseline="middle" 
-          font-family="sans-serif"
-          font-size="72"
-          font-weight="bold"
-          fill="rgba(0,0,0,0.4)"
-          transform="rotate(-30 512 512)"
-        >${watermarkText}</text>
+        <g transform="rotate(-30 512 512)">
+          <text 
+            x="50%" 
+            y="30%" 
+            text-anchor="middle" 
+            dominant-baseline="middle" 
+            font-family="sans-serif"
+            font-size="162"
+            font-weight="900"
+            fill="rgba(0,0,0,0.4)"
+          >PREVIEW</text>
+          <text 
+            x="50%" 
+            y="62%" 
+            text-anchor="middle" 
+            dominant-baseline="middle" 
+            font-family="sans-serif"
+            font-size="162"
+            font-weight="900"
+            fill="rgba(0,0,0,0.4)"
+          >storyincolor.com</text>
+        </g>
       </svg>`;
     const watermarkBuffer = Buffer.from(watermarkSvg);
     console.log(`[applyWatermark] SVG created (inline styles). Watermark buffer size: ${watermarkBuffer.length}`);
@@ -1243,3 +1325,391 @@ export const getPdfDownloadUrl = onCall({
     );
   }
 });
+
+/**
+ * Creates a Stripe checkout session for credit purchase
+ */
+export const createCreditCheckout = onCall<{packageId: string, origin?: string}>(
+  {
+    secrets: [STRIPE_SECRET_KEY],
+    labels: {
+      "deployment-callable": "true"
+    }
+  },
+  async (request) => {
+    console.log("[createCreditCheckout] Function called with request:", request.data);
+    
+    // Verify auth context is present
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated to purchase credits');
+    }
+    
+    const userId = request.auth.uid;
+    const userEmail = request.auth.token.email;
+    console.log(`[Auth] User authenticated: ${userId}`);
+
+    // Extract packageId from data
+    const { packageId, origin } = request.data;
+    console.log("[Request Body] Received packageId:", packageId);
+    console.log("[Request Body] Received origin:", origin);
+
+    // Validate packageId
+    if (!packageId) {
+      console.error('[Validation Error] Missing required field: packageId');
+      throw new HttpsError('invalid-argument', 'Missing required field: packageId');
+    }
+
+    try {
+      // Find the credit package
+      const creditPackage = CREDIT_PACKAGES.find(pkg => pkg.id === packageId);
+      if (!creditPackage) {
+        console.error(`[Validation Error] Invalid credit package: ${packageId}`);
+        throw new HttpsError('invalid-argument', 'Invalid credit package selected');
+      }
+      
+      // Initialize Stripe
+      console.log("[Stripe] Initializing Stripe client.");
+      
+      // Fetch the secret and apply stronger validation
+      let stripeKey = STRIPE_SECRET_KEY.value();
+      
+      // Check if key matches expected format pattern (sk_live_... or sk_test_...)
+      const isValidStripeKeyFormat = /^sk_(live|test)_[A-Za-z0-9_]+$/.test(stripeKey);
+      console.log(`[Stripe] Secret key format valid: ${isValidStripeKeyFormat}`);
+      
+      if (!isValidStripeKeyFormat) {
+        console.error('[Stripe] API key has invalid format - this will cause auth errors');
+        // Try to sanitize by removing all non-ASCII characters
+        const originalLength = stripeKey.length;
+        stripeKey = stripeKey.replace(/[^\x20-\x7E]/g, '');
+        console.log(`[Stripe] Sanitized key: removed ${originalLength - stripeKey.length} non-ASCII chars`);
+      }
+      
+      // Log a sanitized version (first 8 chars) for debugging
+      console.log(`[Stripe] Secret key prefix: ${stripeKey.substring(0, 8)}... (length: ${stripeKey.length})`);
+      
+      const stripe = new Stripe(stripeKey, {
+        apiVersion: '2023-10-16',
+      });
+
+      // Create product name and description
+      const productName = `${creditPackage.credits} Credits`;
+      const productDescription = `${creditPackage.credits} credits for generating coloring pages (${creditPackage.discountPercentage}% discount)`;
+
+      // Create line items
+      const lineItems = [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: productName,
+            description: productDescription,
+          },
+          unit_amount: creditPackage.price,
+        },
+        quantity: 1,
+      }];
+      console.log("[Stripe] Prepared line items.");
+
+      // Determine domain for success/cancel URLs - use provided origin or default to production
+      const domain = origin || 'https://storyincolor.com';
+      console.log(`[Stripe] Using domain for redirects: ${domain}`);
+      
+      // Create checkout session
+      console.log("[Stripe] Creating checkout session...");
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        payment_method_options: {
+          card: {
+            setup_future_usage: 'off_session',
+            request_three_d_secure: 'automatic'
+          }
+        },
+        payment_intent_data: {
+          capture_method: 'automatic',
+        },
+        billing_address_collection: 'auto', 
+        line_items: lineItems,
+        mode: 'payment',
+        locale: 'en',
+        client_reference_id: userId,
+        customer_email: userEmail || undefined,
+        metadata: { 
+          userId,
+          packageId,
+          creditAmount: String(creditPackage.credits),
+          priceInCents: String(creditPackage.price),
+          type: 'credit_purchase'
+        },
+        success_url: `${domain}/dashboard?credit_purchase=success`,
+        cancel_url: `${domain}/credits`,
+      });
+      console.log(`[Stripe] Checkout session created successfully: ${session.id}`);
+
+      // Return the session ID 
+      return { sessionId: session.id };
+
+    } catch (error) {
+      console.error('[Stripe Error] Failed to create checkout session:', error);
+      if (error instanceof Error && 'type' in error) {
+          console.error('[Stripe Error Details]', { type: (error as any).type, code: (error as any).code, message: error.message });
+      }
+      throw new HttpsError('internal', 'Failed to create checkout session');
+    }
+  }
+);
+
+/**
+ * Generates a PDF for a project without requiring payment
+ */
+export const generateProjectPDF = onCall(
+  {
+    timeoutSeconds: 300,
+    memory: '4GiB',
+  },
+  async (request) => {
+    console.log("[generateProjectPDF] Function called with request:", request.data);
+    
+    // Verify auth context
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated to generate PDF');
+    }
+    
+    const userId = request.auth.uid;
+    console.log(`[Auth] User authenticated: ${userId}`);
+
+    // Extract projectId from data
+    const { projectId } = request.data;
+    
+    // Validate projectId
+    if (!projectId) {
+      console.error('[Validation Error] Missing required field: projectId');
+      throw new HttpsError('invalid-argument', 'Missing required field: projectId');
+    }
+    
+    try {
+      console.log(`[PDF] Starting PDF generation for project ${projectId}`);
+      
+      // Reference to the Firestore project document
+      const db = admin.firestore();
+      const projectRef = db.collection('users').doc(userId).collection('projects').doc(projectId);
+      
+      // Get project data
+      const projectSnapshot = await projectRef.get();
+      if (!projectSnapshot.exists) {
+        throw new HttpsError('not-found', `Project ${projectId} not found for user ${userId}`);
+      }
+      
+      const projectData = projectSnapshot.data();
+      
+      // Verify project has pages
+      const pages = projectData?.pages || [];
+      if (pages.length === 0) {
+        throw new HttpsError('failed-precondition', 'Project has no pages to include in PDF');
+      }
+      
+      console.log(`[PDF] Project has ${pages.length} pages to include in PDF`);
+      
+      // Create PDF filename
+      const pdfFilename = `${projectData?.title || 'Coloring_Book'}_${new Date().getTime()}.pdf`;
+      const pdfStoragePath = `users/${userId}/projects/${projectId}/downloads/${pdfFilename}`;
+      
+      console.log(`[PDF] Created filename: ${pdfFilename}`);
+      console.log(`[PDF] Storage path: ${pdfStoragePath}`);
+      
+      // Create temp directory for PDF generation
+      const tempDir = os.tmpdir();
+      const tempPdfPath = path.join(tempDir, pdfFilename);
+      console.log(`[PDF] Using temp path: ${tempPdfPath}`);
+      
+      // Create PDF document
+      const doc = new PDFDocument({
+        size: 'letter', // Use letter size
+        margin: 36, // 0.5 inch margins
+      });
+      
+      // Create write stream for PDF
+      const writeStream = fs.createWriteStream(tempPdfPath);
+      doc.pipe(writeStream);
+      
+      // Add title page
+      doc.fontSize(24)
+         .font('Helvetica-Bold')
+         .text(projectData?.title || 'My Coloring Pages', {
+             align: 'center'
+         })
+         .moveDown(2)
+         .fontSize(12)
+         .font('Helvetica')
+         .text(`Generated on ${new Date().toLocaleDateString()}`, {
+             align: 'center',
+             continued: false
+         })
+         .moveDown(3)
+         .fontSize(14)
+         .text('Printing Instructions:', {
+             align: 'left',
+             continued: false
+         })
+         .moveDown(0.5)
+         .fontSize(12)
+         .text('1. Use high-quality paper for best results', {
+             align: 'left',
+             continued: false
+         })
+         .moveDown(0.5)
+         .text('2. For best results, use "Fit to page" in your printer settings', {
+             align: 'left',
+             continued: false
+         });
+      
+      doc.addPage();
+      
+      // Process each page and add to PDF
+      console.log(`[PDF] Adding pages to PDF document`);
+      
+      // Function to download and process image
+      async function downloadImage(storagePath: string): Promise<Buffer> {
+          console.log(`[PDF] Downloading image from ${storagePath}`);
+          const file = bucket.file(storagePath);
+          const [buffer] = await file.download();
+          return buffer;
+      }
+      
+      // Use Promise.all to download all images in parallel
+      const downloadPromises = pages.map(async (page: any, pageIndex: number) => {
+          try {
+              // Get selected version (or first if none selected)
+              const selectedVersionId = page.selectedVersionId;
+              const versions = page.versions || [];
+              
+              if (versions.length === 0) {
+                  console.log(`[PDF] Page ${pageIndex + 1} has no versions, skipping`);
+                  return null;
+              }
+              
+              const version = versions.find((v: any) => v.versionId === selectedVersionId) || versions[0];
+              
+              // Use originalStoragePath (unprocessed image) for best quality in PDF
+              const storagePath = version.originalStoragePath;
+              
+              if (!storagePath) {
+                  console.log(`[PDF] No storage path found for page ${pageIndex + 1}, skipping`);
+                  return null;
+              }
+              
+              console.log(`[PDF] Processing page ${pageIndex + 1}, using version ${version.versionId}`);
+              
+              // Download the image
+              const imageBuffer = await downloadImage(storagePath);
+              return { index: pageIndex, buffer: imageBuffer };
+          } catch (pageError) {
+              console.error(`[PDF] Error processing page ${pageIndex + 1}:`, pageError);
+              return null;
+          }
+      });
+      
+      // Wait for all downloads to complete
+      const imageResults = await Promise.all(downloadPromises);
+      const validImages = imageResults.filter(result => result !== null);
+      
+      console.log(`[PDF] Downloaded ${validImages.length} valid images out of ${pages.length} pages`);
+      
+      // Add each image to the PDF
+      for (const imageResult of validImages) {
+          // Add a new page for each image (except the first one which comes after title page)
+          if (imageResult.index > 0) {
+              doc.addPage();
+          }
+          
+          try {
+              // Get image dimensions
+              const metadata = await sharp(imageResult.buffer).metadata();
+              const width = metadata.width || 1024;
+              const height = metadata.height || 1024;
+              
+              // Calculate aspect ratio
+              const imgAspect = width / height;
+              const pageWidth = doc.page.width - (doc.page.margins.left + doc.page.margins.right);
+              const pageHeight = doc.page.height - (doc.page.margins.top + doc.page.margins.bottom);
+              const pageAspect = pageWidth / pageHeight;
+              
+              // Determine dimensions to fit image on page while maintaining aspect ratio
+              let finalWidth, finalHeight;
+              if (imgAspect > pageAspect) {
+                  // Image is wider than page proportion
+                  finalWidth = pageWidth;
+                  finalHeight = pageWidth / imgAspect;
+              } else {
+                  // Image is taller than page proportion
+                  finalHeight = pageHeight;
+                  finalWidth = pageHeight * imgAspect;
+              }
+              
+              // Calculate position to center image on page
+              const xPos = doc.page.margins.left + (pageWidth - finalWidth) / 2;
+              const yPos = doc.page.margins.top + (pageHeight - finalHeight) / 2;
+              
+              // Add image to page
+              doc.image(imageResult.buffer, xPos, yPos, {
+                  width: finalWidth,
+                  height: finalHeight
+              });
+              
+              console.log(`[PDF] Added page ${imageResult.index + 1} to PDF`);
+          } catch (renderError) {
+              console.error(`[PDF] Error rendering page ${imageResult.index + 1}:`, renderError);
+          }
+      }
+      
+      // Finalize the PDF
+      doc.end();
+      
+      // Wait for the PDF to be fully written
+      await new Promise<void>((resolve, reject) => {
+          writeStream.on('finish', () => resolve());
+          writeStream.on('error', reject);
+      });
+      
+      console.log(`[PDF] PDF created at ${tempPdfPath}`);
+      
+      // Upload PDF to Storage
+      console.log(`[PDF] Uploading PDF to storage: ${pdfStoragePath}`);
+      await bucket.upload(tempPdfPath, {
+          destination: pdfStoragePath,
+          metadata: {
+              contentType: 'application/pdf',
+              metadata: {
+                  firebaseStorageDownloadTokens: uuidv4(), // Generate a download token
+              }
+          }
+      });
+      
+      // Clean up temp file
+      fs.unlinkSync(tempPdfPath);
+      console.log(`[PDF] Cleaned up temp file`);
+      
+      // Create a download URL
+      const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(pdfStoragePath)}?alt=media`;
+      
+      console.log(`[PDF] Created download URL: ${downloadUrl}`);
+      
+      // Update the project with PDF path
+      await projectRef.update({
+          pdfStoragePath: pdfStoragePath,
+          pdfUrl: downloadUrl,
+          pdfGeneratedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Return success response with PDF URL
+      return {
+          success: true,
+          pdfUrl: downloadUrl,
+          message: "PDF generated successfully"
+      };
+      
+    } catch (error) {
+      console.error(`[PDF Error] Failed to generate PDF: ${error}`);
+      throw new HttpsError('internal', `Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+);

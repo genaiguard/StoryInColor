@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, ArrowRight, Upload, ImagePlus, Check, Trash2, X, Loader2, Wand2, RotateCcw, PlusCircle, CheckCircle, AlertTriangle, Crop, Image, Info } from "lucide-react"
+import { ArrowLeft, ArrowRight, Upload, ImagePlus, Check, Trash2, X, Loader2, Wand2, RotateCcw, PlusCircle, CheckCircle, AlertTriangle, Crop, Image, Info, Sparkles, ShoppingCart, FileDown } from "lucide-react"
 import { UploadProvider, useUpload } from "@/app/context/upload-context"
 import { v4 as uuidv4 } from "uuid"
 import { useFirebase } from "@/app/firebase/firebase-provider"
@@ -20,6 +20,8 @@ import { PathImg } from "@/components/ui/pathed-image"
 import { DndProvider, useDrag, useDrop } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { debounce } from 'lodash'
+import { getUserCredits, useCredit, formatCreditBalance } from "@/app/firebase/credits-helpers"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 // Insert the ProjectData interface
 interface OriginalImage {
@@ -95,6 +97,11 @@ function CreatePageContent() {
   const [isLoadingProject, setIsLoadingProject] = useState<boolean>(true)
   const [projectExists, setProjectExists] = useState<boolean>(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  
+  const [credits, setCredits] = useState<number>(0)
+  const [isLoadingCredits, setIsLoadingCredits] = useState<boolean>(true)
+  const [showCreditUI, setShowCreditUI] = useState<boolean>(false)
+  const [generatingPDF, setGeneratingPDF] = useState<boolean>(false)
 
   // Add state for notice visibility
   const [showNotices, setShowNotices] = useState({
@@ -109,6 +116,26 @@ function CreatePageContent() {
       [noticeKey]: false
     }));
   };
+
+  // Add credits loading useEffect
+  useEffect(() => {
+    const loadUserCredits = async () => {
+      if (!user || !firebaseInitialized) return;
+      
+      try {
+        setIsLoadingCredits(true);
+        const userCredits = await getUserCredits(user.uid);
+        setCredits(userCredits.balance);
+      } catch (error) {
+        console.error("Error loading credits:", error);
+        toast.error("Failed to load your credits");
+      } finally {
+        setIsLoadingCredits(false);
+      }
+    };
+    
+    loadUserCredits();
+  }, [user, firebaseInitialized]);
 
   // --- Project ID Initialization --- (Run once on mount, respecting StrictMode)
   useEffect(() => {
@@ -441,6 +468,13 @@ function CreatePageContent() {
         return;
     }
 
+    // Check if user has enough credits
+    if (credits <= 0) {
+      setShowCreditUI(true);
+      toast.error("You need to purchase credits to generate more coloring pages");
+      return;
+    }
+
     // Update page state to indicate processing
     setPages(prevPages => 
       prevPages.map(p => p.id === pageId ? { ...p, isProcessing: true, processingError: null, isPreparingToRegenerate: false } : p)
@@ -450,6 +484,15 @@ function CreatePageContent() {
       console.log(`Calling processImageWithOpenAI for page ${pageId} with style ${artStyle}`)
       const functions = getFunctions();
       const processImage = httpsCallable(functions, 'processImageWithOpenAI');
+      
+      // Use a credit
+      const creditUsed = await useCredit(user.uid, projectId, pageId);
+      if (!creditUsed) {
+        throw new Error("Failed to use credit. Please check your balance.");
+      }
+      
+      // Update local credit balance
+      setCredits(prevCredits => prevCredits - 1);
       
       const result = await processImage({ 
         projectId: projectId,
@@ -538,6 +581,54 @@ function CreatePageContent() {
     }
   }
 
+  // Add PDF generation function
+  const handleGeneratePDF = async () => {
+    if (!projectId) {
+      toast.error("Project ID not available. Cannot proceed.");
+      return;
+    }
+    
+    // Ensure all pages have images and selected versions
+    const pagesReady = pages.every(p => p.originalImage && p.selectedVersionId);
+    if (!pagesReady || pages.length === 0) {
+      toast.error("Please ensure all pages have an uploaded image and a selected coloring version before generating PDF.");
+      return;
+    }
+    
+    // Ensure latest state is saved
+    debouncedSave.flush();
+    
+    if (isSaving) {
+      toast.info("Saving progress before generating PDF...");
+      setTimeout(() => handleGeneratePDF(), 1000);
+      return;
+    }
+    
+    setGeneratingPDF(true);
+    
+    try {
+      const functions = getFunctions();
+      const generatePDF = httpsCallable(functions, 'generateProjectPDF');
+      
+      const result = await generatePDF({ projectId });
+      const data = result.data as { success: boolean; pdfUrl?: string; message?: string };
+      
+      if (data.success && data.pdfUrl) {
+        toast.success("PDF generated successfully!");
+        // Open PDF in new tab
+        window.open(data.pdfUrl, '_blank');
+      } else {
+        throw new Error(data.message || "Failed to generate PDF.");
+      }
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error generating PDF.";
+      toast.error(`PDF generation failed: ${errorMessage}`);
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
+
   // --- Render Logic ---
   if (!projectId) {
     // Show loading or placeholder while projectId is being initialized
@@ -574,12 +665,40 @@ function CreatePageContent() {
             </Link>
           </div>
           <div className="flex items-center gap-2">
+            {!isLoadingCredits && (
+              <div 
+                className="hidden md:flex items-center gap-1 mr-2 bg-blue-50 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                onClick={() => router.push('/credits')}
+              >
+                <Sparkles className="h-4 w-4 text-blue-500" />
+                <span>{formatCreditBalance(credits)}</span>
+              </div>
+            )}
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => router.push('/dashboard')}
             >
               Exit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="whitespace-nowrap"
+              disabled={generatingPDF || isSaving || totalPages === 0 || pages.some(p => !p.originalImage || !p.selectedVersionId || p.isProcessing || p.isPreparingToRegenerate)}
+              onClick={handleGeneratePDF}
+            >
+              {generatingPDF ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Generate PDF
+                </>
+              )}
             </Button>
             <Button
               size="sm"
@@ -596,6 +715,30 @@ function CreatePageContent() {
       {/* Main Content */}
       <main className="flex-1 py-6 md:py-8 px-4">
         <div className="container mx-auto max-w-7xl">
+          {/* Credit UI */}
+          {showCreditUI && (
+            <Alert className="mb-6 bg-amber-50 border-amber-200">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <AlertTitle>Out of credits</AlertTitle>
+              <AlertDescription className="flex flex-col space-y-2">
+                <p>You need credits to generate coloring pages from your photos.</p>
+                <div className="mt-1 flex gap-2">
+                  <Button size="sm" onClick={() => router.push("/credits")}>
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Purchase Credits
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => setShowCreditUI(false)}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {/* Project Title Input */}
           <div className="mb-8 p-6 bg-white rounded-lg shadow">
             <Label htmlFor="bookTitle" className="text-xl font-semibold mb-4 block">Project Title</Label>

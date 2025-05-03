@@ -18,6 +18,13 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     
+    // Allow users to read and write their own credits
+    match /userCredits/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow admin to manage all user credits
+      allow read, write: if isAdmin();
+    }
+    
     // Public data can be read by anyone but only written by authenticated users
     match /public/{document=**} {
       allow read: if true;

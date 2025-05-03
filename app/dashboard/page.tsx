@@ -5,13 +5,14 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PlusCircle, Settings, LogOut, FileEdit, ShoppingBag, Eye, AlertTriangle, FileDown } from "lucide-react"
+import { PlusCircle, Settings, LogOut, FileEdit, ShoppingBag, Eye, AlertTriangle, FileDown, Sparkles, CreditCard } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 import { useFirebase } from "@/app/firebase/firebase-provider"
 import { getFirestore, collection, query, where, getDocs, orderBy } from "firebase/firestore"
 import { ref, getDownloadURL } from "firebase/storage"
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers"
 import { PathImg } from "@/components/ui/pathed-image"
+import { getUserCredits, formatCreditBalance } from "@/app/firebase/credits-helpers"
 
 // Define interfaces for project types
 interface BaseProject {
@@ -58,6 +59,13 @@ const mapStatusToDashboardView = (status: string): 'draft' | 'completed' | 'proc
   }
 };
 
+// Helper function to format the date
+const formatHistoryDate = (timestamp: any) => {
+  if (!timestamp) return 'Unknown date';
+  const date = new Date(timestamp.seconds * 1000);
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("draft") // Default to draft
   const isMobile = useMobile()
@@ -71,6 +79,37 @@ export default function DashboardPage() {
   // const [orderedProjects, setOrderedProjects] = useState<OrderedProject[]>([])
   const [projects, setProjects] = useState<DashboardProject[]>([]) // Single state for all projects
   const [error, setError] = useState("")
+  
+  // Add credit state
+  const [credits, setCredits] = useState<number>(0)
+  const [isLoadingCredits, setIsLoadingCredits] = useState<boolean>(true)
+  const [creditHistory, setCreditHistory] = useState<any[]>([])
+
+  // Load user credits
+  useEffect(() => {
+    const loadUserCredits = async () => {
+      if (!user || !initialized) return;
+      
+      try {
+        setIsLoadingCredits(true);
+        const userCredits = await getUserCredits(user.uid);
+        setCredits(userCredits.balance);
+        
+        // Get the last 3 usage history items
+        const recentUsage = userCredits.usageHistory
+          .sort((a, b) => b.date.seconds - a.date.seconds)
+          .slice(0, 3);
+        setCreditHistory(recentUsage);
+      } catch (error) {
+        console.error("Error loading credits:", error);
+        // Don't show an error toast here since we already show project loading errors
+      } finally {
+        setIsLoadingCredits(false);
+      }
+    };
+    
+    loadUserCredits();
+  }, [user, initialized]);
 
   // Load user projects from Firebase
   useEffect(() => {
@@ -231,6 +270,15 @@ export default function DashboardPage() {
             </span>
           </Link>
           <nav className="flex items-center gap-3 md:gap-6">
+            {!isLoadingCredits && (
+              <div 
+                className="flex items-center gap-1 mr-2 bg-blue-50 px-3 py-1.5 rounded-full text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                onClick={() => window.location.href = '/credits'}
+              >
+                <Sparkles className="h-4 w-4 text-blue-500" />
+                <span>{formatCreditBalance(credits)}</span>
+              </div>
+            )}
             <Link href="/dashboard" className="text-sm font-medium text-orange-500">
               Dashboard
             </Link>
@@ -321,6 +369,27 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Add a dedicated credit information section for new users */}
+          {credits === 0 && (
+            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Sparkles className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-medium text-amber-800 mb-1">You need credits to create coloring pages</h3>
+                  <p className="text-sm text-amber-700 mb-2">
+                    Each AI-generated coloring page requires 1 credit. Purchase credits to continue creating beautiful coloring pages.
+                  </p>
+                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700" asChild>
+                    <Link href="/credits">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Purchase Credits
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-6 md:mb-8">
@@ -526,6 +595,66 @@ export default function DashboardPage() {
           </Tabs>
         </div>
       </main>
+
+      {/* Credit Information Section - Moved to bottom */}
+      <div className="container mx-auto max-w-7xl px-4 mb-8">
+        <div className="bg-purple-50 border border-purple-100 rounded-lg p-6 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+            <h3 className="text-xl font-semibold flex items-center gap-2 text-purple-800">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              Your Credit Balance
+            </h3>
+            <Button className="mt-3 md:mt-0 bg-purple-600 hover:bg-purple-700" asChild>
+              <Link href="/credits">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Get More Credits
+              </Link>
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-6">
+            {/* Credit Balance */}
+            <div className="md:col-span-1">
+              <div className="text-3xl md:text-4xl font-bold text-purple-700 mb-2">
+                {isLoadingCredits ? "..." : formatCreditBalance(credits)}
+              </div>
+              
+              {creditHistory.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-purple-200">
+                  <h4 className="text-sm font-medium text-purple-700 mb-2">Recent Usage</h4>
+                  <div className="space-y-2">
+                    {creditHistory.map((usage, i) => (
+                      <div key={i} className="flex justify-between items-center text-sm">
+                        <span className="text-purple-700">Used 1 credit</span>
+                        <span className="text-purple-600">{formatHistoryDate(usage.date)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* How Credits Work */}
+            <div className="md:col-span-3">
+              <h4 className="text-lg font-medium text-purple-800 mb-3">How Credits Work</h4>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="bg-white/50 rounded-lg p-4">
+                  <h5 className="font-semibold mb-2 text-purple-700">Free Credits</h5>
+                  <p className="text-purple-900">New users receive 4 free credits to get started with creating coloring pages.</p>
+                </div>
+                <div className="bg-white/50 rounded-lg p-4">
+                  <h5 className="font-semibold mb-2 text-purple-700">Usage</h5>
+                  <p className="text-purple-900">Each AI-generated coloring page costs 1 credit. You can create multiple projects.</p>
+                </div>
+                <div className="bg-white/50 rounded-lg p-4">
+                  <h5 className="font-semibold mb-2 text-purple-700">Purchase</h5>
+                  <p className="text-purple-900">Buy more credits starting at $3.50. Larger packages offer discounts of up to 36%.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <footer className="border-t bg-white mt-8">
         <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
