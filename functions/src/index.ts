@@ -315,9 +315,6 @@ export const stripeWebhook = onRequest(
                       status: session.payment_status === 'paid' ? 'processing_pdf' : 'payment_pending',
                       orderNumber: projectId.substring(0, 8).toUpperCase(),
                       orderDate: admin.firestore.FieldValue.serverTimestamp(),
-                      estimatedDelivery: admin.firestore.Timestamp.fromDate(
-                          new Date(Date.now() + (14 + Math.floor(pageCount / 10)) * 24 * 60 * 60 * 1000)
-                      ),
                       paymentId: session.id,
                       paymentStatus: session.payment_status,
                       pageCount: pageCount,

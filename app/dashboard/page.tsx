@@ -33,7 +33,6 @@ interface BaseProject {
 // Combine into a single Project type for simplicity
 type DashboardProject = BaseProject & {
   orderNumber?: string; // Optional, present for 'completed'
-  estimatedDelivery?: string; // Optional, present for 'completed'
   pdfUrl?: string; // URL to download the PDF if available
   processingStatus?: string; // More detailed status for UI display
   deleted?: boolean; // Add deleted flag
@@ -123,9 +122,6 @@ export default function DashboardPage() {
             thumbnail: thumbnailUrl,
             date: data.updatedAt ? new Date(data.updatedAt.toDate()).toLocaleDateString() : "Unknown date",
             orderNumber: doc.id.substring(0, 8).toUpperCase(),
-            estimatedDelivery: data.estimatedDelivery
-              ? new Date(data.estimatedDelivery.toDate()).toLocaleDateString()
-              : undefined,
             pdfUrl: data.pdfUrl,
             processingStatus: data.processingStatus,
             deleted: data.deleted === true,
@@ -474,22 +470,15 @@ export default function DashboardPage() {
                           Completed
                         </div>
                       </div>
-                      <CardHeader className="p-4">
+                      <CardHeader className="p-4 pb-1">
                         <CardTitle className="text-lg">{project.title}</CardTitle>
                         <CardDescription>Order #{project.orderNumber || project.id.substring(0,8)}</CardDescription>
                       </CardHeader>
                       <CardContent className="p-4 pt-0">
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Completion Date:</span>
-                            <span>{project.date}</span>
+                        <div>
+                          <div className="text-sm">
+                            <CardDescription className="text-sm">Completion Date: {project.date}</CardDescription>
                           </div>
-                          {project.estimatedDelivery && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Est. Delivery:</span>
-                              <span>{project.estimatedDelivery}</span>
-                            </div>
-                          )}
                         </div>
                       </CardContent>
                       <CardFooter className="p-4">

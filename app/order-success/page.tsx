@@ -21,9 +21,6 @@ export default function OrderSuccessPage() {
   const [projectId, setProjectId] = useState<string | null>(null)
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
   const [orderNumber, setOrderNumber] = useState<string>(sessionId ? sessionId.substring(0, 8).toUpperCase() : '')
-  const [estimatedDelivery, setEstimatedDelivery] = useState<string>(
-    new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()
-  )
 
   // Load order details from Firestore
   useEffect(() => {
@@ -55,12 +52,6 @@ export default function OrderSuccessPage() {
         setProjectId(projectDoc.id)
         setOrderStatus(projectData.status || 'processing')
         setOrderNumber(projectDoc.id.substring(0, 8).toUpperCase())
-        
-        if (projectData.estimatedDelivery) {
-          setEstimatedDelivery(
-            new Date(projectData.estimatedDelivery.toDate()).toLocaleDateString()
-          )
-        }
         
         if (projectData.pdfUrl) {
           setDownloadUrl(projectData.pdfUrl)
@@ -121,10 +112,81 @@ export default function OrderSuccessPage() {
       <main className="flex-1 py-6 md:py-8 px-4 flex items-center justify-center">
         <div className="container mx-auto max-w-3xl">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
-              <p className="text-gray-500">Processing your order...</p>
-            </div>
+            <Card className="w-full border border-blue-200">
+              <CardHeader className="text-center pb-2">
+                <div className="mx-auto bg-blue-100 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+                  <RefreshCw className="h-8 w-8 text-blue-600 animate-spin" />
+                </div>
+                <CardTitle className="text-xl md:text-2xl text-blue-600 mb-2">Loading Order Details</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4 pb-2 px-6">
+                <div className="flex items-center justify-center">
+                  <p className="text-sm text-gray-600">Retrieving your order information...</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : orderStatus === 'processing_pdf' || orderStatus === 'processing' ? (
+            <Card className="w-full border border-amber-200">
+              <CardHeader className="text-center pb-2">
+                <div className="mx-auto bg-amber-100 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+                  <RefreshCw className="h-8 w-8 text-amber-600 animate-spin" />
+                </div>
+                <CardTitle className="text-xl md:text-2xl text-amber-600 mb-2">Processing Your Order</CardTitle>
+                <CardDescription>Your PDF is being generated</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 pb-2 px-6">
+                <div className="space-y-6">
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <h3 className="text-lg font-medium mb-2 flex items-center">
+                      <Package className="h-5 w-5 mr-2 text-gray-600" /> 
+                      Order Details
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Order Number: <span className="font-medium">{orderNumber}</span>
+                    </p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Status: <span className="font-medium capitalize text-amber-600">
+                        <RefreshCw className="h-3 w-3 mr-1 inline-block animate-spin" />
+                        Processing
+                      </span>
+                    </p>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 bg-amber-50">
+                    <h3 className="text-lg font-medium mb-2 flex items-center text-amber-700">
+                      <RefreshCw className="h-5 w-5 mr-2 animate-spin" /> 
+                      PDF Generation in Progress
+                    </h3>
+                    
+                    <p className="text-sm text-gray-600 mb-4">
+                      Your coloring book PDF is being generated. The page will automatically update when complete.
+                    </p>
+                    
+                    <Button 
+                      className="w-full bg-amber-600 hover:bg-amber-700"
+                      onClick={handleRefresh}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Check Status
+                    </Button>
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <p className="text-center text-gray-600 text-sm mb-4">
+                      We've sent a confirmation email with your order details.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex flex-col space-y-3 px-6 pb-6">
+                <Button className="w-full bg-orange-500 hover:bg-orange-600" asChild>
+                  <Link href="/dashboard">
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    View Dashboard
+                  </Link>
+                </Button>
+              </CardFooter>
+            </Card>
           ) : (
             <Card className="w-full">
               <CardHeader className="text-center pb-2">
@@ -147,9 +209,6 @@ export default function OrderSuccessPage() {
                     <p className="text-sm text-gray-600 mb-1">
                       Status: <span className="font-medium capitalize">{orderStatus.replace('_', ' ')}</span>
                     </p>
-                    <p className="text-sm text-gray-600">
-                      Estimated Delivery: <span className="font-medium">{estimatedDelivery}</span>
-                    </p>
                   </div>
                   
                   {/* PDF Download Section - Only show if completed */}
@@ -171,42 +230,22 @@ export default function OrderSuccessPage() {
                     </div>
                   )}
                   
-                  {/* PDF Processing Section */}
-                  {orderStatus === 'processing_pdf' && (
-                    <div className="border rounded-lg p-4 bg-blue-50">
-                      <h3 className="text-lg font-medium mb-2 flex items-center text-blue-700">
-                        <RefreshCw className="h-5 w-5 mr-2 animate-spin" /> 
-                        PDF in Progress
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-3">
-                        We're generating your coloring pages PDF. This usually takes a few minutes. You'll receive an email when it's ready.
-                      </p>
-                      <Button 
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                        onClick={handleRefresh}
-                      >
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Check Status
-                      </Button>
-                    </div>
-                  )}
-                  
                   {/* PDF Error Section */}
                   {orderStatus === 'pdf_failed' && (
-                    <div className="border rounded-lg p-4 bg-amber-50">
-                      <h3 className="text-lg font-medium mb-2 flex items-center text-amber-700">
+                    <div className="border-2 rounded-lg p-4 bg-red-50 border-red-200">
+                      <h3 className="text-lg font-medium mb-2 flex items-center text-red-700">
                         <AlertTriangle className="h-5 w-5 mr-2" /> 
                         PDF Processing Issue
                       </h3>
-                      <p className="text-sm text-gray-600 mb-3">
+                      <p className="text-sm text-gray-700 mb-3">
                         We encountered an issue while generating your PDF. Our team has been notified and will resolve this soon.
                       </p>
                       <Button 
-                        className="w-full bg-amber-600 hover:bg-amber-700"
+                        className="w-full bg-red-600 hover:bg-red-700"
                         onClick={handleRefresh}
                       >
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        Check Status
+                        Check Status Again
                       </Button>
                     </div>
                   )}
