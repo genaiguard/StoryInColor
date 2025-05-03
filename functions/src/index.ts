@@ -975,9 +975,9 @@ export const processImageWithOpenAI = onCall(
             // Determine prompt based on artStyle
             let prompt: string;
             if (artStyle === 'ghibli') {
-                prompt = "Transfer to a coloring book image in ghibli style for someone to color";
+                prompt = "Create a beautiful coloring image for people to print and color. Clean, fine lines, no shading, filling or color.";
             } else { // Default to 'classic' or any other style
-                prompt = "Transfer to a coloring book image for someone to color";
+                prompt = "Create a beautiful coloring image in Studio Ghibli style for people to print and color. Clean, fine lines, no shading, filling or color.";
             }
             console.log(`Using prompt for style '${artStyle}': "${prompt}"`);
             
@@ -991,13 +991,13 @@ export const processImageWithOpenAI = onCall(
                 // Call OpenAI API
                 console.log("Using OpenAI client with gpt-image-1 model");
                 
-                // Direct API call with proper Node.js FormData
+                // Direct API call with proper Node.js FormData DO NOT CHANGE THIS
                 const formData = new FormData();
                 formData.append('model', 'gpt-image-1');
                 formData.append('prompt', prompt);
                 formData.append('n', '1');
-                formData.append('size', '1024x1024');
-                formData.append('quality', 'medium');
+                formData.append('size', '1024x1536');
+                formData.append('quality', 'auto');
 
                 // Log what we're appending to see it in the logs
                 console.log("Appending image to FormData, size:", resizedImageBuffer.length);

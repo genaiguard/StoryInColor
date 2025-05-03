@@ -594,19 +594,6 @@ function CreatePageContent() {
                   />
                 </div>
 
-          {/* Instant Availability Message */}
-          <div className="mb-8 p-5 bg-green-50 border border-green-200 rounded-lg shadow-sm">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="text-base font-medium text-green-800 mb-1">Instant Digital Download</h3>
-                <p className="text-sm text-green-700">
-                  After purchasing, your custom coloring pages will be available immediately as a self-print PDF.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Page Management Area */}
                 <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
