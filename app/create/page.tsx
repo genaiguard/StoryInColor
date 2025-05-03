@@ -547,37 +547,29 @@ function CreatePageContent() {
     <div className="flex min-h-screen flex-col bg-gray-50">
       {/* Header */}
       <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
-        <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-4">
+        <div className="container mx-auto max-w-7xl flex h-14 items-center justify-between px-4 md:px-6">
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")}>
               <ArrowLeft className="h-5 w-5" />
               <span className="sr-only">Back to Dashboard</span>
             </Button>
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold">
+            <Link href="/" className="flex items-center">
+              <span className="text-lg font-bold">
                 Story<span className="text-orange-500">InColor</span>
               </span>
             </Link>
           </div>
-          <div className="flex items-center gap-4">
-            {/* Saving Indicator */}
-            <div className="text-xs text-gray-500 flex items-center gap-1">
-              {isSaving ? (
-                <> <Loader2 className="h-3 w-3 animate-spin" /> Saving... </>
-              ) : lastSaved ? (
-                <> <Check className="h-3 w-3 text-green-500" /> Saved: {lastSaved.toLocaleTimeString()} </>
-              ) : (
-                "Unsaved changes"
-              )}
-            </div>
+          <div className="flex items-center gap-2">
             <Button 
               variant="outline" 
+              size="sm"
               onClick={() => router.push('/dashboard')}
             >
               Exit
             </Button>
             <Button
-              className="bg-green-600 hover:bg-green-700"
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 whitespace-nowrap"
               onClick={handleOrder}
               disabled={isSaving || totalPages === 0 || pages.some(p => !p.originalImage || !p.selectedVersionId || p.isProcessing || p.isPreparingToRegenerate)}
             >
@@ -655,9 +647,23 @@ function CreatePageContent() {
 
       {/* Footer */}
       <footer className="border-t bg-white mt-8">
-        <div className="container mx-auto px-4 md:px-6 py-4 md:py-6 text-center text-xs text-gray-500">
-          © {new Date().getFullYear()} StoryInColor. All rights reserved. | Project ID: {projectId}
-                </div>
+        <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
+          {/* Saving indicator moved to footer */}
+          <div className="flex justify-center items-center mb-2">
+            <div className="text-sm text-gray-500 flex items-center gap-1">
+              {isSaving ? (
+                <> <Loader2 className="h-4 w-4 animate-spin" /> Saving changes... </>
+              ) : lastSaved ? (
+                <> <Check className="h-4 w-4 text-green-500" /> Last saved: {lastSaved.toLocaleTimeString()} </>
+              ) : (
+                "Unsaved changes"
+              )}
+            </div>
+          </div>
+          <div className="text-center text-xs text-gray-500">
+            © {new Date().getFullYear()} StoryInColor. All rights reserved. | Project ID: {projectId}
+          </div>
+        </div>
       </footer>
               </div>
   )
