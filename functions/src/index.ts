@@ -963,7 +963,7 @@ export const processImageWithOpenAI = onCall(
                     fit: sharp.fit.inside,
                     withoutEnlargement: true 
                 })
-                .jpeg({ quality: 80 }) // Compress with JPEG at 80% quality
+                .jpeg({ quality: 65 }) 
                 .toBuffer();
                 
             // Clear references to free memory - don't modify the constant itself
@@ -975,9 +975,9 @@ export const processImageWithOpenAI = onCall(
             // Determine prompt based on artStyle
             let prompt: string;
             if (artStyle === 'ghibli') {
-                prompt = "Create a beautiful coloring image for people to print and color. Clean, fine lines, no shading, filling or color.";
+                prompt = "Create a beautiful coloring image in Studio Ghibli style for people to print and color. Clean, fine lines, no shading, filling or (background)color, beautiful.";
             } else { // Default to 'classic' or any other style
-                prompt = "Create a beautiful coloring image in Studio Ghibli style for people to print and color. Clean, fine lines, no shading, filling or color.";
+                prompt = "Create a beautiful coloring image for people to print and color. Clean, fine lines, no shading, filling or (background)color. People to look realistic, but more beautiful, cute, slightly slimmer, and charming.";
             }
             console.log(`Using prompt for style '${artStyle}': "${prompt}"`);
             

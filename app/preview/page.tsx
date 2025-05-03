@@ -357,6 +357,14 @@ function PreviewPageContent() {
         { duration: 5000 }
       );
 
+      // Add Link preference to localStorage to influence Stripe checkout
+      // This is a client-side preference that Stripe's Link integration reads
+      if (typeof window !== 'undefined' && window.localStorage) {
+        // Set Link preference to false to make it less prominent
+        window.localStorage.setItem('stripe.link.preference', JSON.stringify({enabled: false}));
+        console.log("Set Stripe Link preferences to disabled by default");
+      }
+      
       const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
 
       if (stripeError) {

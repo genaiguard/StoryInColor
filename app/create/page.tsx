@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, ArrowRight, Upload, ImagePlus, Check, Trash2, X, Loader2, Wand2, RotateCcw, PlusCircle, CheckCircle } from "lucide-react"
+import { ArrowLeft, ArrowRight, Upload, ImagePlus, Check, Trash2, X, Loader2, Wand2, RotateCcw, PlusCircle, CheckCircle, AlertTriangle, Crop, Image, Info } from "lucide-react"
 import { UploadProvider, useUpload } from "@/app/context/upload-context"
 import { v4 as uuidv4 } from "uuid"
 import { useFirebase } from "@/app/firebase/firebase-provider"
@@ -95,6 +95,20 @@ function CreatePageContent() {
   const [isLoadingProject, setIsLoadingProject] = useState<boolean>(true)
   const [projectExists, setProjectExists] = useState<boolean>(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+
+  // Add state for notice visibility
+  const [showNotices, setShowNotices] = useState({
+    trimming: true,
+    portrait: true,
+    copyright: true
+  });
+  
+  const dismissNotice = (noticeKey: 'trimming' | 'portrait' | 'copyright') => {
+    setShowNotices(prev => ({
+      ...prev,
+      [noticeKey]: false
+    }));
+  };
 
   // --- Project ID Initialization --- (Run once on mount, respecting StrictMode)
   useEffect(() => {
@@ -587,15 +601,63 @@ function CreatePageContent() {
             <Label htmlFor="bookTitle" className="text-xl font-semibold mb-4 block">Project Title</Label>
             <Input
               id="bookTitle"
-                    value={bookTitle}
-                    onChange={(e) => setBookTitle(e.target.value)}
-                    placeholder="Enter a title for your coloring pages"
+              value={bookTitle}
+              onChange={(e) => setBookTitle(e.target.value)}
+              placeholder="Enter a title for your coloring pages"
               className="text-lg"
-                  />
+            />
+          </div>
+
+          {/* Notice Banners - NEW SECTION */}
+          <div className="space-y-3 mb-8">
+            {/* Trimming Notice */}
+            {showNotices.trimming && (
+              <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <Crop className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-blue-700">
+                    <span className="font-medium">Tip:</span> For best results, trim and crop your images before uploading to remove unnecessary backgrounds.
+                  </p>
                 </div>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => dismissNotice('trimming')}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
+            {/* Portrait Orientation Notice */}
+            {showNotices.portrait && (
+              <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <Image className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-blue-700">
+                    <span className="font-medium">Recommendation:</span> Portrait-oriented photos (taller than wide) typically make better coloring pages.
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => dismissNotice('portrait')}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
+            {/* Copyright Notice */}
+            {showNotices.copyright && (
+              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-amber-700">
+                    <span className="font-medium">Important:</span> Please ensure you have rights to the images you upload. Do not use copyrighted material without permission.
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => dismissNotice('copyright')}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
 
           {/* Page Management Area */}
-                <div className="mb-8">
+          <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Your Coloring Pages ({totalPages}/{MAX_PAGES})</h2>
               <Button 
@@ -609,7 +671,7 @@ function CreatePageContent() {
             {pages.length === 0 ? (
               <div className="text-center py-10 border-2 border-dashed border-gray-300 rounded-lg">
                 <p className="text-gray-500">Your project is empty. Click "Add Page" to start!</p>
-                          </div>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {pages.map((page, index) => (
@@ -626,10 +688,10 @@ function CreatePageContent() {
                     onCancelRegeneration={() => cancelRegeneration(page.id)}
                   />
                 ))}
-                          </div>
+              </div>
             )}
-                      </div>
-                </div>
+          </div>
+        </div>
       </main>
 
       {/* Footer */}
@@ -652,7 +714,7 @@ function CreatePageContent() {
           </div>
         </div>
       </footer>
-              </div>
+    </div>
   )
 }
 
@@ -664,8 +726,8 @@ const LoadingState = ({ message }: { message: string }) => (
     <div className="text-center">
       <Loader2 className="h-12 w-12 animate-spin text-orange-500 mx-auto mb-4" />
       <p className="text-gray-500">{message}</p>
-                        </div>
-                        </div>
+    </div>
+  </div>
 )
 
 // Auth Redirect Placeholder
@@ -681,31 +743,31 @@ const AuthRedirect = () => {
 
 // Style Option Component
 const StyleOption = ({ id, label, description, imageUrl }: { id: string; label: string; description: string; imageUrl: string }) => (
-                    <div className="relative">
+  <div className="relative">
     <RadioGroupItem value={id} id={id} className="peer sr-only" />
-                      <Label
+    <Label
       htmlFor={id}
       className="flex flex-col rounded-lg border-2 bg-white p-6 hover:border-orange-500 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-50 h-full cursor-pointer transition-colors"
-                      >
-                        <div className="flex justify-center mb-4 h-40 items-center">
+    >
+      <div className="flex justify-center mb-4 h-40 items-center">
         <PathImg // Use PathImg for potential base path handling
           src={imageUrl}
           alt={`${label} example`}
-                            width={150}
-                            height={150}
-                            className="h-auto max-h-40 object-contain"
+          width={150}
+          height={150}
+          className="h-auto max-h-40 object-contain"
           onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }} // Fallback
-                          />
-                        </div>
-                        <div className="mb-4 text-center flex-grow">
+        />
+      </div>
+      <div className="mb-4 text-center flex-grow">
         <h3 className="text-lg font-bold">{label}</h3>
         <p className="text-sm text-gray-500">{description}</p>
-                        </div>
+      </div>
       <div className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-white opacity-0 peer-data-[state=checked]:opacity-100 transition-opacity">
-                          <Check className="h-4 w-4" />
-                        </div>
-                      </Label>
-                    </div>
+        <Check className="h-4 w-4" />
+      </div>
+    </Label>
+  </div>
 )
 
 // Page Card Component (Needs DnD implementation)
@@ -829,24 +891,24 @@ function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConv
         {!page.originalImage ? (
           // State: No Image Uploaded
           <div className="text-center">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
               accept="image/png, image/jpeg, image/webp"
-                    onChange={handleFileChange}
-                  />
+              onChange={handleFileChange}
+            />
             <Button variant="outline" onClick={handleBrowseClick}>
               <Upload className="mr-2 h-4 w-4" /> Upload Photo
-                    </Button>
+            </Button>
             <p className="text-xs text-gray-400 mt-2">PNG, JPG, WEBP</p>
-                  </div>
+          </div>
         ) : page.isProcessing ? (
           // State: Processing with OpenAI
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto mb-2" />
             <p className="text-sm text-gray-500">Converting image...</p>
-                </div>
+          </div>
         ) : page.processingError ? (
           // State: Processing Error
           <div className="text-center text-red-600">
@@ -881,7 +943,7 @@ function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConv
                 disabled={!page.originalImage?.uploaded || page.isProcessing}
                 className="bg-orange-500 hover:bg-orange-600 text-white px-6"
               >
-                 <Wand2 className="mr-2 h-4 w-4" /> Convert to Coloring Page
+                <Wand2 className="mr-2 h-4 w-4" /> Convert to Coloring Page
               </Button>
             </div>
           </>
