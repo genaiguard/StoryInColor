@@ -6,10 +6,27 @@ import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PlusCircle, Settings, LogOut, FileEdit, ShoppingBag, Eye, AlertTriangle, FileDown, Sparkles, CreditCard } from "lucide-react"
+import { PlusCircle, Settings, LogOut, FileEdit, ShoppingBag, Eye, AlertTriangle, FileDown, Sparkles, CreditCard, Trash2, MoreVertical } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useMobile } from "@/hooks/use-mobile"
 import { useFirebase } from "@/app/firebase/firebase-provider"
-import { getFirestore, collection, query, where, getDocs, orderBy } from "firebase/firestore"
+import { getFirestore, collection, query, where, getDocs, orderBy, doc, updateDoc } from "firebase/firestore"
 import { ref, getDownloadURL } from "firebase/storage"
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers"
 import { PathImg } from "@/components/ui/pathed-image"
@@ -321,6 +338,80 @@ export default function DashboardPage() {
 
   console.log("[Debug] Rendering Dashboard. State:", { creditPurchaseSuccess, isProcessingCreditPurchase, pollingComplete, recentPurchaseDetected });
 
+  // In the DashboardPage component, add these states for delete confirmation dialog
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Add a function to handle project deletion
+  const handleDeleteProject = async (projectId: string) => {
+    if (!user || !initialized) return;
+    
+    try {
+      setIsDeletingProject(true);
+      
+      const db = getFirestore();
+      const projectRef = doc(db, "users", user.uid, "projects", projectId);
+      
+      // Update the project with a "deleted" flag instead of actually deleting it
+      // This is a soft-delete approach that allows for potential recovery
+      await updateDoc(projectRef, {
+        deleted: true,
+        updatedAt: new Date() // Update timestamp
+      });
+      
+      // Update local state to remove the deleted project
+      setProjects(prevProjects => prevProjects.filter(p => p.id !== projectId));
+      
+      toast.success("Project deleted successfully");
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      toast.error("Failed to delete project. Please try again.");
+    } finally {
+      setIsDeletingProject(false);
+      setProjectToDelete(null);
+    }
+  };
+
+  // Delete confirmation dialog component
+  const DeleteConfirmationDialog = () => (
+    <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Delete Project</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete this project? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex gap-2 mt-4">
+          <Button
+            variant="outline"
+            onClick={() => setDeleteDialogOpen(false)}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => projectToDelete && handleDeleteProject(projectToDelete)}
+            disabled={isDeletingProject}
+            className="flex-1"
+          >
+            {isDeletingProject ? (
+              <>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                Deleting...
+              </>
+            ) : (
+              "Delete Project"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (!initialized || isLoading) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-50">
@@ -489,7 +580,10 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Unified Projects View */}
+          {/* Add the delete confirmation dialog */}
+          <DeleteConfirmationDialog />
+
+          {/* Unified Projects View - Update card to include delete option */}
           {projects.length > 0 ? (
             <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {projects.map((project) => (
@@ -505,6 +599,45 @@ export default function DashboardPage() {
                         e.currentTarget.src = "/StoryInColor/placeholder.svg?height=300&width=400";
                       }}
                     />
+                    {/* Add Actions Dropdown */}
+                    <div className="absolute top-2 right-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/40 text-white hover:bg-black/60 rounded-full">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link href={`/create?id=${project.id}`} className="cursor-pointer">
+                              <FileEdit className="h-4 w-4 mr-2" />
+                              Edit Project
+                            </Link>
+                          </DropdownMenuItem>
+                          {project.pdfUrl && (
+                            <DropdownMenuItem asChild>
+                              <a href={project.pdfUrl} target="_blank" rel="noopener noreferrer" download className="cursor-pointer">
+                                <FileDown className="h-4 w-4 mr-2" />
+                                Download PDF
+                              </a>
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600 cursor-pointer"
+                            onClick={() => {
+                              setProjectToDelete(project.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Project
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                   <CardHeader className="p-4">
                     <CardTitle className="text-lg">{project.title}</CardTitle>

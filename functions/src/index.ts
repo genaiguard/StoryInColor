@@ -564,7 +564,7 @@ export const processImageWithOpenAI = onCall(
             if (artStyle === 'ghibli') {
                 prompt = "Create a beautiful coloring image in Studio Ghibli style for people to print and color. Clean, fine lines, no shading, filling or (background)color, beautiful.";
             } else { // Default to 'classic' or any other style
-                prompt = "Create a beautiful coloring image for people to print and color. Clean, fine lines, no shading, filling or (background)color. People to look realistic, but more beautiful, cute, slightly slimmer, and charming.";
+                prompt = "Create a beautiful coloring image for people to print and color. Clean, fine lines, no shading, no filling and no background colors. Maintain the original features of the image ";
             }
             console.log(`Using prompt for style '${artStyle}': "${prompt}"`);
             
