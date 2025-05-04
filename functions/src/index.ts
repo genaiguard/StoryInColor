@@ -1214,6 +1214,10 @@ export const generateProjectPDF = onCall(
           return buffer;
       }
       
+      // Organize all images - both selected and unselected
+      const selectedImages: {index: number, buffer: Buffer}[] = [];
+      const unselectedImages: {pageIndex: number, versionIndex: number, buffer: Buffer}[] = [];
+      
       // Use Promise.all to download all images in parallel
       const downloadPromises = pages.map(async (page: any, pageIndex: number) => {
           try {
@@ -1226,33 +1230,63 @@ export const generateProjectPDF = onCall(
                   return null;
               }
               
-              const version = versions.find((v: any) => v.versionId === selectedVersionId) || versions[0];
+              // Process selected version
+              const selectedVersion = versions.find((v: any) => v.versionId === selectedVersionId) || versions[0];
               
               // Use the appropriate image path based on user's purchase history
-              let storagePath;
+              let selectedStoragePath;
               console.log(`[PDF-DEBUG] hasPurchasedCredits=${hasPurchasedCredits} for path selection`);
               if (hasPurchasedCredits) {
                   // Paid users get original (non-watermarked) images
-                  storagePath = version.originalStoragePath;
+                  selectedStoragePath = selectedVersion.originalStoragePath;
                   console.log(`[PDF] Using original image for paid user on page ${pageIndex + 1}`);
               } else {
                   // Free users get watermarked preview images
-                  storagePath = version.watermarkedStoragePath;
+                  selectedStoragePath = selectedVersion.watermarkedStoragePath;
                   console.log(`[PDF] Using watermarked image for free user on page ${pageIndex + 1}`);
               }
               
-              console.log(`[PDF-DEBUG] Selected path: ${storagePath}, watermarkedPath=${version.watermarkedStoragePath}, originalPath=${version.originalStoragePath}`);
-              
-              if (!storagePath) {
-                  console.log(`[PDF] No storage path found for page ${pageIndex + 1}, skipping`);
+              if (!selectedStoragePath) {
+                  console.log(`[PDF] No storage path found for selected version on page ${pageIndex + 1}, skipping`);
                   return null;
               }
               
-              console.log(`[PDF] Processing page ${pageIndex + 1}, using version ${version.versionId}`);
+              console.log(`[PDF] Processing selected version for page ${pageIndex + 1}, using version ${selectedVersion.versionId}`);
               
-              // Download the image
-              const imageBuffer = await downloadImage(storagePath);
-              return { index: pageIndex, buffer: imageBuffer };
+              // Download the selected image
+              const selectedImageBuffer = await downloadImage(selectedStoragePath);
+              selectedImages.push({ index: pageIndex, buffer: selectedImageBuffer });
+              
+              // Process unselected versions
+              const unselectedVersionPromises = versions
+                  .filter((v: any) => v.versionId !== selectedVersionId)
+                  .map(async (unselectedVersion: any, versionIndex: number) => {
+                      let unselectedStoragePath;
+                      if (hasPurchasedCredits) {
+                          unselectedStoragePath = unselectedVersion.originalStoragePath;
+                      } else {
+                          unselectedStoragePath = unselectedVersion.watermarkedStoragePath;
+                      }
+                      
+                      if (!unselectedStoragePath) {
+                          console.log(`[PDF] No storage path found for unselected version ${unselectedVersion.versionId} on page ${pageIndex + 1}, skipping`);
+                          return null;
+                      }
+                      
+                      console.log(`[PDF] Processing unselected version ${unselectedVersion.versionId} for page ${pageIndex + 1}`);
+                      
+                      // Download the unselected image
+                      const unselectedImageBuffer = await downloadImage(unselectedStoragePath);
+                      return { pageIndex, versionIndex, buffer: unselectedImageBuffer };
+                  });
+              
+              // Wait for all unselected versions to download
+              const unselectedResults = await Promise.all(unselectedVersionPromises);
+              unselectedResults.filter(result => result !== null).forEach(result => {
+                  unselectedImages.push(result);
+              });
+              
+              return true; // Indicate that this page was processed
           } catch (pageError) {
               console.error(`[PDF] Error processing page ${pageIndex + 1}:`, pageError);
               return null;
@@ -1260,13 +1294,12 @@ export const generateProjectPDF = onCall(
       });
       
       // Wait for all downloads to complete
-      const imageResults = await Promise.all(downloadPromises);
-      const validImages = imageResults.filter(result => result !== null);
+      await Promise.all(downloadPromises);
       
-      console.log(`[PDF] Downloaded ${validImages.length} valid images out of ${pages.length} pages`);
+      console.log(`[PDF] Downloaded ${selectedImages.length} selected images and ${unselectedImages.length} unselected images`);
       
-      // Add each image to the PDF
-      for (const imageResult of validImages) {
+      // Add each selected image to the PDF
+      for (const imageResult of selectedImages) {
           // Add a new page for each image (except the first one which comes after title page)
           if (imageResult.index > 0) {
               doc.addPage();
@@ -1306,9 +1339,84 @@ export const generateProjectPDF = onCall(
                   height: finalHeight
               });
               
-              console.log(`[PDF] Added page ${imageResult.index + 1} to PDF`);
+              console.log(`[PDF] Added selected page ${imageResult.index + 1} to PDF`);
           } catch (renderError) {
-              console.error(`[PDF] Error rendering page ${imageResult.index + 1}:`, renderError);
+              console.error(`[PDF] Error rendering selected page ${imageResult.index + 1}:`, renderError);
+          }
+      }
+      
+      // Add unselected images section if there are any
+      if (unselectedImages.length > 0) {
+          // Add separator page
+          doc.addPage();
+          
+          // Create a separator page with text
+          doc.fontSize(24)
+             .font('Helvetica-Bold')
+             .text('Alternative Versions', {
+                 align: 'center'
+             })
+             .moveDown(1)
+             .fontSize(14)
+             .font('Helvetica')
+             .text('The following pages contain alternative versions that were not selected for the main coloring book.', {
+                 align: 'center'
+             })
+             .moveDown(0.5)
+             .text('You may use these as additional coloring pages.', {
+                 align: 'center'
+             });
+          
+          // Add each unselected image
+          for (const unselectedImage of unselectedImages) {
+              doc.addPage();
+              
+              try {
+                  // Get image dimensions
+                  const metadata = await sharp(unselectedImage.buffer).metadata();
+                  const width = metadata.width || 1024;
+                  const height = metadata.height || 1024;
+                  
+                  // Calculate aspect ratio
+                  const imgAspect = width / height;
+                  const pageWidth = doc.page.width - (doc.page.margins.left + doc.page.margins.right);
+                  const pageHeight = doc.page.height - (doc.page.margins.top + doc.page.margins.bottom);
+                  const pageAspect = pageWidth / pageHeight;
+                  
+                  // Determine dimensions to fit image on page while maintaining aspect ratio
+                  let finalWidth, finalHeight;
+                  if (imgAspect > pageAspect) {
+                      // Image is wider than page proportion
+                      finalWidth = pageWidth;
+                      finalHeight = pageWidth / imgAspect;
+                  } else {
+                      // Image is taller than page proportion
+                      finalHeight = pageHeight;
+                      finalWidth = pageHeight * imgAspect;
+                  }
+                  
+                  // Calculate position to center image on page
+                  const xPos = doc.page.margins.left + (pageWidth - finalWidth) / 2;
+                  const yPos = doc.page.margins.top + (pageHeight - finalHeight) / 2;
+                  
+                  // Add image to page
+                  doc.image(unselectedImage.buffer, xPos, yPos, {
+                      width: finalWidth,
+                      height: finalHeight
+                  });
+                  
+                  // Add a small caption
+                  doc.moveDown()
+                     .fontSize(10)
+                     .font('Helvetica')
+                     .text(`Alternative version ${unselectedImage.versionIndex + 1} for page ${unselectedImage.pageIndex + 1}`, {
+                         align: 'center'
+                     });
+                  
+                  console.log(`[PDF] Added unselected version ${unselectedImage.versionIndex + 1} for page ${unselectedImage.pageIndex + 1} to PDF`);
+              } catch (renderError) {
+                  console.error(`[PDF] Error rendering unselected version for page ${unselectedImage.pageIndex + 1}:`, renderError);
+              }
           }
       }
       
