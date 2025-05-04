@@ -270,21 +270,70 @@ function CreatePageContent() {
         pagesWithUpdatedNumbers.map(p => ({ id: p.id, pageNumber: p.pageNumber }))
       );
 
+      // Check if we need to update the timestamp - only do this for real changes, not just on load
+      let shouldUpdateTimestamp = true;
+      
+      // If the project exists, compare with existing data
+      if (currentProjectExists) {
+        try {
+          const existingDoc = await getDoc(projectRef);
+          if (existingDoc.exists()) {
+            const existingData = existingDoc.data() as ProjectData;
+            
+            // Check if title changed
+            const titleChanged = existingData.title !== currentBookTitle;
+            
+            // Check if pages changed (count, order, versions)
+            let pagesChanged = existingData.pages?.length !== pagesWithUpdatedNumbers.length;
+            
+            // If page count is the same, do a deeper check
+            if (!pagesChanged && existingData.pages) {
+              // Check each page for changes
+              for (let i = 0; i < pagesWithUpdatedNumbers.length; i++) {
+                const currentPage = pagesWithUpdatedNumbers[i];
+                const existingPage = existingData.pages.find(p => p.id === currentPage.id);
+                
+                if (!existingPage || 
+                    existingPage.pageNumber !== currentPage.pageNumber ||
+                    existingPage.selectedVersionId !== currentPage.selectedVersionId ||
+                    existingPage.versions.length !== currentPage.versions.length) {
+                  pagesChanged = true;
+                  break;
+                }
+              }
+            }
+            
+            // Only update timestamp if something actually changed
+            shouldUpdateTimestamp = titleChanged || pagesChanged;
+            console.log("Content changed?", shouldUpdateTimestamp, "Title changed?", titleChanged, "Pages changed?", pagesChanged);
+          }
+        } catch (error) {
+          console.error("Error checking for changes:", error);
+          // On error, default to updating timestamp to be safe
+          shouldUpdateTimestamp = true;
+        }
+      }
+
       const dataToSave: Partial<ProjectData> = {
         pages: pagesWithUpdatedNumbers, // Use pages with updated numbers
         status: 'draft',
         userId: user.uid,
-        updatedAt: serverTimestamp(),
         title: currentBookTitle,
+      }
+      
+      // Only include updatedAt if something actually changed
+      if (shouldUpdateTimestamp) {
+        dataToSave.updatedAt = serverTimestamp();
       }
 
       try {
         if (currentProjectExists) {
-          console.log("Updating existing project:", currentProjectId)
+          console.log("Updating existing project:", currentProjectId, shouldUpdateTimestamp ? "with timestamp update" : "without timestamp update");
           await updateDoc(projectRef, dataToSave)
         } else {
           console.log("Creating new project:", currentProjectId)
           dataToSave.createdAt = serverTimestamp()
+          dataToSave.updatedAt = serverTimestamp() // Always include timestamp for new projects
           await setDoc(projectRef, dataToSave)
           // Important: Update projectExists state AFTER successful creation
           setProjectExists(true)
@@ -583,6 +632,10 @@ function CreatePageContent() {
 
   // --- PDF Generation ---
 
+  // Add state for storing PDF URL and visibility of the download link
+  const [currentPdfUrl, setCurrentPdfUrl] = useState<string | null>(null);
+  const [showPdfLink, setShowPdfLink] = useState<boolean>(false);
+
   // Add PDF generation function
   const handleGeneratePDF = async () => {
     if (!projectId) {
@@ -625,7 +678,8 @@ function CreatePageContent() {
           // Compare timestamps - if PDF was generated after the last update, use the existing PDF
           if (pdfGeneratedAt >= lastUpdatedAt) {
             toast.success("Using existing PDF - no changes detected since last generation.");
-            window.open(projectData.pdfUrl, '_blank');
+            setCurrentPdfUrl(projectData.pdfUrl);
+            setShowPdfLink(true);
             setGeneratingPDF(false);
             return;
           }
@@ -647,8 +701,9 @@ function CreatePageContent() {
         });
         
         toast.success("PDF generated successfully!");
-        // Open PDF in new tab
-        window.open(data.pdfUrl, '_blank');
+        // Set the PDF URL in state and show the download link
+        setCurrentPdfUrl(data.pdfUrl);
+        setShowPdfLink(true);
       } else {
         throw new Error(data.message || "Failed to generate PDF.");
       }
@@ -659,6 +714,11 @@ function CreatePageContent() {
     } finally {
       setGeneratingPDF(false);
     }
+  };
+
+  // Function to close the PDF download link panel
+  const closePdfLink = () => {
+    setShowPdfLink(false);
   };
 
   // --- Render Logic ---
@@ -734,6 +794,48 @@ function CreatePageContent() {
       {/* Main Content */}
       <main className="flex-1 py-6 md:py-8 px-4">
         <div className="container mx-auto max-w-7xl">
+          {/* PDF Download Link Panel */}
+          {showPdfLink && currentPdfUrl && (
+            <Alert className="mb-6 bg-green-50 border-green-200">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              <AlertTitle>{generatingPDF ? "Generating PDF..." : "Your PDF is ready!"}</AlertTitle>
+              <AlertDescription className="flex flex-col space-y-2">
+                {generatingPDF ? (
+                  <p>Please wait while we prepare your coloring pages...</p>
+                ) : (
+                  <p>Your coloring pages have been successfully generated.</p>
+                )}
+                <div className="mt-1 flex gap-2">
+                  <Button 
+                    size="sm" 
+                    onClick={() => window.open(currentPdfUrl, '_blank')}
+                    disabled={generatingPDF}
+                  >
+                    {generatingPDF ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Download PDF
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={closePdfLink}
+                    disabled={generatingPDF}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {/* Credit UI */}
           {showCreditUI && (
             <Alert className="mb-6 bg-amber-50 border-amber-200">

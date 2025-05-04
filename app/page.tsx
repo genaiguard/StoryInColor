@@ -11,6 +11,8 @@ import PricingSection from "@/components/landing-page/pricing-section"
 import TestimonialsSection from "@/components/landing-page/testimonials-section"
 import FAQSection from "@/components/landing-page/faq-section"
 import Footer from "@/components/landing-page/footer"
+import LandingPageSEO from "@/components/seo/landing-page-seo"
+import StructuredData from "@/components/seo/structured-data"
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("")
@@ -63,13 +65,15 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <LandingPageSEO />
+      <StructuredData />
       <Header activeSection={activeSection} scrollToSection={scrollToSection} />
       <main className="flex-1">
         <HeroSection scrollToSection={scrollToSection} />
         <ExamplesSection />
         <HowItWorksSection />
         <PetPortraitsSection />
-        <CustomizationSection scrollToSection={scrollToSection} />
+        <CustomizationSection />
         <PricingSection />
         <TestimonialsSection />
         <FAQSection />

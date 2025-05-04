@@ -2,10 +2,11 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { FirebaseProvider } from './firebase/firebase-provider'
 import Script from 'next/script'
+import StructuredData from '@/components/seo/structured-data'
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'StoryInColor - AI Coloring Books',
-  description: 'Create personalized coloring books with AI',
+  description: 'Turn your photos into beautiful custom coloring pages with AI. Create personalized coloring books from family photos, pet portraits, and vacation memories.',
 }
 
 export default function RootLayout({

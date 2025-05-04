@@ -122,8 +122,8 @@ export const stripeWebhook = onRequest(
               if (session.metadata?.type === 'credit_purchase') {
                   // Handle credit purchase
                   console.log(`[Webhook] Processing credit purchase`);
-                  
-                  const userId = session.metadata?.userId;
+
+              const userId = session.metadata?.userId;
                   const packageId = session.metadata?.packageId;
                   const creditAmount = session.metadata?.creditAmount ? parseInt(session.metadata.creditAmount, 10) : 0;
                   const priceInCents = session.metadata?.priceInCents ? parseInt(session.metadata.priceInCents, 10) : 0;
@@ -131,8 +131,8 @@ export const stripeWebhook = onRequest(
                   if (!userId || !packageId || creditAmount <= 0) {
                       console.error('[Webhook Error] Missing userId, packageId, or valid creditAmount in session metadata.', session.metadata);
                       res.status(200).send({ received: true, error: 'Missing required metadata for credit purchase' });
-                      return;
-                  }
+                  return;
+              }
                   
                   // Only process if payment is successful
                   if (session.payment_status === 'paid') {
@@ -157,7 +157,7 @@ export const stripeWebhook = onRequest(
                                   usageHistory: [],
                                   lastUpdated: admin.firestore.FieldValue.serverTimestamp()
                               });
-                          } else {
+                                      } else {
                               // Update existing user credits document
                               // We don't need the existing data for an increment operation
                               await userCreditsRef.update({
@@ -178,15 +178,15 @@ export const stripeWebhook = onRequest(
                           // Still return success to Stripe but log the error
                           res.status(200).send({ received: true, error: 'Failed to add credits' });
                           return;
-                      }
-                  } else {
+                               }
+                          } else {
                       console.log(`[Credits] Payment not completed: ${session.payment_status}`);
                   }
                   
                   // Acknowledge receipt of the event
                   res.status(200).send({ received: true, type: 'credit_purchase' });
                   return;
-              } else {
+                  } else {
                   // Unknown checkout type
                   console.log(`[Webhook] Unrecognized checkout type. Session ID: ${session.id}`);
                   res.status(200).send({ received: true, type: 'unknown' });
