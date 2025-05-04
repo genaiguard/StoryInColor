@@ -195,6 +195,20 @@ function CreatePageContent() {
           const storage = getConfiguredStorage();
           const pagesWithPreviewUrls = await Promise.all(
             sortedPages.map(async (page) => {
+              // Fetch URL for original image if it exists
+              let updatedOriginalImage = page.originalImage;
+              if (updatedOriginalImage?.storagePath) {
+                try {
+                  const originalUrl = await getDownloadURL(ref(storage, updatedOriginalImage.storagePath));
+                  updatedOriginalImage = {
+                    ...updatedOriginalImage,
+                    previewUrl: originalUrl
+                  };
+                } catch (error) {
+                  console.error(`Failed to get preview URL for original image in page ${page.id}:`, error);
+                }
+              }
+              
               const versionsWithPreviewUrls = await Promise.all(
                 page.versions.map(async (version) => {
                   if (version.watermarkedStoragePath) {
@@ -211,7 +225,7 @@ function CreatePageContent() {
                   }
                 })
               );
-              return { ...page, versions: versionsWithPreviewUrls };
+              return { ...page, originalImage: updatedOriginalImage, versions: versionsWithPreviewUrls };
             })
           );
           
