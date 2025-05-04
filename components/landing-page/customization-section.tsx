@@ -48,7 +48,7 @@ export default function CustomizationSection() {
                 }}
               />
               <video 
-                src="/images/VideoDemo.mov" 
+                src="/images/VideoDemo.mp4" 
                 className="w-full h-auto relative z-0"
                 style={{ 
                   backgroundColor: 'transparent',
