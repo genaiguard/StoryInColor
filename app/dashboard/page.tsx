@@ -714,12 +714,10 @@ export default function DashboardPage() {
                           <Button
                             size="lg"
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-all hover:shadow-md"
-                            asChild
+                            onClick={() => toast.info("PDF is being generated. It will be available soon.")}
                           >
-                            <Link href={`/order-success?session_id=${project.orderNumber}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </Link>
+                            <FileEdit className="mr-2 h-4 w-4" />
+                            PDF Generating
                           </Button>
                         )}
                       </CardFooter>
