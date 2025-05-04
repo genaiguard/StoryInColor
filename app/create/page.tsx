@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, ArrowRight, Upload, ImagePlus, Check, Trash2, X, Loader2, Wand2, RotateCcw, PlusCircle, CheckCircle, AlertTriangle, Crop, Image, Info, Sparkles, ShoppingCart, FileDown } from "lucide-react"
+import { ArrowLeft, ArrowRight, Upload, ImagePlus, Check, Trash2, X, Loader2, Wand2, RotateCcw, PlusCircle, CheckCircle, AlertTriangle, Crop, Image, Info, Sparkles, ShoppingCart, FileDown, Pencil } from "lucide-react"
 import { UploadProvider, useUpload } from "@/app/context/upload-context"
 import { v4 as uuidv4 } from "uuid"
 import { useFirebase } from "@/app/firebase/firebase-provider"
@@ -101,6 +101,7 @@ function CreatePageContent() {
   const [isLoadingCredits, setIsLoadingCredits] = useState<boolean>(true)
   const [showCreditUI, setShowCreditUI] = useState<boolean>(false)
   const [generatingPDF, setGeneratingPDF] = useState<boolean>(false)
+  const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false)
 
   // Add state for notice visibility
   const [showNotices, setShowNotices] = useState({
@@ -717,14 +718,42 @@ function CreatePageContent() {
           
           {/* Project Title Input */}
           <div className="mb-8 p-6 bg-white rounded-lg shadow">
-            <Label htmlFor="bookTitle" className="text-xl font-semibold mb-4 block">Project Title</Label>
-            <Input
-              id="bookTitle"
-              value={bookTitle}
-              onChange={(e) => setBookTitle(e.target.value)}
-              placeholder="Enter a title for your coloring pages"
-              className="text-lg"
-            />
+            {isEditingTitle ? (
+              <div className="flex flex-col space-y-3">
+                <Label htmlFor="bookTitle" className="text-xl font-semibold block">Project Title</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="bookTitle"
+                    value={bookTitle}
+                    onChange={(e) => setBookTitle(e.target.value)}
+                    placeholder="Enter a title for your coloring pages"
+                    className="text-lg flex-1"
+                    autoFocus
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsEditingTitle(false)}
+                  >
+                    <Check className="h-4 w-4 mr-1" /> Done
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-800">
+                  {bookTitle || "Untitled Coloring Book"}
+                </h1>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingTitle(true)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <Pencil className="h-4 w-4 mr-1" /> Edit
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Notice Banners - NEW SECTION */}
