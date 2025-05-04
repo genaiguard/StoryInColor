@@ -305,7 +305,7 @@ function CreatePageContent() {
   // --- Page Management Functions ---
   const addPage = () => {
     if (pages.length >= MAX_PAGES) {
-      toast.warning(`Maximum of ${MAX_PAGES} pages reached.`)
+      toast.warning(`Maximum limit of ${MAX_PAGES} pages reached. Cannot add more pages.`)
       return
     }
     const newPage: Page = {
@@ -782,7 +782,7 @@ function CreatePageContent() {
           {/* Page Management Area */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Your Coloring Pages ({totalPages}/{MAX_PAGES})</h2>
+              <h2 className="text-xl font-semibold">Your Coloring Pages</h2>
               <Button 
                 onClick={addPage} 
                 disabled={totalPages >= MAX_PAGES} 

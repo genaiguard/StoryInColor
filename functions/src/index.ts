@@ -1093,13 +1093,33 @@ export const generateProjectPDF = onCall(
              align: 'center',
              continued: false
          })
+         .moveDown(2);
+      
+      // Add printing instructions
+      doc.fontSize(14)
+         .font('Helvetica-Bold')
+         .text('Printing Instructions:', {
+             align: 'left',
+             continued: false
+         })
+         .moveDown(0.5)
+         .fontSize(12)
+         .font('Helvetica')
+         .text('1. Use high-quality paper for best results', {
+             align: 'left',
+             continued: false
+         })
+         .moveDown(0.5)
+         .text('2. For best results, use "Fit to page" in your printer settings', {
+             align: 'left',
+             continued: false
+         })
          .moveDown(2)
          .fontSize(12)
          .text(`Generated on ${new Date().toLocaleDateString()}`, {
              align: 'center',
              continued: false
-         })
-         .moveDown(1.5);
+         });
          
       // Add QR code for the website - centered on page
       // Use QR code from frontend public folder
@@ -1109,46 +1129,76 @@ export const generateProjectPDF = onCall(
       const qrSize = 150; // QR code size in pixels
       const qrX = doc.page.margins.left + (pageWidth - qrSize) / 2;
       
+      // Center the QR code vertically, but position it a bit higher
+      // Calculate vertical center position with adjustment
+      const currentY = doc.y;
+      const remainingHeight = doc.page.height - doc.page.margins.bottom - currentY;
+      
+      // Adjust the spacing to position QR code higher (reduce top space by 30%)
+      const idealSpacerHeight = (remainingHeight - qrSize) / 2;
+      const topSpacerHeight = idealSpacerHeight * 0.7; // Reduce top space to move QR code higher
+      
       // Try to use the QR code image, with text fallback if it fails
       try {
-        doc.image(qrCodeUrl, qrX, doc.y, { width: qrSize })
-           .moveDown(2);
+        // Download the QR code to a temp file
+        const qrCodeTempPath = path.join(tempDir, 'qr-code.png');
+        console.log(`[PDF] Downloading QR code from ${qrCodeUrl} to ${qrCodeTempPath}`);
+        
+        // Use node-fetch to download the image
+        const response = await fetch(qrCodeUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch QR code: ${response.status} ${response.statusText}`);
+        }
+        
+        const imageBuffer = await response.arrayBuffer();
+        fs.writeFileSync(qrCodeTempPath, Buffer.from(imageBuffer));
+        
+        // Add space to position the QR code (reduced to move it higher)
+        doc.moveDown(topSpacerHeight / doc.currentLineHeight());
+        
+        // Use the downloaded file in the PDF
+        doc.image(qrCodeTempPath, qrX, doc.y, { width: qrSize });
+           
+        // Cleanup temp file
+        fs.unlinkSync(qrCodeTempPath);
       } catch (error) {
         console.error('[PDF] Error adding QR code image, falling back to text:', error);
         // Fallback to text if image fails
+        doc.moveDown(topSpacerHeight / doc.currentLineHeight());
         doc.fontSize(14)
-           .text('Visit storyincolor.com/qrcode', {
+           .text('Visit storyincolor.com?source=pdf', {
                align: 'center'
-           })
-           .moveDown(2);
+           });
       }
            
-      doc.fontSize(14)
-         .text('Printing Instructions:', {
-             align: 'left',
-             continued: false
-         })
-         .moveDown(0.5)
-         .fontSize(12)
-         .text('1. Use high-quality paper for best results', {
-             align: 'left',
-             continued: false
-         })
-         .moveDown(0.5)
-         .text('2. For best results, use "Fit to page" in your printer settings', {
-             align: 'left',
-             continued: false
-         });
-         
-      // Add watermark notice for free users
+      // Add watermark notice for free users at the bottom of the page
       if (!hasPurchasedCredits) {
-         doc.moveDown(1.5)
-            .fontSize(10)
-            .fillColor('#888888')
-            .text('Note: This free PDF contains watermarked preview images. Purchase credits to generate high-quality PDFs without watermarks.', {
+         // Position at the bottom of page (adjusted for QR code's new position)
+         const bottomSpace = remainingHeight - topSpacerHeight - qrSize - 80;
+         doc.moveDown(bottomSpace / doc.currentLineHeight());
+         
+         doc.rect(doc.page.margins.left, doc.y, pageWidth, 80)
+            .fill('#ffeeee');
+            
+         doc.moveDown(0.3)
+            .fontSize(14)
+            .font('Helvetica-Bold')
+            .fillColor('#cc0000')
+            .text('FREE VERSION NOTICE', {
+                align: 'center'
+            })
+            .moveDown(0.5)
+            .fontSize(12)
+            .font('Helvetica')
+            .text('This free PDF contains watermarked preview images.', {
                 align: 'center',
-                width: 400
-            });
+                continued: false
+            })
+            .moveDown(0.3)
+            .text('Purchase credits to generate high-quality PDFs without watermarks.', {
+                align: 'center'
+            })
+            .fillColor('#000000');
       }
       
       doc.addPage();
