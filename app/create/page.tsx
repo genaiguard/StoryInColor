@@ -642,10 +642,6 @@ function CreatePageContent() {
       <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
         <div className="container mx-auto max-w-7xl flex h-14 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-              <span className="sr-only">Back to Dashboard</span>
-            </Button>
             <Link href="/" className="flex items-center">
               <span className="text-lg font-bold">
                 Story<span className="text-orange-500">InColor</span>
@@ -655,7 +651,7 @@ function CreatePageContent() {
           <div className="flex items-center gap-2">
             {!isLoadingCredits && (
               <div 
-                className="hidden md:flex items-center gap-1 mr-2 bg-blue-50 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                className="flex items-center gap-1 mr-2 bg-blue-50 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-blue-100 transition-colors"
                 onClick={() => router.push('/credits')}
               >
                 <Sparkles className="h-4 w-4 text-blue-500" />
