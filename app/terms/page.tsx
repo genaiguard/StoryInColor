@@ -22,7 +22,7 @@ export default function TermsPage() {
           <div className="container px-4 md:px-6 max-w-4xl mx-auto">
             <div className="bg-white rounded-lg shadow-sm p-6 md:p-8 lg:p-10">
               <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-6 text-center">Terms of Service</h1>
-              <p className="text-sm text-gray-500 text-center mb-8">Last updated: April 4, 2024</p>
+              <p className="text-sm text-gray-500 text-center mb-8">Last updated: May 15, 2024</p>
               
               <div className="prose max-w-none">
                 <div className="mb-8">
@@ -34,9 +34,11 @@ export default function TermsPage() {
 
                 <div className="mb-10 pb-8 border-b border-gray-200">
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4">1. Use of Service</h2>
-                  <p className="text-gray-700">
-                    StoryInColor provides a platform for creating custom coloring books from your photos using advanced artificial intelligence technology. You may use our
-                    service only as permitted by these terms and applicable law. We reserve the right to refuse service, terminate accounts, or remove content at our discretion.
+                  <p className="text-gray-700 mb-4">
+                    StoryInColor provides a platform for creating custom coloring pages from your photos using advanced artificial intelligence technology. Our service operates on a credit-based system, where each credit allows you to generate one coloring page from your uploaded photo.
+                  </p>
+                  <p className="text-gray-700 mb-4">
+                    You may use our service only as permitted by these terms and applicable law. We reserve the right to refuse service, terminate accounts, or remove content at our discretion.
                   </p>
                   <p className="text-gray-700">
                     You agree not to use the service for any unlawful or prohibited activities, including but not limited to, infringing on intellectual property rights, distributing harmful or malicious content, or engaging in fraudulent activities.
@@ -64,6 +66,7 @@ export default function TermsPage() {
                     <li className="mb-2">The AI conversion process may produce variations from your original photos</li>
                     <li className="mb-2">The quality of the resulting coloring pages depends on the quality and clarity of your uploaded photos</li>
                     <li className="mb-2">Not all images are equally suitable for conversion to coloring book format</li>
+                    <li className="mb-2">Multiple style options may be available for each page, and previous versions may be included as alternatives in your PDF</li>
                   </ul>
                   <p className="text-gray-700">
                     You accept that AI-generated content may not perfectly represent the original photos, and StoryInColor is not liable for artistic variations in the conversion process. You agree to use the AI-generated content for personal, non-commercial purposes only.
@@ -78,17 +81,24 @@ export default function TermsPage() {
                 </div>
 
                 <div className="mb-10 pb-8 border-b border-gray-200">
-                  <h2 className="text-2xl font-semibold text-gray-800 mb-4">5. Payment and Refunds</h2>
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-4">5. Payment and Credits</h2>
                   <p className="text-gray-700 mb-4">
-                    All payments are processed securely through our payment processors. By purchasing our products, you agree to pay all charges at the prices listed at the time of your purchase. Prices for our products are subject to change without notice.
+                    Our service operates on a credit-based system. All payments for credits are processed securely through our payment processors. By purchasing credits, you agree to pay all charges at the prices listed at the time of your purchase. Prices for our credits are subject to change without notice.
                   </p>
                   <p className="text-gray-700 mb-4">
-                    Preview images are provided before purchase to help you make an informed decision. If you're not satisfied with your coloring book due to manufacturing defects or shipping damage, please contact us within 14 days of receiving your order for our satisfaction guarantee. We do not offer refunds for:
+                    Each credit allows you to generate a coloring page from your uploaded photos. Once used, credits cannot be refunded except in the following circumstances:
                   </p>
                   <ul className="list-disc pl-5 text-gray-700">
-                    <li className="mb-2">Stylistic or artistic preferences regarding the AI conversion</li>
-                    <li className="mb-2">Digital products that have been downloaded</li>
-                    <li className="mb-2">Customized physical products unless damaged or defective</li>
+                    <li className="mb-2">Technical failure where the generation process was not completed despite credit deduction</li>
+                    <li className="mb-2">Service outage preventing delivery of purchased credits to your account</li>
+                  </ul>
+                  <p className="text-gray-700 mb-4">
+                    We do not offer refunds for:
+                  </p>
+                  <ul className="list-disc pl-5 text-gray-700">
+                    <li className="mb-2">Stylistic or artistic preferences regarding the AI conversion results</li>
+                    <li className="mb-2">Credits that have been successfully used to generate coloring pages</li>
+                    <li className="mb-2">Unused credits in your account after purchase</li>
                   </ul>
                 </div>
 
@@ -111,8 +121,11 @@ export default function TermsPage() {
                   <p className="text-gray-700 mb-4">
                     The StoryInColor service, including all software, algorithms, features, and functionality, is owned by StoryInColor and is protected by copyright, trademark, and other intellectual property laws. Our name, logo, and the look and feel of our service are trademarks of StoryInColor.
                   </p>
+                  <p className="text-gray-700 mb-4">
+                    While you retain rights to your original photos, the specific AI-transformed artwork created through our service is licensed to you for personal, non-commercial use only. Users who have purchased credits and generated coloring pages receive a license to print and use these pages for personal use.
+                  </p>
                   <p className="text-gray-700">
-                    While you retain rights to your original photos, the specific AI-transformed artwork created through our service is licensed to you for personal, non-commercial use only. You may not reproduce, distribute, or create derivative works from the AI-generated content without our express written permission.
+                    You may not reproduce, distribute, or create derivative works from the AI-generated content for commercial purposes without our express written permission. The PDF files generated using your credits are for your personal use, and you may print as many copies as you wish for personal, non-commercial purposes.
                   </p>
                 </div>
 
@@ -196,4 +209,5 @@ export default function TermsPage() {
     </div>
   )
 }
+
 

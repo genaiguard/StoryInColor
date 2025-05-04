@@ -1170,7 +1170,7 @@ function PageCard({
             <RadioGroup 
               value={selectedArtStyle} 
               onValueChange={setSelectedArtStyle} 
-              className="grid grid-cols-2 gap-4 w-full max-w-xs mb-6"
+              className="grid grid-cols-2 gap-4 w-full max-w-xs mb-3"
             >
               {/* Classic Style Option */}
               <Label htmlFor={`overlay-classic-${page.id}`} className="flex flex-col items-center justify-start rounded-lg border-2 border-gray-400 bg-white p-3 cursor-pointer hover:border-orange-500 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:ring-2 peer-data-[state=checked]:ring-orange-500 peer-data-[state=checked]:ring-offset-1 transition-all relative">
@@ -1188,6 +1188,11 @@ function PageCard({
                 <Check className="absolute top-2 right-2 h-5 w-5 text-orange-600 opacity-0 peer-data-[state=checked]:opacity-100" />
               </Label>
             </RadioGroup>
+            
+            {/* Add note about previous versions */}
+            <p className="text-xs text-gray-300 mb-4 text-center max-w-xs">
+              Previous versions will be saved and included as alternatives in your PDF.
+            </p>
             
             {/* Overlay Actions */}
             <div className="flex gap-4">
