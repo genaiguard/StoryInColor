@@ -13,10 +13,18 @@ export default function FAQSection() {
 
         <div className="mx-auto max-w-3xl mt-12 space-y-6">
           <div className="rounded-lg border bg-white p-6">
-            <h3 className="text-lg font-bold">How long does it take to receive my coloring pages?</h3>
+            <h3 className="text-lg font-bold">How does the credit system work?</h3>
             <p className="mt-2 text-gray-700">
-              Your custom coloring pages are generated into a PDF file almost instantly after purchase.
-              You'll receive a download link via email and can also access it from your dashboard.
+              We use a simple credit system. You receive free starter credits when you sign up. Each credit lets you create one coloring page. 
+              Additional credits are available for purchase, with pricing that rewards bulk purchases.
+            </p>
+          </div>
+
+          <div className="rounded-lg border bg-white p-6">
+            <h3 className="text-lg font-bold">How long does it take to generate my coloring pages?</h3>
+            <p className="mt-2 text-gray-700">
+              Your custom coloring pages are generated almost instantly. You can download them right away and print them at home 
+              or compile multiple pages into a complete coloring book.
             </p>
           </div>
 
@@ -30,6 +38,14 @@ export default function FAQSection() {
           </div>
 
           <div className="rounded-lg border bg-white p-6">
+            <h3 className="text-lg font-bold">Do credits expire?</h3>
+            <p className="mt-2 text-gray-700">
+              Your credits remain available in your account for an extended period. We design our system so you can use them 
+              when it's convenient for you.
+            </p>
+          </div>
+
+          <div className="rounded-lg border bg-white p-6">
             <h3 className="text-lg font-bold">Can I create coloring books of my pets?</h3>
             <p className="mt-2 text-gray-700">
               Pet portraits make wonderful coloring pages. Our AI technology works great with dogs, cats, and other
@@ -39,9 +55,10 @@ export default function FAQSection() {
           </div>
 
           <div className="rounded-lg border bg-white p-6">
-            <h3 className="text-lg font-bold">Can I preview my coloring book before ordering?</h3>
+            <h3 className="text-lg font-bold">Can I preview my coloring pages before finalizing?</h3>
             <p className="mt-2 text-gray-700">
-              Yes! You can preview your custom coloring pages. This allows you to make adjustments or replace photos if needed.
+              Yes! You can see a preview of how your photos will look as coloring pages before finalizing your creation. 
+              This lets you make adjustments or try different photos to get the result you want.
             </p>
           </div>
         </div>

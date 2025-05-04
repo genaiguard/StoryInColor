@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, ArrowRight, Upload, ImagePlus, Check, Trash2, X, Loader2, Wand2, RotateCcw, PlusCircle, CheckCircle, AlertTriangle, Crop, Image, Info, Sparkles, ShoppingCart, FileDown, Pencil } from "lucide-react"
+import { ArrowLeft, ArrowRight, Upload, ImagePlus, Check, Trash2, X, Loader2, Wand2, RotateCcw, PlusCircle, CheckCircle, AlertTriangle, Crop, Image, Info, Sparkles, ShoppingCart, FileDown, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
 import { UploadProvider, useUpload } from "@/app/context/upload-context"
 import { v4 as uuidv4 } from "uuid"
 import { useFirebase } from "@/app/firebase/firebase-provider"
@@ -17,8 +17,6 @@ import { getConfiguredStorage } from "@/app/firebase/storage-helpers"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { toast } from "sonner"
 import { PathImg } from "@/components/ui/pathed-image"
-import { DndProvider, useDrag, useDrop } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
 import { debounce } from 'lodash'
 import { getUserCredits, useCredit, formatCreditBalance } from "@/app/firebase/credits-helpers"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -60,6 +58,8 @@ interface ProjectData {
   createdAt?: any; // ServerTimestamp (on create)
   pdfPath?: string; // Path to final PDF in storage
   title?: string; // Optional title field
+  pdfUrl?: string; // URL to download the generated PDF
+  pdfGeneratedAt?: any; // Timestamp when PDF was last generated
 }
 
 const MAX_PAGES = 40;
@@ -73,11 +73,9 @@ const steps = [
 
 export default function CreatePage() {
   return (
-    <DndProvider backend={HTML5Backend}>
-      <Suspense fallback={<LoadingState message="Loading Creator..." />}>
-        <CreatePageContent />
-      </Suspense>
-    </DndProvider>
+    <Suspense fallback={<LoadingState message="Loading Creator..." />}>
+      <CreatePageContent />
+    </Suspense>
   )
 }
 
@@ -262,8 +260,18 @@ function CreatePageContent() {
       const db = getFirestore()
       const projectRef = doc(db, "users", user.uid, "projects", currentProjectId)
 
+      // Ensure page numbers are sequential before saving
+      const pagesWithUpdatedNumbers = currentPages.map((p, index) => ({ 
+        ...p, 
+        pageNumber: index + 1 
+      }));
+      
+      console.log("Saving pages with updated page numbers:", 
+        pagesWithUpdatedNumbers.map(p => ({ id: p.id, pageNumber: p.pageNumber }))
+      );
+
       const dataToSave: Partial<ProjectData> = {
-        pages: currentPages.map((p, index) => ({ ...p, pageNumber: index + 1 })), // Ensure order
+        pages: pagesWithUpdatedNumbers, // Use pages with updated numbers
         status: 'draft',
         userId: user.uid,
         updatedAt: serverTimestamp(),
@@ -376,16 +384,26 @@ function CreatePageContent() {
 
   const movePage = useCallback((dragIndex: number, hoverIndex: number) => {
     setPages((prevPages: Page[]) => {
-      const updatedPages = [...prevPages]
-      const [movedPage] = updatedPages.splice(dragIndex, 1)
-      updatedPages.splice(hoverIndex, 0, movedPage)
+      const updatedPages = [...prevPages];
+      // Remove the dragged item
+      const [movedPage] = updatedPages.splice(dragIndex, 1);
+      // Insert it at the new position
+      updatedPages.splice(hoverIndex, 0, movedPage);
+      
       // Re-assign page numbers based on new order
-      return updatedPages.map((page, index) => ({
+      const pagesWithUpdatedNumbers = updatedPages.map((page, index) => ({
         ...page,
         pageNumber: index + 1,
-      }))
-    })
-    console.log(`Moved page from index ${dragIndex} to ${hoverIndex}`)
+      }));
+      
+      console.log(`Moved page from index ${dragIndex} to ${hoverIndex}, updated page numbers`);
+      console.log("New page order:", pagesWithUpdatedNumbers.map(p => ({ id: p.id, pageNumber: p.pageNumber })));
+      
+      return pagesWithUpdatedNumbers;
+    });
+    
+    // The pages state update will trigger the useEffect and schedule the debounced save
+    // But the caller can also manually flush it for immediate save
   }, [])
 
   const handleImageUpload = async (pageId: string, file: File) => {
@@ -591,6 +609,30 @@ function CreatePageContent() {
     setGeneratingPDF(true);
     
     try {
+      // First check if an existing PDF is available and still valid
+      const db = getFirestore();
+      const projectRef = doc(db, "users", user.uid, "projects", projectId);
+      const projectSnap = await getDoc(projectRef);
+      
+      if (projectSnap.exists()) {
+        const projectData = projectSnap.data() as ProjectData;
+        
+        // If there's an existing PDF and the project hasn't been updated since last PDF generation
+        if (projectData.pdfUrl && projectData.pdfGeneratedAt && projectData.updatedAt) {
+          const pdfGeneratedAt = projectData.pdfGeneratedAt.toDate ? projectData.pdfGeneratedAt.toDate() : new Date(projectData.pdfGeneratedAt);
+          const lastUpdatedAt = projectData.updatedAt.toDate ? projectData.updatedAt.toDate() : new Date(projectData.updatedAt);
+          
+          // Compare timestamps - if PDF was generated after the last update, use the existing PDF
+          if (pdfGeneratedAt >= lastUpdatedAt) {
+            toast.success("Using existing PDF - no changes detected since last generation.");
+            window.open(projectData.pdfUrl, '_blank');
+            setGeneratingPDF(false);
+            return;
+          }
+        }
+      }
+      
+      // If we reached here, we need to generate a new PDF
       const functions = getFunctions();
       const generatePDF = httpsCallable(functions, 'generateProjectPDF');
       
@@ -598,6 +640,12 @@ function CreatePageContent() {
       const data = result.data as { success: boolean; pdfUrl?: string; message?: string };
       
       if (data.success && data.pdfUrl) {
+        // Store the PDF URL and generation timestamp in the project document
+        await updateDoc(projectRef, {
+          pdfUrl: data.pdfUrl,
+          pdfGeneratedAt: serverTimestamp()
+        });
+        
         toast.success("PDF generated successfully!");
         // Open PDF in new tab
         window.open(data.pdfUrl, '_blank');
@@ -828,6 +876,7 @@ function CreatePageContent() {
                     onSelectVersion={(versionId) => selectVersion(page.id, versionId)}
                     onPrepareToRegenerate={() => prepareForRegeneration(page.id)}
                     onCancelRegeneration={() => cancelRegeneration(page.id)}
+                    debouncedSave={debouncedSave}
                   />
                 ))}
               </div>
@@ -912,7 +961,7 @@ const StyleOption = ({ id, label, description, imageUrl }: { id: string; label: 
   </div>
 )
 
-// Page Card Component (Needs DnD implementation)
+// Page Card Component
 interface PageCardProps {
   page: Page;
   index: number;
@@ -923,82 +972,27 @@ interface PageCardProps {
   onSelectVersion: (versionId: string) => void;
   onPrepareToRegenerate: () => void;
   onCancelRegeneration: () => void;
+  debouncedSave: any; // Add debounced save
 }
 
-function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConvertImage, onSelectVersion, onPrepareToRegenerate, onCancelRegeneration }: PageCardProps) {
+function PageCard({ 
+  page, 
+  index, 
+  onMovePage, 
+  onRemovePage, 
+  onImageUpload, 
+  onConvertImage, 
+  onSelectVersion, 
+  onPrepareToRegenerate, 
+  onCancelRegeneration,
+  debouncedSave
+}: PageCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Local state for selecting art style within the card
   const [selectedArtStyle, setSelectedArtStyle] = useState<string>('classic'); 
   // State for showing the style selection overlay
   const [showStyleOverlay, setShowStyleOverlay] = useState<boolean>(false);
-
-  // --- Drag and Drop Logic ---
-  const [{ handlerId }, drop] = useDrop({
-    accept: 'page', // Use string literal directly
-    collect(monitor) {
-      return {
-        handlerId: monitor.getHandlerId(),
-      };
-    },
-    hover(item: { type: string; id: string; index: number }, monitor) {
-      if (!ref.current) {
-        return;
-      }
-      const dragIndex = item.index;
-      const hoverIndex = index;
-
-      // Don't replace items with themselves
-      if (dragIndex === hoverIndex) {
-        return;
-      }
-
-      // Determine rectangle on screen
-      const hoverBoundingRect = ref.current?.getBoundingClientRect();
-      // Get vertical middle
-      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-      // Determine mouse position
-      const clientOffset = monitor.getClientOffset();
-      // Get pixels to the top
-      const hoverClientY = clientOffset!.y - hoverBoundingRect.top;
-
-      // Only perform the move when the mouse has crossed half of the items height
-      // When dragging downwards, only move when the cursor is below 50%
-      // When dragging upwards, only move when the cursor is above 50%
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-        return;
-      }
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-        return;
-      }
-
-      // Time to actually perform the action
-      onMovePage(dragIndex, hoverIndex);
-
-      // Note: we're mutating the monitor item here!
-      // Generally it's better to avoid mutations,
-      // but it's good here for the sake of performance
-      // to avoid expensive index searches.
-      item.index = hoverIndex;
-    },
-  });
-
-  // Log the type right before useDrag is called
-  console.log(`PageCard ${page.id} rendering with drag type:`, 'page');
-
-  const [{ isDragging }, drag] = useDrag({
-    type: 'page', // Use string literal directly
-    item: () => ({
-      type: 'page', // Use string literal directly
-      id: page.id,
-      index
-    }),
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  drag(drop(ref)); // Attach drag and drop refs
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1011,18 +1005,51 @@ function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConv
     fileInputRef.current?.click();
   };
 
+  const handleMovePrev = () => {
+    if (index > 0) {
+      onMovePage(index, index - 1);
+      // Manually flush the debounced save to ensure changes are persisted immediately
+      debouncedSave.flush();
+    }
+  };
+
+  const handleMoveNext = () => {
+    onMovePage(index, index + 1);
+    // Manually flush the debounced save to ensure changes are persisted immediately
+    debouncedSave.flush();
+  };
+
   const selectedVersion = page.versions.find(v => v.versionId === page.selectedVersionId);
 
   return (
     <div
       ref={ref}
-      data-handler-id={handlerId}
-      className={`border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow ${isDragging ? 'opacity-50' : 'opacity-100'}`}
-      style={{ cursor: 'move' }}
+      className="border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
     >
       {/* Card Header */}
       <div className="p-3 bg-gray-50 border-b flex justify-between items-center">
-        <span className="font-medium text-sm">Page {page.pageNumber}</span>
+        <div className="flex items-center">
+          <span className="font-medium text-sm">Page {page.pageNumber}</span>
+          <div className="ml-2 flex gap-1">
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="h-6 w-6 text-gray-400 hover:text-gray-700" 
+              onClick={handleMovePrev}
+              disabled={index === 0}
+            >
+              <ChevronLeft className="h-3 w-3" />
+            </Button>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="h-6 w-6 text-gray-400 hover:text-gray-700" 
+              onClick={handleMoveNext}
+            >
+              <ChevronRight className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
         <Button size="icon" variant="ghost" className="text-red-500 hover:bg-red-100 h-7 w-7" onClick={onRemovePage}>
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -1071,6 +1098,7 @@ function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConv
                 src={page.originalImage.previewUrl}
                 alt={`Original Upload - Page ${page.pageNumber}`}
                 fill
+                priority={page.pageNumber === 1}
                 className="object-contain rounded-md"
               />
               {!page.originalImage.uploaded && (
@@ -1098,10 +1126,11 @@ function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConv
                 src={selectedVersion.watermarkedPreviewUrl}
                 alt={`Coloring Page Version - Page ${page.pageNumber}`}
                 fill
+                priority={page.pageNumber === 1}
                 className="object-contain"
               />
             ) : (
-              <div className="text-center text-gray-500">Preview loading...</div> // Placeholder
+              <div className="text-center text-gray-500">Preview loading...</div>
             )}
             
             {/* Version Selector & Regenerate Button */}

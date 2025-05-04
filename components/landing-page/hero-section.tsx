@@ -24,10 +24,10 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">
               <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-base font-medium" asChild>
-                <Link href="/login?register=true">Start Creating</Link>
+                <Link href="/login?register=true">Start Free</Link>
               </Button>
             </div>
-            <p className="text-sm text-gray-500">No credit card required to preview your pages</p>
+            <p className="text-sm text-gray-500">Sign up today and try our service with free starter credits</p>
           </div>
           <div className="relative flex items-center justify-center lg:justify-end">
             <PathImg

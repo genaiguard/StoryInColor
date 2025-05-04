@@ -1212,18 +1212,22 @@ export const generateProjectPDF = onCall(
       }
       
       // Organize all images - both selected and unselected
-      const selectedImages: {index: number, buffer: Buffer}[] = [];
-      const unselectedImages: {pageIndex: number, versionIndex: number, buffer: Buffer}[] = [];
+      const selectedImages: {index: number, pageNumber: number, buffer: Buffer}[] = [];
+      const unselectedImages: {pageIndex: number, pageNumber: number, versionIndex: number, buffer: Buffer}[] = [];
       
+      // Sort pages array by pageNumber before processing
+      const sortedPages = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
+      console.log(`[PDF] Sorted ${pages.length} pages by pageNumber before processing`);
+
       // Use Promise.all to download all images in parallel
-      const downloadPromises = pages.map(async (page: any, pageIndex: number) => {
+      const downloadPromises = sortedPages.map(async (page: any, pageIndex: number) => {
           try {
               // Get selected version (or first if none selected)
               const selectedVersionId = page.selectedVersionId;
               const versions = page.versions || [];
               
               if (versions.length === 0) {
-                  console.log(`[PDF] Page ${pageIndex + 1} has no versions, skipping`);
+                  console.log(`[PDF] Page ${page.pageNumber} has no versions, skipping`);
                   return null;
               }
               
@@ -1236,23 +1240,23 @@ export const generateProjectPDF = onCall(
               if (hasPurchasedCredits) {
                   // Paid users get original (non-watermarked) images
                   selectedStoragePath = selectedVersion.originalStoragePath;
-                  console.log(`[PDF] Using original image for paid user on page ${pageIndex + 1}`);
+                  console.log(`[PDF] Using original image for paid user on page ${page.pageNumber}`);
               } else {
                   // Free users get watermarked preview images
                   selectedStoragePath = selectedVersion.watermarkedStoragePath;
-                  console.log(`[PDF] Using watermarked image for free user on page ${pageIndex + 1}`);
+                  console.log(`[PDF] Using watermarked image for free user on page ${page.pageNumber}`);
               }
               
               if (!selectedStoragePath) {
-                  console.log(`[PDF] No storage path found for selected version on page ${pageIndex + 1}, skipping`);
+                  console.log(`[PDF] No storage path found for selected version on page ${page.pageNumber}, skipping`);
                   return null;
               }
               
-              console.log(`[PDF] Processing selected version for page ${pageIndex + 1}, using version ${selectedVersion.versionId}`);
+              console.log(`[PDF] Processing selected version for page ${page.pageNumber}, using version ${selectedVersion.versionId}`);
               
               // Download the selected image
               const selectedImageBuffer = await downloadImage(selectedStoragePath);
-              selectedImages.push({ index: pageIndex, buffer: selectedImageBuffer });
+              selectedImages.push({ index: pageIndex, pageNumber: page.pageNumber, buffer: selectedImageBuffer });
               
               // Process unselected versions
               const unselectedVersionPromises = versions
@@ -1266,15 +1270,15 @@ export const generateProjectPDF = onCall(
                       }
                       
                       if (!unselectedStoragePath) {
-                          console.log(`[PDF] No storage path found for unselected version ${unselectedVersion.versionId} on page ${pageIndex + 1}, skipping`);
+                          console.log(`[PDF] No storage path found for unselected version ${unselectedVersion.versionId} on page ${page.pageNumber}, skipping`);
                           return null;
                       }
                       
-                      console.log(`[PDF] Processing unselected version ${unselectedVersion.versionId} for page ${pageIndex + 1}`);
+                      console.log(`[PDF] Processing unselected version ${unselectedVersion.versionId} for page ${page.pageNumber}`);
                       
                       // Download the unselected image
                       const unselectedImageBuffer = await downloadImage(unselectedStoragePath);
-                      return { pageIndex, versionIndex, buffer: unselectedImageBuffer };
+                      return { pageIndex, pageNumber: page.pageNumber, versionIndex, buffer: unselectedImageBuffer };
                   });
               
               // Wait for all unselected versions to download
@@ -1285,7 +1289,7 @@ export const generateProjectPDF = onCall(
               
               return true; // Indicate that this page was processed
           } catch (pageError) {
-              console.error(`[PDF] Error processing page ${pageIndex + 1}:`, pageError);
+              console.error(`[PDF] Error processing page ${page.pageNumber}:`, pageError);
               return null;
           }
       });
@@ -1295,6 +1299,18 @@ export const generateProjectPDF = onCall(
       
       console.log(`[PDF] Downloaded ${selectedImages.length} selected images and ${unselectedImages.length} unselected images`);
       
+      // Sort the selected images by pageNumber to ensure correct order in PDF
+      selectedImages.sort((a, b) => a.pageNumber - b.pageNumber);
+      console.log("[PDF] Sorted selected images by pageNumber before writing to PDF");
+
+      // Also sort unselected images by pageNumber and then versionIndex
+      unselectedImages.sort((a, b) => 
+        a.pageNumber === b.pageNumber 
+          ? a.versionIndex - b.versionIndex 
+          : a.pageNumber - b.pageNumber
+      );
+      console.log("[PDF] Sorted unselected images by pageNumber and versionIndex before writing to PDF");
+
       // Add each selected image to the PDF
       for (let i = 0; i < selectedImages.length; i++) {
           const imageResult = selectedImages[i];
@@ -1409,13 +1425,13 @@ export const generateProjectPDF = onCall(
                   doc.moveDown()
                      .fontSize(10)
                      .font('Helvetica')
-                     .text(`Alternative version ${unselectedImage.versionIndex + 1} for page ${unselectedImage.pageIndex + 1}`, {
+                     .text(`Alternative version ${unselectedImage.versionIndex + 1} for page ${unselectedImage.pageNumber}`, {
                          align: 'center'
                      });
                   
-                  console.log(`[PDF] Added unselected version ${unselectedImage.versionIndex + 1} for page ${unselectedImage.pageIndex + 1} to PDF`);
+                  console.log(`[PDF] Added unselected version ${unselectedImage.versionIndex + 1} for page ${unselectedImage.pageNumber} to PDF`);
               } catch (renderError) {
-                  console.error(`[PDF] Error rendering unselected version for page ${unselectedImage.pageIndex + 1}:`, renderError);
+                  console.error(`[PDF] Error rendering unselected version for page ${unselectedImage.pageNumber}:`, renderError);
               }
           }
       }

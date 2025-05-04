@@ -28,7 +28,7 @@ export default function HowItWorksSection() {
             </div>
             <h3 className="text-2xl font-bold text-center">2. Preview & Customize</h3>
             <p className="text-center text-gray-500">
-              Our AI converts your photos into coloring pages. Preview your pages and make any adjustments.
+              Our AI converts your photos into coloring pages. Preview and make adjustments to get the best results.
             </p>
           </div>
           <div className="flex flex-col items-center space-y-4 rounded-lg border bg-white p-8 shadow-sm">
@@ -37,7 +37,7 @@ export default function HowItWorksSection() {
             </div>
             <h3 className="text-2xl font-bold text-center">3. Download Your Pages</h3>
             <p className="text-center text-gray-500">
-              Download your personalized coloring pages as a PDF instantly after purchase.
+              Download your personalized coloring pages instantly and print them at home for immediate enjoyment.
             </p>
           </div>
         </div>

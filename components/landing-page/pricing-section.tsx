@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Check } from "lucide-react"
+import { Check, Gift, Sparkles, Folders, Download } from "lucide-react"
 import { PathImg } from "@/components/ui/pathed-image"
 
 export default function PricingSection() {
@@ -20,47 +20,47 @@ export default function PricingSection() {
 
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 mt-12 justify-center">
           <div className="flex flex-col rounded-lg border-2 border-orange-500 bg-white p-6 shadow-lg order-1 lg:order-none">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-bold">Print at Home Pages</h3>
+            <div className="flex items-center justify-between mb-10">
+              <h3 className="text-2xl font-bold">Print at Home Coloring Pages</h3>
             </div>
             <div className="mb-4 flex justify-center">
               <PathImg
                 src="/images/product-pdf.webp"
-                alt="PDF Download option - digital coloring pages"
+                alt="Print at home coloring pages"
                 width={120}
                 height={120}
                 className="h-auto"
               />
             </div>
             <div className="mt-4 text-center">
-              <span className="text-4xl font-bold">$2.00</span>
-              <span className="text-base font-normal text-gray-500"> / page</span>
+              <span className="text-4xl font-bold">Simple Pricing</span>
+              <span className="text-base font-normal text-gray-500 block mt-1">Starting at $0.45 per generation</span>
             </div>
             <ul className="mt-6 space-y-4 flex-1">
               <li className="flex items-center gap-2">
-                <Check className="h-5 w-5 text-orange-500" />
-                <span>Custom coloring pages</span>
+                <Gift className="h-5 w-5 text-orange-500" />
+                <span>Free starter credits included</span>
               </li>
               <li className="flex items-center gap-2">
-                <Check className="h-5 w-5 text-orange-500" />
-                <span>Create as many pages as you like</span>
+                <Sparkles className="h-5 w-5 text-orange-500" />
+                <span>Pay per AI generation</span>
               </li>
               <li className="flex items-center gap-2">
-                <Check className="h-5 w-5 text-orange-500" />
-                <span>PDF download</span>
+                <Folders className="h-5 w-5 text-orange-500" />
+                <span>Create multiple projects</span>
               </li>
               <li className="flex items-center gap-2">
-                <Check className="h-5 w-5 text-orange-500" />
-                <span>Print instantly at home</span>
+                <Download className="h-5 w-5 text-orange-500" />
+                <span>Instant download of print-ready coloring pages</span>
               </li>
             </ul>
             <Button className="mt-6 bg-orange-500 hover:bg-orange-600 text-white" asChild>
-              <Link href="/login?register=true">Start Creating</Link>
+              <Link href="/login?register=true">Try For Free</Link>
             </Button>
           </div>
 
           <div className="flex flex-col rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 shadow-sm order-2 lg:order-none">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-10">
               <h3 className="text-2xl font-bold text-gray-500">Physical Books</h3>
               <div className="rounded-full bg-gray-200 px-2.5 py-0.5 text-sm text-gray-600">Coming Soon</div>
             </div>
