@@ -94,22 +94,42 @@ export default function DashboardPage() {
   const searchParams = useSearchParams()
   const creditPurchaseSuccess = searchParams.get('credit_purchase') === 'success'
 
-  // Set initial processing state directly from URL parameter
+  // Flag to track if we've already handled this specific redirect
+  // Moved inside useEffect where needed
+  // const acknowledgedSessionKey = 'creditPurchaseAcknowledged' 
+
+  // Set initial processing state based on URL param and session storage
   useEffect(() => {
+    const acknowledgedSessionKey = 'creditPurchaseAcknowledged' // Define here
+    console.log("[Debug] Initial effect running. creditPurchaseSuccess:", creditPurchaseSuccess);
     if (creditPurchaseSuccess) {
-      setIsProcessingCreditPurchase(true);
-      // Show an immediate toast notification that will persist
-      toast.success("Purchase detected! Checking for credits...", {
-        duration: 10000,
-        position: "top-center"
-      });
+      const alreadyAcknowledged = sessionStorage.getItem(acknowledgedSessionKey) === 'true';
+      console.log("[Debug] Already acknowledged in session storage:", alreadyAcknowledged);
+      if (!alreadyAcknowledged) {
+        console.log("[Debug] Setting isProcessingCreditPurchase to true initially.");
+        setIsProcessingCreditPurchase(true);
+        toast.info("Purchase detected! Checking for credits...", {
+          duration: 10000,
+          position: "top-center"
+        });
+      } else {
+        // If already acknowledged, ensure processing state is false
+        setIsProcessingCreditPurchase(false);
+      }
     }
   }, [creditPurchaseSuccess]);
 
-  // Load user credits
+  // Load user credits and handle polling
   useEffect(() => {
+    const acknowledgedSessionKey = 'creditPurchaseAcknowledged' // Define here
+    const alreadyAcknowledged = sessionStorage.getItem(acknowledgedSessionKey) === 'true';
+    console.log("[Debug] Credit loading/polling effect running. Params:", { user, initialized, creditPurchaseSuccess, recentPurchaseDetected, pollingComplete, alreadyAcknowledged });
     const loadUserCredits = async () => {
-      if (!user || !initialized) return;
+      console.log("[Debug] loadUserCredits called. Params:", { user, initialized });
+      if (!user || !initialized) {
+        console.log("[Debug] loadUserCredits returning early (user/initialized not ready).");
+        return;
+      }
       
       try {
         setIsLoadingCredits(true);
@@ -126,7 +146,7 @@ export default function DashboardPage() {
           
           const mostRecentPurchase = sortedPurchases[0];
           
-          // Check if the most recent purchase is from today
+          // Check if the most recent purchase is from today AND is a paid purchase
           if (mostRecentPurchase) {
             const purchaseDate = new Date(mostRecentPurchase.purchaseDate.seconds * 1000);
             const today = new Date();
@@ -134,10 +154,15 @@ export default function DashboardPage() {
                             purchaseDate.getMonth() === today.getMonth() && 
                             purchaseDate.getFullYear() === today.getFullYear();
             
-            if (isToday) {
+            const isPaidPurchase = mostRecentPurchase.pricePaid > 0; // Added check for paid purchase
+            
+            console.log("[Debug] Most recent purchase check:", { isToday, isPaidPurchase, purchaseDetails: mostRecentPurchase });
+
+            if (isToday && isPaidPurchase) { // Modify condition to include isPaidPurchase
+              console.log("[Debug] Recent PAID purchase detected today!");
               setRecentPurchaseDetected(true);
               setIsProcessingCreditPurchase(false);
-              // Show success message
+              sessionStorage.setItem(acknowledgedSessionKey, 'true'); // Acknowledge
               toast.success("Credits added successfully!");
             }
           }
@@ -162,37 +187,44 @@ export default function DashboardPage() {
     let intervalId: NodeJS.Timeout | null = null;
     
     if (creditPurchaseSuccess && !recentPurchaseDetected && !pollingComplete) {
-      // Always show processing message when redirected from successful purchase
+      console.log("[Debug] Starting polling interval.");
+      // Always show processing message when redirected from successful purchase (redundant due to initial effect, but safe)
       setIsProcessingCreditPurchase(true);
       
       // Poll every 2 seconds for credit purchase detection
       intervalId = setInterval(() => {
+        console.log("[Debug] Polling: calling loadUserCredits.");
         loadUserCredits();
       }, 2000);
       
       // Set a maximum wait time (30 seconds)
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
+        console.log("[Debug] Polling timeout reached.");
         if (intervalId) {
+          console.log("[Debug] Clearing polling interval.");
           clearInterval(intervalId);
           
           // If we still haven't detected a purchase after polling
           if (!recentPurchaseDetected) {
+            console.log("[Debug] Polling complete, no purchase detected. Showing info message.");
             setPollingComplete(true);
             setIsProcessingCreditPurchase(false);
-            // Show a different message after polling completes without finding a purchase
+            sessionStorage.setItem(acknowledgedSessionKey, 'true'); // Acknowledge timeout
             toast.info("Your purchase is being processed. Credits will appear in your account shortly.");
           }
         }
       }, 30000);
+      
+      // Clean up interval and timeout on unmount or when purchase detected/polling complete
+      return () => {
+        console.log("[Debug] Cleaning up polling effect.");
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
+        clearTimeout(timeoutId);
+      };
     }
-    
-    // Clean up interval on unmount
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [user, initialized, creditPurchaseSuccess, recentPurchaseDetected, pollingComplete]);
+  }, [user, initialized, creditPurchaseSuccess, recentPurchaseDetected, pollingComplete, isProcessingCreditPurchase]);
 
   // Load user projects from Firebase
   useEffect(() => {
@@ -286,6 +318,8 @@ export default function DashboardPage() {
   const draftProjects = projects.filter(p => p.status === 'draft');
   const processingProjects = projects.filter(p => p.status === 'processing');
   const completedProjects = projects.filter(p => p.status === 'completed');
+
+  console.log("[Debug] Rendering Dashboard. State:", { creditPurchaseSuccess, isProcessingCreditPurchase, pollingComplete, recentPurchaseDetected });
 
   if (!initialized || isLoading) {
     return (
