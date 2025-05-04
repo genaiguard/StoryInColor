@@ -16,12 +16,12 @@ export default function CreditsPage() {
   const router = useRouter()
   const { user, initialized: firebaseInitialized } = useFirebase()
   const [isLoading, setIsLoading] = useState(true)
-  const [isPaymentLoading, setIsPaymentLoading] = useState(false)
   const [credits, setCredits] = useState(0)
-  const [error, setError] = useState("")
-  const [usageHistory, setUsageHistory] = useState<any[]>([])
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([])
+  const [usageHistory, setUsageHistory] = useState<any[]>([])
+  const [error, setError] = useState("")
   const [firstActivityTimestamp, setFirstActivityTimestamp] = useState<any>(null)
+  const [packageIdLoading, setPackageIdLoading] = useState<string | null>(null)
 
   // Load user credits and history on mount
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function CreditsPage() {
       return
     }
 
-    setIsPaymentLoading(true)
+    setPackageIdLoading(packageId)
     setError("")
 
     try {
@@ -151,7 +151,7 @@ export default function CreditsPage() {
       setError(message)
       toast.error(message)
     } finally {
-      setIsPaymentLoading(false)
+      setPackageIdLoading(null)
     }
   }
 
@@ -300,9 +300,9 @@ export default function CreditsPage() {
                   <Button 
                     className="w-full"
                     onClick={() => handlePurchaseCredits(pkg.id)}
-                    disabled={isPaymentLoading}
+                    disabled={packageIdLoading === pkg.id}
                   >
-                    {isPaymentLoading ? (
+                    {packageIdLoading === pkg.id ? (
                       <>
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                         Processing...

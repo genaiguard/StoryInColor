@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -13,6 +14,7 @@ import { ref, getDownloadURL } from "firebase/storage"
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers"
 import { PathImg } from "@/components/ui/pathed-image"
 import { getUserCredits, formatCreditBalance } from "@/app/firebase/credits-helpers"
+import { toast } from "sonner"
 
 // Define interfaces for project types
 interface BaseProject {
@@ -84,6 +86,25 @@ export default function DashboardPage() {
   const [credits, setCredits] = useState<number>(0)
   const [isLoadingCredits, setIsLoadingCredits] = useState<boolean>(true)
   const [creditHistory, setCreditHistory] = useState<any[]>([])
+  const [isProcessingCreditPurchase, setIsProcessingCreditPurchase] = useState<boolean>(false)
+  const [recentPurchaseDetected, setRecentPurchaseDetected] = useState<boolean>(false)
+  const [pollingComplete, setPollingComplete] = useState<boolean>(false)
+  
+  // Get search params to check for credit_purchase=success
+  const searchParams = useSearchParams()
+  const creditPurchaseSuccess = searchParams.get('credit_purchase') === 'success'
+
+  // Set initial processing state directly from URL parameter
+  useEffect(() => {
+    if (creditPurchaseSuccess) {
+      setIsProcessingCreditPurchase(true);
+      // Show an immediate toast notification that will persist
+      toast.success("Purchase detected! Checking for credits...", {
+        duration: 10000,
+        position: "top-center"
+      });
+    }
+  }, [creditPurchaseSuccess]);
 
   // Load user credits
   useEffect(() => {
@@ -93,7 +114,34 @@ export default function DashboardPage() {
       try {
         setIsLoadingCredits(true);
         const userCredits = await getUserCredits(user.uid);
+        
         setCredits(userCredits.balance);
+        
+        // If we were redirected from a successful purchase, check if there's a purchase from today
+        if (creditPurchaseSuccess && !recentPurchaseDetected && userCredits.purchaseHistory?.length > 0) {
+          // Sort purchases by date descending to get the most recent first
+          const sortedPurchases = [...userCredits.purchaseHistory].sort((a, b) => 
+            new Date(b.purchaseDate.seconds * 1000).getTime() - new Date(a.purchaseDate.seconds * 1000).getTime()
+          );
+          
+          const mostRecentPurchase = sortedPurchases[0];
+          
+          // Check if the most recent purchase is from today
+          if (mostRecentPurchase) {
+            const purchaseDate = new Date(mostRecentPurchase.purchaseDate.seconds * 1000);
+            const today = new Date();
+            const isToday = purchaseDate.getDate() === today.getDate() && 
+                            purchaseDate.getMonth() === today.getMonth() && 
+                            purchaseDate.getFullYear() === today.getFullYear();
+            
+            if (isToday) {
+              setRecentPurchaseDetected(true);
+              setIsProcessingCreditPurchase(false);
+              // Show success message
+              toast.success("Credits added successfully!");
+            }
+          }
+        }
         
         // Get the last 3 usage history items
         const recentUsage = userCredits.usageHistory
@@ -109,7 +157,42 @@ export default function DashboardPage() {
     };
     
     loadUserCredits();
-  }, [user, initialized]);
+    
+    // Set up polling if we're waiting for a credit purchase to complete
+    let intervalId: NodeJS.Timeout | null = null;
+    
+    if (creditPurchaseSuccess && !recentPurchaseDetected && !pollingComplete) {
+      // Always show processing message when redirected from successful purchase
+      setIsProcessingCreditPurchase(true);
+      
+      // Poll every 2 seconds for credit purchase detection
+      intervalId = setInterval(() => {
+        loadUserCredits();
+      }, 2000);
+      
+      // Set a maximum wait time (30 seconds)
+      setTimeout(() => {
+        if (intervalId) {
+          clearInterval(intervalId);
+          
+          // If we still haven't detected a purchase after polling
+          if (!recentPurchaseDetected) {
+            setPollingComplete(true);
+            setIsProcessingCreditPurchase(false);
+            // Show a different message after polling completes without finding a purchase
+            toast.info("Your purchase is being processed. Credits will appear in your account shortly.");
+          }
+        }
+      }, 30000);
+    }
+    
+    // Clean up interval on unmount
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [user, initialized, creditPurchaseSuccess, recentPurchaseDetected, pollingComplete]);
 
   // Load user projects from Firebase
   useEffect(() => {
@@ -318,6 +401,37 @@ export default function DashboardPage() {
                 <div className="text-sm text-red-700">
                   <p className="font-medium mb-1">Error</p>
                   <p>{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Credit purchase processing notification - Make it more prominent */}
+          {isProcessingCreditPurchase && (
+            <div className="mb-6 bg-blue-500 text-white border border-blue-600 rounded-lg p-6 shadow-lg">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className="animate-spin rounded-full h-6 w-6 border-4 border-white border-b-transparent"></div>
+                </div>
+                <div>
+                  <p className="font-bold mb-1 text-lg">Processing Credit Purchase</p>
+                  <p>Your credit purchase is being processed. This may take a moment.</p>
+                  <p className="mt-2 text-sm text-blue-100">URL parameter detected: credit_purchase=success</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Show a message after polling is complete and no purchase was detected */}
+          {pollingComplete && !recentPurchaseDetected && creditPurchaseSuccess && (
+            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  <Sparkles className="h-5 w-5 text-amber-500" />
+                </div>
+                <div className="text-sm text-amber-700">
+                  <p className="font-medium mb-1">Purchase Processing</p>
+                  <p>Your purchase is being processed in the background. Credits will appear in your account shortly.</p>
                 </div>
               </div>
             </div>

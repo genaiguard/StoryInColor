@@ -318,7 +318,7 @@ export const stripeWebhook = onRequest(
                                       packageId,
                                       creditAmount,
                                       pricePaid: priceInCents,
-                                      purchaseDate: admin.firestore.FieldValue.serverTimestamp()
+                                      purchaseDate: new Date() // Use regular Date instead of server timestamp
                                   }],
                                   usageHistory: [],
                                   lastUpdated: admin.firestore.FieldValue.serverTimestamp()
@@ -332,7 +332,7 @@ export const stripeWebhook = onRequest(
                                       packageId,
                                       creditAmount,
                                       pricePaid: priceInCents,
-                                      purchaseDate: admin.firestore.FieldValue.serverTimestamp()
+                                      purchaseDate: new Date() // Use regular Date instead of server timestamp
                                   }),
                                   lastUpdated: admin.firestore.FieldValue.serverTimestamp()
                               });
@@ -398,7 +398,51 @@ export const stripeWebhook = onRequest(
                       try {
                           console.log(`[PDF] Starting PDF generation for project ${projectId}`);
                           
-                          // Create a PDF filename
+                          // Check if the user has ever purchased credits
+                          const userCreditsRef = db.collection('userCredits').doc(userId);
+                          console.log(`[PDF] Checking credit history for user: ${userId}`);
+                          const userCreditsDoc = await userCreditsRef.get();
+                          
+                          let hasPurchasedCredits = false;
+                          
+                          // Extra debugging for the userCreditsDoc
+                          console.log(`[PDF-DEBUG] userCreditsDoc exists: ${userCreditsDoc.exists}`);
+                          
+                          if (userCreditsDoc.exists) {
+                            const userData = userCreditsDoc.data();
+                            console.log(`[PDF] User credit data found:`, JSON.stringify({
+                              balance: userData?.balance,
+                              used: userData?.used,
+                              purchaseHistoryCount: userData?.purchaseHistory?.length || 0
+                            }));
+                            
+                            // Check if user has any PAID purchase history (not just the initial free credits)
+                            if (userData?.purchaseHistory && userData.purchaseHistory.length > 0) {
+                              // Look for any purchase that is not marked as initial free credits
+                              const paidPurchases = userData.purchaseHistory.filter(
+                                (purchase: any) => !purchase.isInitialCredits && purchase.pricePaid > 0
+                              );
+                              
+                              console.log(`[PDF] User purchase history: total=${userData.purchaseHistory.length}, paid=${paidPurchases.length}`);
+                              console.log(`[PDF] Paid purchases:`, JSON.stringify(paidPurchases));
+                              
+                              if (paidPurchases.length > 0) {
+                                hasPurchasedCredits = true;
+                                console.log(`[PDF] User has purchased credits before. Using high-quality images.`);
+                              } else {
+                                console.log(`[PDF] User has only free initial credits. Using watermarked images.`);
+                              }
+                            } else {
+                              console.log(`[PDF] User has never purchased credits. Using watermarked images.`);
+                            }
+                          } else {
+                            console.log(`[PDF] No credit record found for user. Using watermarked images.`);
+                          }
+                          
+                          // Debug: Log what type of images will be used
+                          console.log(`[PDF] Will use ${hasPurchasedCredits ? 'HIGH QUALITY' : 'WATERMARKED'} images for PDF`);
+
+                          // Create PDF filename
                           const pdfFilename = `${projectData?.title || 'Coloring_Book'}_${new Date().getTime()}.pdf`;
                           const pdfStoragePath = `users/${userId}/projects/${projectId}/downloads/${pdfFilename}`;
                           
@@ -475,6 +519,17 @@ export const stripeWebhook = onRequest(
                                      continued: false
                                  });
                               
+                              // Add watermark notice for free users
+                              if (!hasPurchasedCredits) {
+                                 doc.moveDown(1.5)
+                                    .fontSize(10)
+                                    .fillColor('#888888')
+                                    .text('Note: This free PDF contains watermarked preview images. Purchase credits to generate high-quality PDFs without watermarks.', {
+                                        align: 'center',
+                                        width: 400
+                                    });
+                              }
+                              
                               doc.addPage();
                               
                               // Process each page and add to PDF
@@ -502,8 +557,20 @@ export const stripeWebhook = onRequest(
                                       
                                       const version = versions.find((v: any) => v.versionId === selectedVersionId) || versions[0];
                                       
-                                      // Use originalStoragePath (unprocessed image) for best quality in PDF
-                                      const storagePath = version.originalStoragePath;
+                                      // Use the appropriate image path based on user's purchase history
+                                      let storagePath;
+                                      console.log(`[PDF-DEBUG] hasPurchasedCredits=${hasPurchasedCredits} for path selection`);
+                                      if (hasPurchasedCredits) {
+                                          // Paid users get original (non-watermarked) images
+                                          storagePath = version.originalStoragePath;
+                                          console.log(`[PDF] Using original image for paid user on page ${pageIndex + 1}`);
+                                      } else {
+                                          // Free users get watermarked preview images
+                                          storagePath = version.watermarkedStoragePath;
+                                          console.log(`[PDF] Using watermarked image for free user on page ${pageIndex + 1}`);
+                                      }
+                                      
+                                      console.log(`[PDF-DEBUG] Selected path: ${storagePath}, watermarkedPath=${version.watermarkedStoragePath}, originalPath=${version.originalStoragePath}`);
                                       
                                       if (!storagePath) {
                                           console.log(`[PDF] No storage path found for page ${pageIndex + 1}, skipping`);
@@ -593,9 +660,38 @@ export const stripeWebhook = onRequest(
                                       contentType: 'application/pdf',
                                       metadata: {
                                           firebaseStorageDownloadTokens: uuidv4(), // Generate a download token
+                                          isCompletedPdf: 'true'  // Add this metadata flag to match storage rules
                                       }
                                   }
                               });
+                              
+                              // Additional step to explicitly set the metadata again
+                              console.log(`[PDF] Setting explicit metadata on file: ${pdfStoragePath}`);
+                              const file = bucket.file(pdfStoragePath);
+                              
+                              // Get existing metadata to verify it was set correctly
+                              const [metadata] = await file.getMetadata();
+                              console.log(`[PDF] Current file metadata:`, JSON.stringify(metadata.metadata || {}));
+                              
+                              // Set metadata explicitly with public read flag
+                              await file.setMetadata({
+                                  metadata: {
+                                      isCompletedPdf: 'true',
+                                      firebaseStorageDownloadTokens: uuidv4(), // Generate a new token
+                                  }
+                              });
+                              
+                              // Verify metadata was set correctly
+                              const [updatedMetadata] = await file.getMetadata();
+                              console.log(`[PDF] Updated file metadata:`, JSON.stringify(updatedMetadata.metadata || {}));
+                              
+                              // Make the file publicly accessible
+                              console.log(`[PDF] Making file publicly accessible`);
+                              await file.makePublic();
+                              
+                              // Generate a public URL that doesn't require authentication
+                              const publicUrl = `https://storage.googleapis.com/${bucket.name}/${pdfStoragePath}`;
+                              console.log(`[PDF] Public URL: ${publicUrl}`);
                               
                               // Clean up temp file
                               fs.unlinkSync(tempPdfPath);
@@ -1489,8 +1585,52 @@ export const generateProjectPDF = onCall(
     try {
       console.log(`[PDF] Starting PDF generation for project ${projectId}`);
       
-      // Reference to the Firestore project document
+      // Check if the user has ever purchased credits
       const db = admin.firestore();
+      const userCreditsRef = db.collection('userCredits').doc(userId);
+      console.log(`[PDF] Checking credit history for user: ${userId}`);
+      const userCreditsDoc = await userCreditsRef.get();
+      
+      let hasPurchasedCredits = false;
+      
+      // Extra debugging for the userCreditsDoc
+      console.log(`[PDF-DEBUG] userCreditsDoc exists: ${userCreditsDoc.exists}`);
+      
+      if (userCreditsDoc.exists) {
+        const userData = userCreditsDoc.data();
+        console.log(`[PDF] User credit data found:`, JSON.stringify({
+          balance: userData?.balance,
+          used: userData?.used,
+          purchaseHistoryCount: userData?.purchaseHistory?.length || 0
+        }));
+        
+        // Check if user has any PAID purchase history (not just the initial free credits)
+        if (userData?.purchaseHistory && userData.purchaseHistory.length > 0) {
+          // Look for any purchase that is not marked as initial free credits
+          const paidPurchases = userData.purchaseHistory.filter(
+            (purchase: any) => !purchase.isInitialCredits && purchase.pricePaid > 0
+          );
+          
+          console.log(`[PDF] User purchase history: total=${userData.purchaseHistory.length}, paid=${paidPurchases.length}`);
+          console.log(`[PDF] Paid purchases:`, JSON.stringify(paidPurchases));
+          
+          if (paidPurchases.length > 0) {
+            hasPurchasedCredits = true;
+            console.log(`[PDF] User has purchased credits before. Using high-quality images.`);
+          } else {
+            console.log(`[PDF] User has only free initial credits. Using watermarked images.`);
+          }
+        } else {
+          console.log(`[PDF] User has never purchased credits. Using watermarked images.`);
+        }
+      } else {
+        console.log(`[PDF] No credit record found for user. Using watermarked images.`);
+      }
+      
+      // Debug: Log what type of images will be used
+      console.log(`[PDF] Will use ${hasPurchasedCredits ? 'HIGH QUALITY' : 'WATERMARKED'} images for PDF`);
+
+      // Reference to the Firestore project document
       const projectRef = db.collection('users').doc(userId).collection('projects').doc(projectId);
       
       // Get project data
@@ -1561,6 +1701,17 @@ export const generateProjectPDF = onCall(
              align: 'left',
              continued: false
          });
+         
+      // Add watermark notice for free users
+      if (!hasPurchasedCredits) {
+         doc.moveDown(1.5)
+            .fontSize(10)
+            .fillColor('#888888')
+            .text('Note: This free PDF contains watermarked preview images. Purchase credits to generate high-quality PDFs without watermarks.', {
+                align: 'center',
+                width: 400
+            });
+      }
       
       doc.addPage();
       
@@ -1589,8 +1740,20 @@ export const generateProjectPDF = onCall(
               
               const version = versions.find((v: any) => v.versionId === selectedVersionId) || versions[0];
               
-              // Use originalStoragePath (unprocessed image) for best quality in PDF
-              const storagePath = version.originalStoragePath;
+              // Use the appropriate image path based on user's purchase history
+              let storagePath;
+              console.log(`[PDF-DEBUG] hasPurchasedCredits=${hasPurchasedCredits} for path selection`);
+              if (hasPurchasedCredits) {
+                  // Paid users get original (non-watermarked) images
+                  storagePath = version.originalStoragePath;
+                  console.log(`[PDF] Using original image for paid user on page ${pageIndex + 1}`);
+              } else {
+                  // Free users get watermarked preview images
+                  storagePath = version.watermarkedStoragePath;
+                  console.log(`[PDF] Using watermarked image for free user on page ${pageIndex + 1}`);
+              }
+              
+              console.log(`[PDF-DEBUG] Selected path: ${storagePath}, watermarkedPath=${version.watermarkedStoragePath}, originalPath=${version.originalStoragePath}`);
               
               if (!storagePath) {
                   console.log(`[PDF] No storage path found for page ${pageIndex + 1}, skipping`);
@@ -1680,9 +1843,38 @@ export const generateProjectPDF = onCall(
               contentType: 'application/pdf',
               metadata: {
                   firebaseStorageDownloadTokens: uuidv4(), // Generate a download token
+                  isCompletedPdf: 'true'  // Add this metadata flag to match storage rules
               }
           }
       });
+      
+      // Additional step to explicitly set the metadata again
+      console.log(`[PDF] Setting explicit metadata on file: ${pdfStoragePath}`);
+      const file = bucket.file(pdfStoragePath);
+      
+      // Get existing metadata to verify it was set correctly
+      const [metadata] = await file.getMetadata();
+      console.log(`[PDF] Current file metadata:`, JSON.stringify(metadata.metadata || {}));
+      
+      // Set metadata explicitly with public read flag
+      await file.setMetadata({
+          metadata: {
+              isCompletedPdf: 'true',
+              firebaseStorageDownloadTokens: uuidv4(), // Generate a new token
+          }
+      });
+      
+      // Verify metadata was set correctly
+      const [updatedMetadata] = await file.getMetadata();
+      console.log(`[PDF] Updated file metadata:`, JSON.stringify(updatedMetadata.metadata || {}));
+      
+      // Make the file publicly accessible
+      console.log(`[PDF] Making file publicly accessible`);
+      await file.makePublic();
+      
+      // Generate a public URL that doesn't require authentication
+      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${pdfStoragePath}`;
+      console.log(`[PDF] Public URL: ${publicUrl}`);
       
       // Clean up temp file
       fs.unlinkSync(tempPdfPath);
@@ -1696,14 +1888,14 @@ export const generateProjectPDF = onCall(
       // Update the project with PDF path
       await projectRef.update({
           pdfStoragePath: pdfStoragePath,
-          pdfUrl: downloadUrl,
+          pdfUrl: publicUrl,
           pdfGeneratedAt: admin.firestore.FieldValue.serverTimestamp()
       });
       
       // Return success response with PDF URL
       return {
           success: true,
-          pdfUrl: downloadUrl,
+          pdfUrl: publicUrl,
           message: "PDF generated successfully"
       };
       

@@ -63,7 +63,6 @@ interface ProjectData {
 }
 
 const MAX_PAGES = 40;
-const PRICE_PER_PAGE_CENTS = 200; // $2.00
 
 const steps = [
   { id: "options", label: "Product Options" },
@@ -555,31 +554,7 @@ function CreatePageContent() {
     console.log(`Selected version ${versionId} for page ${pageId}`)
   }
 
-  // --- Navigation ---
-  const handleOrder = () => {
-    if (!projectId) {
-      toast.error("Project ID not available. Cannot proceed.")
-      return
-    }
-    // Ensure latest state is saved before navigating
-    // flush doesn't take arguments, it executes the last scheduled call
-    debouncedSave.flush()
-
-    if (isSaving) {
-      toast.info("Saving progress before checkout...")
-      setTimeout(() => {
-        router.push(`/preview?id=${projectId}`)
-      }, 500)
-    } else {
-      const pagesReady = pages.every(p => p.originalImage && p.selectedVersionId)
-      if (!pagesReady || pages.length === 0) {
-        toast.error("Please ensure all pages have an uploaded image and a selected coloring version before ordering.")
-        return
-      }
-      console.log("Navigating to checkout for project:", projectId)
-      router.push(`/preview?id=${projectId}`)
-    }
-  }
+  // --- PDF Generation ---
 
   // Add PDF generation function
   const handleGeneratePDF = async () => {
@@ -646,7 +621,6 @@ function CreatePageContent() {
   }
 
   const totalPages = pages.length
-  const totalPrice = (totalPages * PRICE_PER_PAGE_CENTS / 100).toFixed(2)
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
@@ -699,14 +673,6 @@ function CreatePageContent() {
                   Generate PDF
                 </>
               )}
-            </Button>
-            <Button
-              size="sm"
-              className="bg-green-600 hover:bg-green-700 whitespace-nowrap"
-              onClick={handleOrder}
-              disabled={isSaving || totalPages === 0 || pages.some(p => !p.originalImage || !p.selectedVersionId || p.isProcessing || p.isPreparingToRegenerate)}
-            >
-              Order Now (${totalPrice})
             </Button>
           </div>
         </div>
@@ -926,10 +892,6 @@ interface PageCardProps {
   onCancelRegeneration: () => void;
 }
 
-const ItemTypes = {
-  PAGE: 'page',
-};
-
 function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConvertImage, onSelectVersion, onPrepareToRegenerate, onCancelRegeneration }: PageCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -940,13 +902,13 @@ function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConv
 
   // --- Drag and Drop Logic ---
   const [{ handlerId }, drop] = useDrop({
-    accept: ItemTypes.PAGE,
+    accept: 'page', // Use string literal directly
     collect(monitor) {
       return {
         handlerId: monitor.getHandlerId(),
       };
     },
-    hover(item: { index: number }, monitor) {
+    hover(item: { type: string; id: string; index: number }, monitor) {
       if (!ref.current) {
         return;
       }
@@ -988,11 +950,16 @@ function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConv
     },
   });
 
+  // Log the type right before useDrag is called
+  console.log(`PageCard ${page.id} rendering with drag type:`, 'page');
+
   const [{ isDragging }, drag] = useDrag({
-    type: ItemTypes.PAGE,
-    item: () => {
-      return { id: page.id, index };
-    },
+    type: 'page', // Use string literal directly
+    item: () => ({
+      type: 'page', // Use string literal directly
+      id: page.id,
+      index
+    }),
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
