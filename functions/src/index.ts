@@ -1086,15 +1086,44 @@ export const generateProjectPDF = onCall(
          .text(projectData?.title || 'My Coloring Pages', {
              align: 'center'
          })
+         .moveDown(0.5)
+         .fontSize(16)
+         .font('Helvetica')
+         .text('storyincolor.com', {
+             align: 'center',
+             continued: false
+         })
          .moveDown(2)
          .fontSize(12)
-         .font('Helvetica')
          .text(`Generated on ${new Date().toLocaleDateString()}`, {
              align: 'center',
              continued: false
          })
-         .moveDown(3)
-         .fontSize(14)
+         .moveDown(1.5);
+         
+      // Add QR code for the website - centered on page
+      // Use QR code from frontend public folder
+      const qrCodeUrl = 'https://storyincolor.com/images/qr-code.png'; // URL to the QR code in public images folder
+      // Calculate position to center the QR code
+      const pageWidth = doc.page.width - (doc.page.margins.left + doc.page.margins.right);
+      const qrSize = 150; // QR code size in pixels
+      const qrX = doc.page.margins.left + (pageWidth - qrSize) / 2;
+      
+      // Try to use the QR code image, with text fallback if it fails
+      try {
+        doc.image(qrCodeUrl, qrX, doc.y, { width: qrSize })
+           .moveDown(2);
+      } catch (error) {
+        console.error('[PDF] Error adding QR code image, falling back to text:', error);
+        // Fallback to text if image fails
+        doc.fontSize(14)
+           .text('Visit storyincolor.com/qrcode', {
+               align: 'center'
+           })
+           .moveDown(2);
+      }
+           
+      doc.fontSize(14)
          .text('Printing Instructions:', {
              align: 'left',
              continued: false
