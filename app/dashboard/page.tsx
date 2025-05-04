@@ -786,7 +786,7 @@ export default function DashboardPage() {
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="bg-white/50 rounded-lg p-4">
                   <h5 className="font-semibold mb-2 text-purple-700">Free Credits</h5>
-                  <p className="text-purple-900">New users receive 4 free credits to get started with creating coloring pages.</p>
+                  <p className="text-purple-900">New users receive 2 free credits to get started with creating coloring pages.</p>
                 </div>
                 <div className="bg-white/50 rounded-lg p-4">
                   <h5 className="font-semibold mb-2 text-purple-700">Usage</h5>
@@ -794,7 +794,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="bg-white/50 rounded-lg p-4">
                   <h5 className="font-semibold mb-2 text-purple-700">Purchase</h5>
-                  <p className="text-purple-900">Buy more credits starting at $3.50. Larger packages offer discounts of up to 36%.</p>
+                  <p className="text-purple-900">Purchase credits for as low as $0.45 per credit.</p>
                 </div>
               </div>
             </div>

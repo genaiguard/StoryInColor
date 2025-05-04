@@ -476,12 +476,6 @@ function CreatePageContent() {
         return;
     }
     
-    // Limit number of versions
-    if (page.versions.length >= 3) {
-        toast.warning("Maximum versions (3) already created.");
-        return;
-    }
-
     // Check if user has enough credits
     if (credits <= 0) {
       setShowCreditUI(true);
@@ -1018,7 +1012,6 @@ function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConv
   };
 
   const selectedVersion = page.versions.find(v => v.versionId === page.selectedVersionId);
-  const canRegenerate = page.versions.length < 3;
 
   return (
     <div
@@ -1132,10 +1125,10 @@ function PageCard({ page, index, onMovePage, onRemovePage, onImageUpload, onConv
                 size="sm"
                 variant="outline"
                 onClick={() => setShowStyleOverlay(true)} 
-                disabled={!canRegenerate || !page.originalImage.uploaded || page.isProcessing}
+                disabled={!page.originalImage.uploaded || page.isProcessing}
                 className="text-xs"
               >
-                <RotateCcw className="mr-1 h-3 w-3" /> Regenerate ({page.versions.length}/3)
+                <RotateCcw className="mr-1 h-3 w-3" /> Regenerate
               </Button>
             </div>
           </>

@@ -329,7 +329,7 @@ export default function CreditsPage() {
                 Credits are used to generate AI coloring pages from your photos. Each credit allows you to convert one photo into a coloring page.
               </p>
               <p>
-                New users receive 4 free credits to try the service. After using your free credits, you'll need to purchase more to continue generating coloring pages.
+                New users receive 2 free credits to try the service. After using your free credits, you'll need to purchase more to continue generating coloring pages.
               </p>
               <p>
                 Credits never expire and can be used across multiple projects. 

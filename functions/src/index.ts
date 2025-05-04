@@ -690,11 +690,8 @@ export const processImageWithOpenAI = onCall(
                     throw new HttpsError('not-found', `Page ${pageId} not found in project`);
                 }
                 
-                // Get current versions and check limit
+                // Get current versions
                 const currentVersions = currentPages[pageIndex].versions || [];
-                if (currentVersions.length >= 3) {
-                    throw new HttpsError('failed-precondition', 'Maximum versions (3) already created');
-                }
                 
                 // Update the page with new version
                 const updatedVersions = [...currentVersions, newVersionData];
@@ -1299,9 +1296,12 @@ export const generateProjectPDF = onCall(
       console.log(`[PDF] Downloaded ${selectedImages.length} selected images and ${unselectedImages.length} unselected images`);
       
       // Add each selected image to the PDF
-      for (const imageResult of selectedImages) {
-          // Add a new page for each image (except the first one which comes after title page)
-          if (imageResult.index > 0) {
+      for (let i = 0; i < selectedImages.length; i++) {
+          const imageResult = selectedImages[i];
+          
+          // Always add a new page after the title page (which is page 1)
+          // But don't add an extra page before the first image
+          if (i > 0) {
               doc.addPage();
           }
           
@@ -1339,7 +1339,7 @@ export const generateProjectPDF = onCall(
                   height: finalHeight
               });
               
-              console.log(`[PDF] Added selected page ${imageResult.index + 1} to PDF`);
+              console.log(`[PDF] Added selected page ${imageResult.index + 1} to PDF at position ${i + 1}`);
           } catch (renderError) {
               console.error(`[PDF] Error rendering selected page ${imageResult.index + 1}:`, renderError);
           }

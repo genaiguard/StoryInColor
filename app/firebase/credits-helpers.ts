@@ -1,7 +1,7 @@
 import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, Timestamp } from "firebase/firestore"
 
 // Constants
-export const FREE_CREDITS_PER_USER = 4;
+export const FREE_CREDITS_PER_USER = 2;
 
 // Interface for credit purchase packages
 export interface CreditPackage {
