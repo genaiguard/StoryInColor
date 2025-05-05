@@ -18,7 +18,8 @@ import {
   UploadCloud,
   Check,
   Mail,
-  CheckCircle
+  CheckCircle,
+  Image as ImageIcon
 } from "lucide-react"
 import { useFirebase } from "@/app/firebase/firebase-provider"
 import { 
@@ -79,7 +80,6 @@ interface ProjectInfo {
   userId: string;
   title: string;
   // productType: string; // Removed
-  status: string;
   createdAt: string;
   orderDate?: string; 
   pdfGeneratedAt?: string; 
@@ -90,6 +90,7 @@ interface ProjectInfo {
   pageCount?: number;
   pdfUrl?: string;
   pages: Page[]; // Use the detailed Page type
+  deleted?: boolean; // Added deleted flag
 }
 
 // Add missing interface definitions from admin/page.tsx
@@ -110,29 +111,11 @@ interface GetUserDataResponse {
 // Admin emails allowed to access this interface
 const ADMIN_EMAILS = ['ipekcioglu@me.com']; // Add any additional admin emails here
 
-// Map Firestore statuses to simplified admin dashboard statuses
-const mapStatusToAdminView = (status: string): 'draft' | 'completed' | 'other' => {
-  switch (status) {
-    case 'draft':
-      return 'draft';
-    case 'pdf_ready':
-    case 'ordered': // Assuming ordered implies completion for admin view
-      return 'completed';
-    // Treat these as needing attention or ignore based on requirements
-    case 'processing_error':
-    case 'pdf_generating':
-    case 'payment_pending': // Assuming this needs attention
-    default:
-      return 'other'; // Could also be 'draft' if we want to group unknowns
-  }
-};
-
 export default function AdminProjectsPage() {
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("draft");
   const [selectedProject, setSelectedProject] = useState<ProjectInfo | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -205,7 +188,6 @@ export default function AdminProjectsPage() {
           const singleProject = await loadSingleProject(db, userId, projectId);
           if (singleProject) {
             setProjects([singleProject]);
-            setActiveTab(singleProject.status === 'completed' ? "processed" : "pending");
           } else {
             setError("Project not found");
           }
@@ -230,19 +212,16 @@ export default function AdminProjectsPage() {
           const projectId = docSnapshot.id;
           const userId = docSnapshot.ref.path.split('/')[1];
           
-          // Map Firestore status to simplified view status
-          const adminStatus = mapStatusToAdminView(data.status || 'draft');
-          
           projectsData.push({
             id: projectId,
             userId,
             title: data.title || "Untitled Project",
-            status: adminStatus, // Use mapped status
             createdAt: data.createdAt ? new Date(data.createdAt.toDate()).toLocaleDateString() : "Unknown date",
             orderDate: data.orderDate ? new Date(data.orderDate.toDate()).toLocaleDateString() : 'N/A',
             pdfGeneratedAt: data.pdfGeneratedAt ? new Date(data.pdfGeneratedAt.toDate()).toLocaleDateString() : 'N/A',
             userEmail: data.userEmail || 'No email in Auth',
-            pages: data.pages || []
+            pages: data.pages || [],
+            deleted: data.deleted || false
           });
         }
         
@@ -362,7 +341,6 @@ export default function AdminProjectsPage() {
         id: projectId,
         userId,
         title: data.title || 'Untitled',
-        status: data.status || 'draft',
         createdAt: formatDate(data.createdAt),
         orderDate: data.orderDate ? formatDate(data.orderDate) : undefined,
         pdfGeneratedAt: data.pdfGeneratedAt ? formatDate(data.pdfGeneratedAt) : undefined,
@@ -370,7 +348,8 @@ export default function AdminProjectsPage() {
         orderNumber: data.orderNumber || undefined,
         pageCount: processedPages.length, // Count processed pages
         pdfUrl: data.pdfUrl || undefined,
-        pages: processedPages // Assign processed pages
+        pages: processedPages, // Assign processed pages
+        deleted: data.deleted || false // Fetch and assign deleted status
       };
     } catch (error) {
       console.error("Error loading single project details:", error);
@@ -378,18 +357,8 @@ export default function AdminProjectsPage() {
     }
   };
   
-  // Filter projects based on active tab
-  const filteredProjects = projects.filter(project => {
-    if (activeTab === "draft") {
-      return project.status === 'draft';
-    } else if (activeTab === "processed") {
-      return project.status === 'completed';
-    }
-    return true;
-  });
-  
   // Filter by search term
-  const searchedProjects = filteredProjects.filter(project => 
+  const searchedProjects = projects.filter(project => 
     project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     project.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     project.userId.toLowerCase().includes(searchTerm.toLowerCase())
@@ -551,88 +520,41 @@ export default function AdminProjectsPage() {
               user={user}
             />
           ) : (
-            /* Show tabs view for all projects */
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6 md:mb-8">
-                <TabsTrigger
-                  value="draft"
-                  className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700"
-                >
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Draft Projects
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="completed" 
-                  className="data-[state=active]:bg-green-100 data-[state=active]:text-green-700"
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Completed Projects
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="draft">
-                {loading ? (
-                  <div className="flex justify-center items-center p-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
-                  </div>
-                ) : searchedProjects.length > 0 ? (
-                  <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
-                    {searchedProjects.map((project) => (
-                      <ProjectCard 
-                        key={`${project.userId}-${project.id}`}
-                        project={project}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <div className="rounded-full bg-amber-100 p-6 mb-4">
-                        <FileUp className="h-10 w-10 text-amber-500" />
-                      </div>
-                      <h3 className="text-xl font-medium mb-2">No Pending Projects</h3>
-                      <p className="text-gray-500 text-center max-w-md mb-6">
-                        {searchTerm 
-                          ? "No projects match your search criteria." 
-                          : "All projects are completed or no projects exist."}
-                      </p>
+            /* Show list view for all projects - Tabs removed */
+            <div className="w-full">
+              {/* Removed TabsList */}
+              {/* List all projects directly */}
+              {loading ? (
+                <div className="flex justify-center items-center p-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+                </div>
+              ) : searchedProjects.length > 0 ? (
+                <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
+                  {searchedProjects.map((project) => (
+                    <ProjectCard 
+                      key={`${project.userId}-${project.id}`}
+                      project={project}
+                      // isProcessed prop is no longer needed
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="rounded-full bg-amber-100 p-6 mb-4">
+                      <FileUp className="h-10 w-10 text-amber-500" />
                     </div>
+                    <h3 className="text-xl font-medium mb-2">No Projects Found</h3>
+                    <p className="text-gray-500 text-center max-w-md mb-6">
+                      {searchTerm 
+                        ? "No projects match your search criteria." 
+                        : "There are currently no projects to display."}
+                    </p>
                   </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="completed">
-                {loading ? (
-                  <div className="flex justify-center items-center p-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
-                  </div>
-                ) : searchedProjects.length > 0 ? (
-                  <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-2">
-                    {searchedProjects.map((project) => (
-                      <ProjectCard 
-                        key={`${project.userId}-${project.id}`}
-                        project={project}
-                        isProcessed={true}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <div className="rounded-full bg-green-100 p-6 mb-4">
-                        <Eye className="h-10 w-10 text-green-500" />
-                      </div>
-                      <h3 className="text-xl font-medium mb-2">No Processed Projects</h3>
-                      <p className="text-gray-500 text-center max-w-md mb-6">
-                        {searchTerm 
-                          ? "No completed projects match your search criteria." 
-                          : "When projects are completed, they will appear here."}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
+                </div>
+              )}
+              {/* Removed TabsContent sections */}
+            </div>
           )}
         </div>
       </main>
@@ -657,11 +579,11 @@ export default function AdminProjectsPage() {
 
 // ProjectCard component for displaying projects in the list view
 function ProjectCard({ 
-  project, 
-  isProcessed = false 
+  project 
+  // Removed isProcessed prop
 }: { 
   project: ProjectInfo; 
-  isProcessed?: boolean;
+  // Removed isProcessed prop type
 }) {
   const [imageError, setImageError] = useState(false);
   
@@ -707,17 +629,7 @@ function ProjectCard({
             <span className="text-xs text-purple-700 font-medium">{project.artStyle || 'Classic'}</span>
           </div> 
           */}
-          {/* Update Status Tag to use project.status */}
-          <div className={`px-2 py-1 rounded-full ${ 
-            project.status === 'completed' ? 'bg-green-100 text-green-800' : 
-            project.status === 'draft' ? 'bg-gray-100 text-gray-800' : 
-            project.status === 'pdf_failed' ? 'bg-red-100 text-red-800' : 
-            'bg-yellow-100 text-yellow-800' // Default/other statuses 
-          }`}>
-            <span className="text-xs font-medium">
-              {project.status || 'unknown'} {/* Display actual status */}
-            </span>
-          </div>
+          {/* Ensure Status Tag is fully removed */}
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 border-t">
@@ -744,9 +656,17 @@ function SingleProjectView({
     <div className="space-y-8"> {/* Changed from grid to space-y */}
       {/* Project Information Card (Keep as is) */}
       <Card>
-        <CardHeader>
-          <CardTitle>Project Information</CardTitle>
-          <CardDescription>Details about this project</CardDescription>
+        <CardHeader className="flex flex-row justify-between items-start">
+          <div>
+            <CardTitle>Project Information</CardTitle>
+            <CardDescription>Details about this project</CardDescription>
+          </div>
+          {/* Add Deleted Badge if applicable */}
+          {project.deleted && (
+            <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded border border-red-400">
+              Deleted
+            </span>
+          )}
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -786,25 +706,13 @@ function SingleProjectView({
                     <p className="text-base">{project.pageCount}</p>
                   </div>
                 )}
-               <div>
-                 <h3 className="text-sm font-medium text-gray-500 mb-1">Status</h3>
-                 <p>
-                   <span className={`font-medium px-2 py-1 rounded-full text-sm ${ 
-                     project.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                     project.status === 'draft' ? 'bg-gray-100 text-gray-800' : 
-                     project.status === 'pdf_failed' ? 'bg-red-100 text-red-800' : 
-                     'bg-yellow-100 text-yellow-800' 
-                   }`}>
-                     {project.status || 'unknown'}
-                   </span>
-                 </p>
-               </div>
-               {project.pdfUrl && (
-                 <div>
-                   <h3 className="text-sm font-medium text-gray-500 mb-1">Download Link</h3>
-                   <a href={project.pdfUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">{project.pdfUrl}</a>
-                 </div>
-               )}
+                {/* Ensure Status display is fully removed */}
+                {project.pdfUrl && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Download Link</h3>
+                    <p className="text-base">{project.pdfUrl}</p>
+                  </div>
+                )}
             </div>
           </div>
         </CardContent>
@@ -813,22 +721,23 @@ function SingleProjectView({
       {/* Project Pages Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Project Pages</CardTitle>
-          <CardDescription>Original uploads and selected coloring page versions.</CardDescription>
+          <CardTitle>Project Pages ({project.pages?.length || 0})</CardTitle>
+          <CardDescription>Original uploads and all generated coloring page versions.</CardDescription>
         </CardHeader>
         <CardContent>
           {project.pages && project.pages.length > 0 ? (
-            <div className="space-y-6"> {/* Vertical space between pages */}
+            <div className="space-y-6"> 
               {project.pages.map((page, index) => {
-                const selectedVersion = page.versions.find(v => v.versionId === page.selectedVersionId);
+                // Find selected version for potential highlighting (optional)
+                // const selectedVersion = page.versions.find(v => v.versionId === page.selectedVersionId);
                 return (
                   <div key={page.id || index} className="border rounded-lg p-4">
-                    <h4 className="text-lg font-semibold mb-3">Page {page.pageNumber}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <h4 className="text-lg font-semibold mb-4">Page {page.pageNumber}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                       {/* Original Image */}
-                      <div>
-                        <h5 className="text-sm font-medium text-gray-600 mb-2">Original Upload</h5>
-                        <div className="relative aspect-square border rounded-lg overflow-hidden bg-gray-100">
+                      <div className="md:col-span-1">
+                        <h5 className="text-sm font-medium text-gray-600 mb-2 text-center">Original Upload</h5>
+                        <div className="relative aspect-square border rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                           {page.originalImage?.displayUrl ? (
                             <PathImg 
                               src={page.originalImage.displayUrl} 
@@ -837,30 +746,41 @@ function SingleProjectView({
                               className="object-contain" 
                             />
                           ) : (
-                            <div className="flex items-center justify-center h-full text-gray-400">No Image</div>
+                            <div className="text-gray-400 p-4 text-center text-sm">No Original Image</div>
                           )}
                         </div>
                       </div>
-                      {/* Selected Coloring Version */}
-                      <div>
-                        <h5 className="text-sm font-medium text-gray-600 mb-2">Selected Version</h5>
-                        <div className="relative aspect-square border rounded-lg overflow-hidden bg-gray-100">
-                          {selectedVersion?.watermarkedPreviewUrl ? (
-                            <PathImg 
-                              src={selectedVersion.watermarkedPreviewUrl} 
-                              alt={`Selected Version - Page ${page.pageNumber}`}
-                              fill 
-                              className="object-contain" 
-                            />
+                      {/* Generated Versions */}
+                      <div className="md:col-span-2">
+                          <h5 className="text-sm font-medium text-gray-600 mb-2">Generated Versions ({page.versions?.length || 0})</h5>
+                          {page.versions && page.versions.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              {page.versions.map((version, vIndex) => (
+                                <div key={version.versionId} className={`border rounded-lg overflow-hidden ${version.versionId === page.selectedVersionId ? 'ring-2 ring-offset-1 ring-orange-500' : ''}`}>
+                                  <div className="relative aspect-square bg-gray-100 flex items-center justify-center">
+                                    {version.watermarkedPreviewUrl ? (
+                                      <PathImg 
+                                        src={version.watermarkedPreviewUrl} 
+                                        alt={`Version ${vIndex + 1} - Page ${page.pageNumber}`}
+                                        fill 
+                                        className="object-contain" 
+                                      />
+                                    ) : (
+                                      <div className="text-gray-400 p-2 text-center text-xs"><ImageIcon className="w-5 h-5 mx-auto mb-1"/>Preview unavailable</div>
+                                    )}
+                                  </div>
+                                  <div className="p-1.5 text-center bg-gray-50">
+                                      <p className="text-xs text-gray-600">
+                                          Style: <span className="font-medium">{version.artStyle}</span>
+                                          {version.versionId === page.selectedVersionId && <span className="text-green-600 font-bold"> (Selected)</span>}
+                                      </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           ) : (
-                            <div className="flex items-center justify-center h-full text-gray-400">No Version Selected/Generated</div>
+                             <div className="text-gray-400 p-4 text-center text-sm italic border rounded-lg">No versions generated for this page.</div>
                           )}
-                        </div>
-                        {selectedVersion && (
-                          <p className="text-xs text-gray-500 mt-2 text-center">
-                            Style Used: <span className="font-medium">{selectedVersion.artStyle}</span>
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>

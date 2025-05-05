@@ -33,8 +33,8 @@ const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
 
 // Initialize Firebase Admin
 admin.initializeApp();
-// Only initialize db when needed
-// const db = admin.firestore();
+const db = admin.firestore(); // Initialize Firestore globally here
+const auth = admin.auth();    // Initialize Auth globally here
 const storageClient = new Storage(); // Initialize Storage client
 const bucketName = admin.app().options.storageBucket || process.env.GCLOUD_STORAGE_BUCKET;
 if (!bucketName) {
@@ -138,7 +138,6 @@ export const stripeWebhook = onRequest(
                   if (session.payment_status === 'paid') {
                       try {
                           console.log(`[Credits] Adding ${creditAmount} credits for user ${userId}`);
-                          const db = admin.firestore();
                           const userCreditsRef = db.collection('userCredits').doc(userId);
                           
                           // Get current user credits or create if not exists
@@ -359,53 +358,6 @@ export const getAuthUserData = onCall({
     return { 
       success: false, 
       message: 'Failed to fetch user data', 
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
-// Function to list all users - paginated for performance
-export const listAllUsers = onCall({
-  secrets: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, SENDER_EMAIL_ADDRESS],
-}, async (request) => {
-  // Verify admin access
-  if (!request.auth) {
-    console.error('[Admin API] Unauthorized attempt to list users');
-    throw new Error('Unauthorized - User must be authenticated');
-  }
-  
-  // Only allow the admin email to call this function
-  if (request.auth.token.email !== 'ipekcioglu@me.com') {
-    console.error(`[Admin API] User ${request.auth.token.email} attempted to access admin function`);
-    throw new Error('Unauthorized - Admin access only');
-  }
-  
-  try {
-    // Get parameters for pagination
-    const pageSize = request.data.pageSize || 1000; // Default limit
-    const pageToken = request.data.pageToken;
-    
-    // List all users
-    const listUsersResult = await admin.auth().listUsers(pageSize, pageToken);
-    
-    // Map to simplified user objects
-    const users = listUsersResult.users.map(userRecord => ({
-      uid: userRecord.uid,
-      email: userRecord.email,
-      displayName: userRecord.displayName,
-      createdAt: userRecord.metadata.creationTime
-    }));
-    
-    return {
-      success: true,
-      users,
-      pageToken: listUsersResult.pageToken
-    };
-  } catch (error) {
-    console.error('[Admin API] Error listing users:', error);
-    return { 
-      success: false, 
-      message: 'Failed to list users', 
       error: error instanceof Error ? error.message : String(error)
     };
   }
@@ -663,7 +615,6 @@ export const processImageWithOpenAI = onCall(
                 
                 // 5. Update Firestore with version info
                 console.log(`Updating Firestore for project: ${projectId}`);
-                const db = admin.firestore();
                 const projectRef = db.collection('users').doc(userId).collection('projects').doc(projectId);
                 
                 // Create new version data
@@ -769,7 +720,6 @@ export const getPdfDownloadUrl = onCall({
   try {
     // Get project to verify ownership and get PDF path
     console.log(`[DownloadURL] Fetching project ${projectId} for user ${userId}`);
-    const db = admin.firestore();
     const projectRef = db.collection('users').doc(userId).collection('projects').doc(projectId);
     const projectSnap = await projectRef.get();
     
@@ -992,7 +942,6 @@ export const generateProjectPDF = onCall(
       console.log(`[PDF] Starting PDF generation for project ${projectId}`);
       
       // Check if the user has ever purchased credits
-      const db = admin.firestore();
       const userCreditsRef = db.collection('userCredits').doc(userId);
       console.log(`[PDF] Checking credit history for user: ${userId}`);
       const userCreditsDoc = await userCreditsRef.get();
@@ -1514,6 +1463,269 @@ export const generateProjectPDF = onCall(
     } catch (error) {
       console.error(`[PDF Error] Failed to generate PDF: ${error}`);
       throw new HttpsError('internal', `Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+);
+
+// --- Type Definitions for Admin Dashboard ---
+interface AggregatedStats {
+  totalUsers: number;
+  totalRevenue: number; // In dollars
+  payingCustomers: number;
+  totalUploads: number;
+  totalGenerations: number;
+  totalPdfGenerations: number;
+}
+
+interface UserProjectSummary {
+  id: string;
+  title: string;
+  pageCount: number;
+}
+
+interface EnrichedUser {
+  id: string; // Firebase Auth UID
+  email: string | null;
+  displayName: string | null;
+  createdAt: string; // ISO string format (User creation)
+  disabled: boolean; // Added Auth disabled status
+  deleted: boolean; // Added Firestore deleted status
+  creditBalance: number;
+  totalSpent: number; // In dollars
+  projectCount: number;
+  pdfGeneratedCount: number;
+  latestProjectCreatedAt: string | null;
+  projects: UserProjectSummary[];
+}
+
+interface AdminDashboardData {
+  success: boolean;
+  aggregatedStats: AggregatedStats;
+  users: EnrichedUser[];
+}
+
+// --- Admin Dashboard Data Function (getAdminDashboardData - Enhanced) ---
+export const getAdminDashboardData = onCall(
+  {
+    secrets: [], // Add secrets if needed later
+    timeoutSeconds: 120, // Increased timeout for potentially large aggregations
+    memory: '2GiB',    // Increased memory
+  },
+  async (request): Promise<AdminDashboardData> => {
+    console.log("[getAdminDashboardData] Function called.");
+
+    // 1. Verify admin authentication
+    if (!request.auth || request.auth.token.email !== 'ipekcioglu@me.com') {
+      console.error(`[Admin Dashboard] Unauthorized attempt by ${request.auth?.token.email || 'unauthenticated user'}.`);
+      throw new HttpsError('permission-denied', 'Admin access required.');
+    }
+    console.log(`[Admin Dashboard] Admin user verified: ${request.auth.token.email}`);
+
+    let totalUsers = 0;
+    let totalRevenueCents = 0;
+    let payingCustomers = 0;
+    let totalUploads = 0;
+    let totalGenerations = 0;
+    let totalPdfGenerations = 0;
+    const allAuthUsers: admin.auth.UserRecord[] = [];
+    const userCreditSummaries = new Map<string, { balance: number; totalSpentCents: number }>();
+    const userProjectSummaries = new Map<string, { 
+      projectCount: number; 
+      pdfGeneratedCount: number;
+      latestProjectTimestamp: admin.firestore.Timestamp | null;
+      projects: UserProjectSummary[]; 
+    }>();
+    const userFirestoreData = new Map<string, { deleted: boolean }>(); // Map to store Firestore deleted status
+
+    try {
+      // 2. Aggregate Data & Build Summaries
+      console.log("[Admin Dashboard] Starting data aggregation...");
+
+      // --- Fetch All Users (Auth) & Count Total ---
+      console.log("[Admin Dashboard] Fetching all users from Firebase Auth...");
+      let pageToken: string | undefined;
+      do {
+        const listUsersResult = await auth.listUsers(1000, pageToken);
+        totalUsers += listUsersResult.users.length;
+        allAuthUsers.push(...listUsersResult.users);
+        pageToken = listUsersResult.pageToken;
+      } while (pageToken);
+      console.log(`[Admin Dashboard] Fetched total ${totalUsers} users from Auth.`);
+
+      // --- Fetch Firestore User Deleted Status ---
+      console.log("[Admin Dashboard] Fetching Firestore user deleted status...");
+      const usersSnapshot = await db.collection('users').get();
+      usersSnapshot.forEach(doc => {
+          userFirestoreData.set(doc.id, { deleted: doc.data()?.deleted || false });
+      });
+      console.log(`[Admin Dashboard] Fetched deleted status for ${userFirestoreData.size} users from Firestore.`);
+
+      // --- Aggregate from userCredits & Build Summaries ---
+      console.log("[Admin Dashboard] Aggregating from userCredits...");
+      const userCreditsSnapshot = await db.collection('userCredits').get();
+      userCreditsSnapshot.forEach(doc => {
+        const data = doc.data();
+        let userSpentCents = 0;
+        let userPaid = false;
+        if (data.purchaseHistory && Array.isArray(data.purchaseHistory)) {
+          data.purchaseHistory.forEach((purchase: any) => {
+            if (purchase.pricePaid && purchase.pricePaid > 0 && !purchase.isInitialCredits) {
+              const price = Number(purchase.pricePaid) || 0;
+              totalRevenueCents += price;
+              userSpentCents += price;
+              userPaid = true;
+            }
+          });
+        }
+        if (userPaid) {
+          payingCustomers++;
+        }
+        userCreditSummaries.set(doc.id, {
+          balance: data.balance || 0,
+          totalSpentCents: userSpentCents,
+        });
+      });
+      const totalRevenueDollars = totalRevenueCents / 100;
+      console.log(`[Admin Dashboard] Aggregated Credits - Revenue: $${totalRevenueDollars.toFixed(2)}, Paying Customers: ${payingCustomers}`);
+
+      // --- Aggregate from projects & Build Summaries ---
+      console.log("[Admin Dashboard] Aggregating from projects collection group...");
+      const projectsSnapshot = await db.collectionGroup('projects').get();
+      projectsSnapshot.forEach(doc => {
+        const data = doc.data();
+        const pathParts = doc.ref.path.split('/');
+        const userId = pathParts.length > 1 ? pathParts[1] : null;
+        const projectCreatedAt = data.createdAt as admin.firestore.Timestamp | undefined;
+
+        if (userId) {
+           let projectPageCount = 0;
+           if (data.pages && Array.isArray(data.pages)) {
+             projectPageCount = data.pages.length;
+             data.pages.forEach((page: any) => {
+               if (page.originalImage?.storagePath) {
+                 totalUploads++;
+               }
+               if (page.versions && Array.isArray(page.versions)) {
+                 totalGenerations += page.versions.length;
+               }
+             });
+           }
+           
+           // Count total PDFs generated
+           const pdfGenerated = !!data.pdfUrl || !!data.pdfGeneratedAt;
+           if (pdfGenerated) {
+             totalPdfGenerations++;
+           }
+
+           // Update user's project summary
+           const currentUserSummary = userProjectSummaries.get(userId) || { 
+               projectCount: 0, 
+               pdfGeneratedCount: 0,
+               latestProjectTimestamp: null,
+               projects: [] 
+           };
+           
+           currentUserSummary.projectCount++;
+           if (pdfGenerated) {
+             currentUserSummary.pdfGeneratedCount++;
+           }
+
+           // Track latest project timestamp for the user
+           if (projectCreatedAt && (!currentUserSummary.latestProjectTimestamp || projectCreatedAt > currentUserSummary.latestProjectTimestamp)) {
+             currentUserSummary.latestProjectTimestamp = projectCreatedAt;
+           }
+
+           // Only store limited project details for the list view
+           if (currentUserSummary.projects.length < 10) { // Limit to e.g., 10 projects shown per user
+                currentUserSummary.projects.push({ 
+                    id: doc.id, 
+                    title: data.title || 'Untitled Project', 
+                    pageCount: projectPageCount 
+                });
+           }
+           userProjectSummaries.set(userId, currentUserSummary);
+        }
+      });
+      console.log(`[Admin Dashboard] Aggregated Projects - Uploads: ${totalUploads}, Generations: ${totalGenerations}, PDFs: ${totalPdfGenerations}`);
+
+      // 3. Construct Enriched User List
+      console.log("[Admin Dashboard] Constructing enriched user list...");
+      const enrichedUsers: EnrichedUser[] = allAuthUsers.map(authUser => {
+        const creditSummary = userCreditSummaries.get(authUser.uid) || { balance: 0, totalSpentCents: 0 };
+        const projectSummary = userProjectSummaries.get(authUser.uid) || { projectCount: 0, pdfGeneratedCount: 0, latestProjectTimestamp: null, projects: [] };
+        const firestoreUser = userFirestoreData.get(authUser.uid) || { deleted: false }; // Get deleted status
+        
+        return {
+          id: authUser.uid,
+          email: authUser.email || null,
+          displayName: authUser.displayName || null,
+          createdAt: authUser.metadata.creationTime, // ISO string (User creation)
+          disabled: authUser.disabled, // Add disabled status
+          deleted: firestoreUser.deleted, // Add deleted status
+          creditBalance: creditSummary.balance,
+          totalSpent: creditSummary.totalSpentCents / 100, // Convert to dollars
+          projectCount: projectSummary.projectCount,
+          pdfGeneratedCount: projectSummary.pdfGeneratedCount,
+          latestProjectCreatedAt: projectSummary.latestProjectTimestamp?.toDate().toISOString() || null,
+          projects: projectSummary.projects, // Contains {id, title, pageCount}
+        };
+      });
+      console.log(`[Admin Dashboard] Constructed enriched list for ${enrichedUsers.length} users.`);
+      
+      console.log("[Admin Dashboard] Aggregation and data preparation complete.");
+
+      // 4. Return Data
+      return {
+        success: true,
+        aggregatedStats: {
+          totalUsers,
+          totalRevenue: totalRevenueDollars,
+          payingCustomers,
+          totalUploads,
+          totalGenerations,
+          totalPdfGenerations,
+        },
+        users: enrichedUsers,
+      };
+
+    } catch (error: any) {
+      console.error('[Admin Dashboard] Error fetching data:', error);
+      throw new HttpsError('internal', `Failed to fetch admin dashboard data: ${error.message}`);
+    }
+  }
+);
+
+// Add this function
+export const disableCurrentUserAccount = onCall(
+  {
+    // Add secrets if necessary, e.g., if interacting with other services
+    secrets: [],
+  },
+  async (request) => {
+    console.log("[disableCurrentUserAccount] Function called.");
+
+    // 1. Verify authentication
+    if (!request.auth) {
+      console.error('[Disable Account] Unauthorized: No authentication provided.');
+      throw new HttpsError('unauthenticated', 'User must be authenticated to disable account.');
+    }
+    const userId = request.auth.uid;
+    const userEmail = request.auth.token.email; // For logging
+    console.log(`[Disable Account] Attempting to disable account for user: ${userId} (${userEmail})`);
+
+    try {
+      // 2. Disable user in Firebase Auth
+      await admin.auth().updateUser(userId, { disabled: true });
+      console.log(`[Disable Account] Successfully disabled user ${userId} in Firebase Auth.`);
+
+      // Optionally: Could also trigger the Firestore soft-delete here instead of client-side,
+      // but keeping it client-side is okay since re-authentication happens there.
+
+      return { success: true, message: "Account disabled successfully." };
+
+    } catch (error: any) {
+      console.error(`[Disable Account] Error disabling user ${userId}:`, error);
+      throw new HttpsError('internal', `Failed to disable account: ${error.message}`);
     }
   }
 );

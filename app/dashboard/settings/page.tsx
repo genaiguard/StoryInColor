@@ -34,6 +34,7 @@ import {
 } from "firebase/firestore"
 import { ref, listAll, deleteObject, StorageReference } from "firebase/storage"
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers"
+import { getFunctions, httpsCallable } from "firebase/functions"
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -305,10 +306,25 @@ export default function SettingsPage() {
         // Continue with account deletion even if Firestore update fails
       }
       
-      // Step 3: Delete the user authentication account
-      await deleteUser(user);
-      console.log("Authentication account deleted");
+      // Step 3: Disable the user authentication account via Cloud Function
+      const functions = getFunctions();
+      const disableAccountFn = httpsCallable(functions, 'disableCurrentUserAccount');
+      const disableResult = await disableAccountFn();
+
+      if (!(disableResult.data as any)?.success) {
+         // Handle potential error from the cloud function if needed
+         throw new Error((disableResult.data as any)?.message || 'Failed to disable account.');
+      }
+      console.log("Authentication account disabled via Cloud Function.");
       
+      // Log out the user after disabling
+      if(logout) {
+        await logout();
+        console.log("User logged out.");
+      } else {
+        console.warn("Logout function not available from Firebase context.");
+      }
+
       // Redirect to home page
       router.push("/");
     } catch (error: any) {

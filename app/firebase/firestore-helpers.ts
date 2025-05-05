@@ -22,7 +22,6 @@ export interface Project {
   id?: string
   title: string
   productType: string
-  status: "draft" | "preview" | "ordered"
   thumbnailPath?: string
   createdAt?: any
   updatedAt?: any
@@ -91,6 +90,8 @@ export const deleteProject = async (userId: string, projectId: string): Promise<
   await deleteDoc(projectRef)
 }
 
+// Commenting out unused function that relies on the removed 'status' field
+/*
 // Get projects by status
 export const getProjectsByStatus = async (userId: string, status: Project["status"]): Promise<Project[]> => {
   const projectsRef = getUserProjectsRef(userId)
@@ -109,6 +110,7 @@ export const getProjectsByStatus = async (userId: string, status: Project["statu
     ...doc.data(),
   })) as Project[]
 }
+*/
 
 // Get all projects for a user
 export const getAllProjects = async (userId: string): Promise<Project[]> => {

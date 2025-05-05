@@ -52,7 +52,6 @@ interface Page {
 
 interface ProjectData {
   pages: Page[];
-  status: 'draft' | 'ordered' | 'processing_error' | 'pdf_generating' | 'pdf_ready';
   userId: string;
   updatedAt: any; // ServerTimestamp
   createdAt?: any; // ServerTimestamp (on create)
@@ -316,7 +315,6 @@ function CreatePageContent() {
 
       const dataToSave: Partial<ProjectData> = {
         pages: pagesWithUpdatedNumbers, // Use pages with updated numbers
-        status: 'draft',
         userId: user.uid,
         title: currentBookTitle,
       }
