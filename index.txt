@@ -1,0 +1,43 @@
+1:"$Sreact.fragment"
+2:I[9243,["992","static/chunks/bc9e92e6-3d639528ecc456a3.js","794","static/chunks/d441faa4-dd15d84af91e532d.js","235","static/chunks/235-a8dae20f77fd0506.js","641","static/chunks/641-854ac69d4f5e4548.js","177","static/chunks/app/layout-8f6e6a81d8253403.js"],""]
+4:I[5349,["992","static/chunks/bc9e92e6-3d639528ecc456a3.js","794","static/chunks/d441faa4-dd15d84af91e532d.js","235","static/chunks/235-a8dae20f77fd0506.js","641","static/chunks/641-854ac69d4f5e4548.js","177","static/chunks/app/layout-8f6e6a81d8253403.js"],"FirebaseProvider"]
+5:I[7555,[],""]
+6:I[1295,[],""]
+7:I[6874,["874","static/chunks/874-0c27f7bcda62bbbf.js","345","static/chunks/app/not-found-d46499e63e8dd29b.js"],""]
+8:I[894,[],"ClientPageRoot"]
+9:I[6331,["874","static/chunks/874-0c27f7bcda62bbbf.js","352","static/chunks/352-0a6ab416d608cabe.js","766","static/chunks/766-07f33200d16fd5c7.js","544","static/chunks/544-505d9913cf9bec87.js","974","static/chunks/app/page-bf7930ecbb59094a.js"],"default"]
+c:I[9665,[],"OutletBoundary"]
+f:I[9665,[],"ViewportBoundary"]
+11:I[9665,[],"MetadataBoundary"]
+13:I[6614,[],""]
+:HL["/_next/static/css/353f34ca3d848c71.css","style"]
+3:T480,
+            (function() {
+              if (typeof window === 'undefined') return;
+              
+              if (window.location.hostname.includes('github.io')) {
+                setTimeout(function() {
+                  document.querySelectorAll('img').forEach(function(img) {
+                    if (img.src && img.src.startsWith(window.location.origin + '/') && 
+                        !img.src.includes('/StoryInColor/')) {
+                      img.src = img.src.replace(window.location.origin + '/', window.location.origin + '/StoryInColor/');
+                    }
+                  });
+                  
+                  document.querySelectorAll('[style*="background-image"]').forEach(function(el) {
+                    if (el.style.backgroundImage && 
+                        el.style.backgroundImage.startsWith('url("/') && 
+                        !el.style.backgroundImage.includes('/StoryInColor/')) {
+                      el.style.backgroundImage = el.style.backgroundImage.replace('url("/', 'url("/StoryInColor/');
+                    }
+                  });
+                }, 300);
+              }
+            })();
+          0:{"P":null,"b":"l-iZSIMVRllUQt2I0nYJl","p":"","c":["",""],"i":false,"f":[[["",{"children":["__PAGE__",{}]},"$undefined","$undefined",true],["",["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/353f34ca3d848c71.css","precedence":"next","crossOrigin":"$undefined","nonce":"$undefined"}]],["$","html",null,{"lang":"en","children":[["$","head",null,{"children":[["$","$L2",null,{"id":"clarity-tracking","strategy":"afterInteractive","children":"\n            (function(c,l,a,r,i,t,y){\n                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};\n                t=l.createElement(r);t.async=1;t.src=\"https://www.clarity.ms/tag/\"+i;\n                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);\n            })(window, document, \"clarity\", \"script\", \"qxtkvqson7\");\n            \n            clarity(\"set\", \"iframeSelector\", \"iframe[src*='firebaseapp.com'], iframe[src*='web.app']\");\n          "}],["$","$L2",null,{"id":"spa-routing-script","strategy":"beforeInteractive","children":"\n            (function() {\n              if (typeof window === 'undefined') return;\n              \n              var query = window.location.search.substring(1);\n              var params = {};\n              query.split('&').forEach(function(param) {\n                if (!param) return;\n                var pair = param.split('=');\n                params[pair[0]] = pair[1];\n              });\n              \n              if (params.p) {\n                var path = params.p.replace(/~and~/g, '&');\n                var query = params.q ? '?' + params.q.replace(/~and~/g, '&') : '';\n                var hash = window.location.hash;\n                \n                window.history.replaceState(\n                  null,\n                  null,\n                  window.location.pathname.split('?')[0] + (path === '/' ? '' : path) + query + hash\n                );\n              }\n            })();\n          "}],["$","$L2",null,{"id":"fix-image-paths","strategy":"afterInteractive","children":"$3"}]]}],["$","body",null,{"children":["$","$L4",null,{"children":["$","$L5",null,{"parallelRouterKey":"children","error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L6",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[["$","div",null,{"className":"flex flex-col items-center justify-center min-h-screen text-center px-4","children":[["$","h2",null,{"className":"text-3xl font-bold mb-4","children":"404 - Page Not Found"}],["$","p",null,{"className":"text-lg mb-6","children":"The page you're looking for doesn't exist or has been moved."}],["$","$L7",null,{"href":"/","className":"px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors","children":"Return Home"}]]}],[]],"forbidden":"$undefined","unauthorized":"$undefined"}]}]}]]}]]}],{"children":["__PAGE__",["$","$1","c",{"children":[["$","$L8",null,{"Component":"$9","searchParams":{},"params":{},"promises":["$@a","$@b"]}],"$undefined",null,["$","$Lc",null,{"children":["$Ld","$Le",null]}]]}],{},null,false]},null,false],["$","$1","h",{"children":[null,["$","$1","gLsnWX3bBoVvym0ktlQr7",{"children":[["$","$Lf",null,{"children":"$L10"}],null]}],["$","$L11",null,{"children":"$L12"}]]}],false]],"m":"$undefined","G":["$13","$undefined"],"s":false,"S":true}
+a:{}
+b:{}
+10:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
+d:null
+e:null
+12:[["$","title","0",{"children":"StoryInColor - AI Coloring Books"}],["$","meta","1",{"name":"description","content":"Turn your photos into beautiful custom coloring pages with AI. Create personalized coloring books from family photos, pet portraits, and vacation memories."}]]
