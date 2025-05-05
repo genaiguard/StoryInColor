@@ -1,16 +1,17 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import dynamic from 'next/dynamic'
 import Header from "@/components/landing-page/header"
 import HeroSection from "@/components/landing-page/hero-section"
-import ExamplesSection from "@/components/landing-page/examples-section"
-import HowItWorksSection from "@/components/landing-page/how-it-works-section"
-import PetPortraitsSection from "@/components/landing-page/pet-portraits-section"
-import CustomizationSection from "@/components/landing-page/customization-section"
-import PricingSection from "@/components/landing-page/pricing-section"
-import TestimonialsSection from "@/components/landing-page/testimonials-section"
-import FAQSection from "@/components/landing-page/faq-section"
-import Footer from "@/components/landing-page/footer"
+const ExamplesSection = dynamic(() => import('@/components/landing-page/examples-section'))
+const HowItWorksSection = dynamic(() => import('@/components/landing-page/how-it-works-section'))
+const PetPortraitsSection = dynamic(() => import('@/components/landing-page/pet-portraits-section'))
+const CustomizationSection = dynamic(() => import('@/components/landing-page/customization-section'))
+const PricingSection = dynamic(() => import('@/components/landing-page/pricing-section'))
+const TestimonialsSection = dynamic(() => import('@/components/landing-page/testimonials-section'))
+const FAQSection = dynamic(() => import('@/components/landing-page/faq-section'))
+const Footer = dynamic(() => import('@/components/landing-page/footer'))
 import LandingPageSEO from "@/components/seo/landing-page-seo"
 import StructuredData from "@/components/seo/structured-data"
 

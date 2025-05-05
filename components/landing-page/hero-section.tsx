@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { PathImg } from "@/components/ui/pathed-image"
+import Image from 'next/image'
 
 export default function HeroSection({ scrollToSection }: { scrollToSection?: any }) {
   return (
@@ -30,13 +31,13 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
             <p className="text-sm text-gray-500">Sign up today and try our service with free starter credits</p>
           </div>
           <div className="relative flex items-center justify-center lg:justify-end">
-            <PathImg
+            <Image
               src="/images/best-6.webp"
               alt="Coloring page of a family at the beach alongside the original framed photo and colored pencils"
               width={600}
               height={600}
               className="w-full h-auto"
-              priority={true}
+              priority
             />
           </div>
         </div>
