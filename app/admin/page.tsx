@@ -65,7 +65,7 @@ interface AdminDashboardData {
   error?: string;
 }
 
-// Admin emails allowed to access this interface
+// Admin emails allowed to access this interface .
 const ADMIN_EMAILS = ['ipekcioglu@me.com'];
 
 type SortKey = 'userCreatedAt' | 'lastProjectCreatedAt' | 'email' | 'totalSpent';
