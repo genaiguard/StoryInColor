@@ -636,8 +636,8 @@ function CreatePageContent() {
   const [currentPdfUrl, setCurrentPdfUrl] = useState<string | null>(null);
   const [showPdfLink, setShowPdfLink] = useState<boolean>(false);
 
-  // Add PDF generation function
-  const handleGeneratePDF = async () => {
+  // PDF Generation Function (wrapped in useCallback)
+  const handleGeneratePDF = useCallback(async () => {
     if (!projectId || !user) {
       toast.error("Project ID or user not available. Cannot proceed.");
       return;
@@ -741,7 +741,17 @@ function CreatePageContent() {
     } finally {
       setGeneratingPDF(false);
     }
-  };
+  }, [projectId, user, pages, pdfGenerationProceedAnyway, isSaving, debouncedSave, setGeneratingPDF, setShowWatermarkNoticeAlert, setCurrentPdfUrl, setShowPdfLink, setPdfGenerationProceedAnyway, router]); // Added router to dependencies
+
+  // useEffect to trigger PDF generation when pdfGenerationProceedAnyway is true
+  useEffect(() => {
+    if (pdfGenerationProceedAnyway && !showWatermarkNoticeAlert && user && projectId) {
+      handleGeneratePDF();
+      // Reset the flag immediately to prevent re-triggering on other dependency changes
+      // This was previously inside handleGeneratePDF, but it's better here for this effect's logic
+      // setPdfGenerationProceedAnyway(false); // This will be set inside handleGeneratePDF now.
+    }
+  }, [pdfGenerationProceedAnyway, showWatermarkNoticeAlert, user, projectId, handleGeneratePDF, setPdfGenerationProceedAnyway]);
 
   // Function to close the PDF download link panel
   const closePdfLink = () => {
@@ -876,7 +886,7 @@ function CreatePageContent() {
                     onClick={() => {
                       setPdfGenerationProceedAnyway(true);
                       setShowWatermarkNoticeAlert(false);
-                      handleGeneratePDF();
+                      // handleGeneratePDF(); // Removed direct call
                     }}
                   >
                     Generate Watermarked PDF
