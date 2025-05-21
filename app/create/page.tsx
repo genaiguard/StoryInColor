@@ -99,6 +99,8 @@ function CreatePageContent() {
   const [showCreditUI, setShowCreditUI] = useState<boolean>(false)
   const [generatingPDF, setGeneratingPDF] = useState<boolean>(false)
   const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false)
+  const [showWatermarkNoticeAlert, setShowWatermarkNoticeAlert] = useState<boolean>(false)
+  const [pdfGenerationProceedAnyway, setPdfGenerationProceedAnyway] = useState<boolean>(false)
 
   // Add state for notice visibility
   const [showNotices, setShowNotices] = useState({
@@ -636,16 +638,33 @@ function CreatePageContent() {
 
   // Add PDF generation function
   const handleGeneratePDF = async () => {
-    if (!projectId) {
-      toast.error("Project ID not available. Cannot proceed.");
+    if (!projectId || !user) {
+      toast.error("Project ID or user not available. Cannot proceed.");
       return;
     }
-    
+
     // Ensure all pages have images and selected versions
     const pagesReady = pages.every(p => p.originalImage && p.selectedVersionId);
     if (!pagesReady || pages.length === 0) {
       toast.error("Please ensure all pages have an uploaded image and a selected coloring version before generating PDF.");
       return;
+    }
+
+    // Check for non-purchaser status
+    if (!pdfGenerationProceedAnyway) {
+      try {
+        const userCreditsData = await getUserCredits(user.uid);
+        const hasMadePurchase = userCreditsData.purchaseHistory?.some(item => !item.isInitialCredits);
+
+        if (!hasMadePurchase) {
+          setShowWatermarkNoticeAlert(true);
+          return; // Stop PDF generation until user makes a choice
+        }
+      } catch (error) {
+        console.error("Error fetching user credits for PDF generation:", error);
+        toast.error("Could not verify your purchase status. Please try again.");
+        return;
+      }
     }
     
     // Ensure latest state is saved
@@ -653,11 +672,21 @@ function CreatePageContent() {
     
     if (isSaving) {
       toast.info("Saving progress before generating PDF...");
-      setTimeout(() => handleGeneratePDF(), 1000);
+      // Check again after delay, in case the save was quick
+      setTimeout(() => {
+        if (isSaving) { // If still saving after delay
+          toast.info("Still saving... please wait a moment before trying again.");
+          return;
+        }
+        handleGeneratePDF(); // Retry PDF generation
+      }, 1500); // Increased delay slightly
       return;
     }
     
     setGeneratingPDF(true);
+    if (pdfGenerationProceedAnyway) {
+      setPdfGenerationProceedAnyway(false); // Reset the flag
+    }
     
     try {
       // First check if an existing PDF is available and still valid
@@ -686,9 +715,9 @@ function CreatePageContent() {
       
       // If we reached here, we need to generate a new PDF
       const functions = getFunctions();
-      const generatePDF = httpsCallable(functions, 'generateProjectPDF');
+      const generatePDFCallable = httpsCallable(functions, 'generateProjectPDF'); // Renamed for clarity
       
-      const result = await generatePDF({ projectId });
+      const result = await generatePDFCallable({ projectId });
       const data = result.data as { success: boolean; pdfUrl?: string; message?: string };
       
       if (data.success && data.pdfUrl) {
@@ -828,6 +857,47 @@ function CreatePageContent() {
                     disabled={generatingPDF}
                   >
                     Dismiss
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Watermark Notice Alert - NEW */}
+          {showWatermarkNoticeAlert && (
+            <Alert className="mb-6 bg-amber-50 border-amber-200">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <AlertTitle>Generate PDF Preview</AlertTitle>
+              <AlertDescription className="flex flex-col space-y-2">
+                <p>You are using the free version. Your PDF will include watermarked images. Purchase any credit package (starting at $3.50 for 5 credits) to generate PDFs with high-quality, unwatermarked images.</p>
+                <div className="mt-1 flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setPdfGenerationProceedAnyway(true);
+                      setShowWatermarkNoticeAlert(false);
+                      handleGeneratePDF();
+                    }}
+                  >
+                    Generate Watermarked PDF
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setShowWatermarkNoticeAlert(false);
+                      router.push('/credits');
+                    }}
+                  >
+                     <ShoppingCart className="mr-2 h-4 w-4" />
+                    Purchase Credits
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowWatermarkNoticeAlert(false)}
+                  >
+                    Cancel
                   </Button>
                 </div>
               </AlertDescription>

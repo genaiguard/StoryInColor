@@ -334,6 +334,9 @@ export default function CreditsPage() {
               <p>
                 Credits never expire and can be used across multiple projects. 
               </p>
+              <p>
+                Generate high-quality, unwatermarked PDFs of your creations by purchasing any credit package.
+              </p>
             </div>
           </div>
           
