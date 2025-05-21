@@ -26,21 +26,5 @@
     "ui": {
       "enabled": true
     }
-  },
-  "hosting": {
-    "site": "storyincolor-ai",
-    "public": "out",
-    "cleanUrls": true,
-    "headers": [
-      {
-        "source": "**/*",
-        "headers": [
-          {
-            "key": "Content-Security-Policy",
-            "value": "frame-ancestors 'self' https://storyincolor.com;"
-          }
-        ]
-      }
-    ]
   }
 }

@@ -1,86 +1,66 @@
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { PathImg } from "@/components/ui/pathed-image"
+import { motion } from "framer-motion"
 
 export default function PetPortraitsSection() {
   return (
     <section id="pet-portraits" className="bg-white py-12 md:py-16 lg:py-20">
       <div className="container mx-auto max-w-7xl px-6 md:px-8">
         <div className="grid gap-8 md:grid-cols-2 md:gap-12 items-center">
-          <div>
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ 
+              type: "spring",
+              stiffness: 100,
+              damping: 20
+            }}
+          >
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
-              Loved Ones In Vibrant <span className="text-orange-500">Detail</span>
+              Even Your Furry Friends in <span className="text-orange-500">Detail</span>
             </h2>
             <p className="text-gray-700 md:text-lg mb-6">
-              Our AI technology captures the essence of your furry friends and family members, creating detailed line art
-              perfect for coloring. Every whisker, smile, and expression is preserved in our conversion process.
+              Transform your pet photos into beautiful coloring pages. Our AI captures every detail, from whiskers to expressions, 
+              creating perfect coloring pages for all ages.
             </p>
-            <div className="space-y-4 mb-8">
-              <div className="flex items-start">
-                <div className="bg-orange-100 p-1 rounded mr-3 mt-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-orange-500"
-                  >
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Remarkable Detail</h3>
-                  <p className="text-gray-700">
-                    Our conversion preserves important features while creating coloring-friendly illustrations
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start">
-                <div className="bg-orange-100 p-1 rounded mr-3 mt-1">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-orange-500"
-                  >
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Perfect For All Ages</h3>
-                  <p className="text-gray-700">
-                    From toddlers to seniors, our coloring pages provide a rewarding creative experience
-                  </p>
-                </div>
-              </div>
-            </div>
-            <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-base font-medium" asChild>
-              <Link href="/login">Create Your Pet Portrait Pages</Link>
-            </Button>
-          </div>
-          <div className="mt-8 md:mt-0">
-            <div className="relative rounded-lg overflow-hidden shadow-lg">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-base font-medium" asChild>
+                <Link href="/login">Create Your Pet Portrait Pages</Link>
+              </Button>
+            </motion.div>
+          </motion.div>
+          <motion.div 
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ 
+              type: "spring",
+              stiffness: 100,
+              damping: 20,
+              delay: 0.1
+            }}
+            className="mt-8 md:mt-0"
+          >
+            <div className="aspect-[5/3.8] overflow-hidden">
               <PathImg
                 src="/images/dog-coloring-hero.webp"
                 alt="A side-by-side comparison showing an original color photo of a golden retriever and its converted line art version suitable for coloring"
                 width={600}
                 height={500}
-                className="w-full h-auto"
+                className="w-full h-full object-cover object-top"
                 priority={true}
               />
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>
