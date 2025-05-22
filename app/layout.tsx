@@ -7,6 +7,10 @@ import StructuredData from '@/components/seo/structured-data'
 export const metadata = {
   title: 'StoryInColor - AI Coloring Books',
   description: 'Turn your photos into beautiful custom coloring pages with AI. Create personalized coloring books from family photos, pet portraits, and vacation memories.',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export default function RootLayout({
