@@ -190,8 +190,8 @@ export default function PricingSection() {
               className="mt-6"
             >
               <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white" asChild>
-                <Link href="/login?register=true">Try For Free</Link>
-              </Button>
+              <Link href="/login?register=true">Try For Free</Link>
+            </Button>
             </motion.div>
           </motion.div>
 
@@ -250,9 +250,9 @@ export default function PricingSection() {
             </ul>
             <div className="mt-6">
               <Button className="w-full bg-gray-300 text-gray-500 cursor-not-allowed" disabled>
-                Coming Soon
-              </Button>
-            </div>
+              Coming Soon
+            </Button>
+          </div>
           </motion.div>
         </div>
       </motion.div>

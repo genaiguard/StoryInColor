@@ -103,11 +103,11 @@ export default function HowItWorksSection() {
           <motion.p 
             className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed"
           >
-            Transform your cherished memories into custom coloring pages in just three simple steps
+              Transform your cherished memories into custom coloring pages in just three simple steps
           </motion.p>
         </motion.div>
 
-        <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 lg:grid-cols-3 lg:gap-12">
+        <div className="mx-auto grid max-w-5xl items-stretch gap-6 py-12 lg:grid-cols-3 lg:gap-12">
           <motion.div 
             custom={0}
             variants={cardVariants}
@@ -129,10 +129,10 @@ export default function HowItWorksSection() {
               <Camera className="h-8 w-8 text-orange-500" />
             </motion.div>
             <motion.div variants={textVariants}>
-              <h3 className="text-2xl font-bold text-center">1. Upload Photos</h3>
+            <h3 className="text-2xl font-bold text-center">1. Upload Photos</h3>
               <p className="text-center text-gray-500 mt-2">
-                Upload your vacation photos, family pictures, or any special memories you want to transform.
-              </p>
+              Upload your vacation photos, family pictures, or any special memories you want to transform.
+            </p>
             </motion.div>
           </motion.div>
 
@@ -157,10 +157,10 @@ export default function HowItWorksSection() {
               <Book className="h-8 w-8 text-purple-500" />
             </motion.div>
             <motion.div variants={textVariants}>
-              <h3 className="text-2xl font-bold text-center">2. Preview & Customize</h3>
+            <h3 className="text-2xl font-bold text-center">2. Preview & Customize</h3>
               <p className="text-center text-gray-500 mt-2">
-                Our AI converts your photos into coloring pages. Preview and make adjustments to get the best results.
-              </p>
+              Our AI converts your photos into coloring pages. Preview and make adjustments to get the best results.
+            </p>
             </motion.div>
           </motion.div>
 
@@ -185,10 +185,10 @@ export default function HowItWorksSection() {
               <Download className="h-8 w-8 text-pink-500" />
             </motion.div>
             <motion.div variants={textVariants}>
-              <h3 className="text-2xl font-bold text-center">3. Download Your Pages</h3>
+            <h3 className="text-2xl font-bold text-center">3. Download Your Pages</h3>
               <p className="text-center text-gray-500 mt-2">
-                Download your personalized coloring pages instantly and print them at home for immediate enjoyment.
-              </p>
+              Download your personalized coloring pages instantly and print them at home for immediate enjoyment.
+            </p>
             </motion.div>
           </motion.div>
         </div>

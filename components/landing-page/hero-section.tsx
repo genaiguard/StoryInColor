@@ -78,9 +78,9 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
                     className="mr-3 inline-block"
                   >
                     {word === "Photos" ? (
-                      <span className="bg-gradient-to-r from-purple-600 via-red-500 to-orange-500 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-purple-600 via-red-500 to-orange-500 bg-clip-text text-transparent">
                         {word}
-                      </span>
+                </span>
                     ) : (
                       word
                     )}
