@@ -32,6 +32,7 @@ import { getConfiguredStorage } from "@/app/firebase/storage-helpers"
 import { PathImg } from "@/components/ui/pathed-image"
 import { getUserCredits, formatCreditBalance } from "@/app/firebase/credits-helpers"
 import { toast } from "sonner"
+import { trackEvent, trackPurchase } from "@/components/tracking/facebook-pixel"
 
 // Define interfaces for project types
 interface BaseProject {
@@ -180,6 +181,17 @@ export default function DashboardPage() {
               setRecentPurchaseDetected(true);
               setIsProcessingCreditPurchase(false);
               sessionStorage.setItem(acknowledgedSessionKey, 'true'); // Acknowledge
+              
+              // Track Facebook Pixel purchase event
+              trackPurchase(mostRecentPurchase.pricePaid / 100, 'USD') // Convert cents to dollars
+              trackEvent('Purchase', {
+                content_name: 'Credit Purchase',
+                content_category: 'credits',
+                value: mostRecentPurchase.pricePaid / 100,
+                currency: 'USD',
+                num_items: mostRecentPurchase.creditAmount
+              })
+              
               toast.success("Credits added successfully!");
             }
           }

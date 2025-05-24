@@ -12,6 +12,7 @@ import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useFirebase } from "@/app/firebase/firebase-provider"
 import { getFunctions, httpsCallable } from "firebase/functions"
+import { trackEvent, trackSignUp } from "@/components/tracking/facebook-pixel"
 
 function LoginForm() {
   const [email, setEmail] = useState("")
@@ -54,6 +55,13 @@ function LoginForm() {
     try {
       await signUp(email, password)
       
+      // Track successful registration for Facebook Pixel
+      trackSignUp()
+      trackEvent('CompleteRegistration', {
+        content_name: 'User Registration',
+        method: 'email'
+      })
+      
       // Send welcome email notification
       try {
         const functions = getFunctions();
@@ -93,6 +101,15 @@ function LoginForm() {
       // Access additional user info which contains isNewUser
       // @ts-ignore - Firebase typings may be incomplete
       const isNewUser = result.additionalUserInfo?.isNewUser || false;
+      
+      // Track successful Google sign-in for new users
+      if (isNewUser) {
+        trackSignUp()
+        trackEvent('CompleteRegistration', {
+          content_name: 'User Registration',
+          method: 'google'
+        })
+      }
       
       // Only send welcome email for new users
       if (isNewUser) {

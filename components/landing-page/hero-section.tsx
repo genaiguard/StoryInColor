@@ -6,6 +6,7 @@ import { PathImg } from "@/components/ui/pathed-image"
 import Image from 'next/image'
 import { motion, useScroll, useTransform } from "framer-motion"
 import { useRef } from "react"
+import { trackEvent, trackLead } from "@/components/tracking/facebook-pixel"
 
 export default function HeroSection({ scrollToSection }: { scrollToSection?: any }) {
   const containerRef = useRef(null)
@@ -110,7 +111,17 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
               className="flex flex-col gap-2 min-[400px]:flex-row"
             >
               <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-base font-medium" asChild>
-                <Link href="/login?register=true">Start Free</Link>
+                <Link 
+                  href="/login?register=true"
+                  onClick={() => {
+                    trackEvent('Lead', { 
+                      content_name: 'Hero CTA - Start Free',
+                      content_category: 'sign_up'
+                    })
+                  }}
+                >
+                  Start Free
+                </Link>
               </Button>
             </motion.div>
             <motion.p 

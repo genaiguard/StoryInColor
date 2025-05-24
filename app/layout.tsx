@@ -3,6 +3,8 @@ import './globals.css'
 import { FirebaseProvider } from './firebase/firebase-provider'
 import Script from 'next/script'
 import StructuredData from '@/components/seo/structured-data'
+import FacebookPixel from '@/components/tracking/facebook-pixel'
+import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
 
 export const metadata = {
   title: 'StoryInColor - AI Coloring Books',
@@ -21,6 +23,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Facebook Pixel - Only load in production or when explicitly enabled */}
+        {FACEBOOK_PIXEL_CONFIG.ENABLED && (
+          <FacebookPixel pixelId={FACEBOOK_PIXEL_CONFIG.PIXEL_ID} />
+        )}
         <Script id="clarity-tracking" strategy="afterInteractive">
           {`
             (function(c,l,a,r,i,t,y){

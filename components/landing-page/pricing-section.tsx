@@ -6,6 +6,7 @@ import { Check, Gift, Sparkles, Folders, Download } from "lucide-react"
 import { PathImg } from "@/components/ui/pathed-image"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { useRef, useState } from "react"
+import { trackEvent } from "@/components/tracking/facebook-pixel"
 
 export default function PricingSection() {
   const sectionRef = useRef(null)
@@ -190,7 +191,17 @@ export default function PricingSection() {
               className="mt-6"
             >
               <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white" asChild>
-              <Link href="/login?register=true">Try For Free</Link>
+              <Link 
+                href="/login?register=true"
+                onClick={() => {
+                  trackEvent('InitiateCheckout', { 
+                    content_name: 'Pricing CTA - Try For Free',
+                    content_category: 'pricing'
+                  })
+                }}
+              >
+                Try For Free
+              </Link>
             </Button>
             </motion.div>
           </motion.div>
