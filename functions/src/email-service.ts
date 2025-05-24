@@ -174,23 +174,28 @@ function generateWelcomeEmailTemplate(name: string): string {
           <h1 style="color: #f97316;">Welcome to StoryInColor, ${name}!</h1>
         </div>
         
-        <p>Thank you for joining our platform! We're excited to help you create personalized coloring books from your photos.</p>
+        <p>Thank you for joining StoryInColor! We're excited to help you turn your favorite photos into beautiful custom coloring pages.</p>
         
         <p>With StoryInColor, you can:</p>
         <ul>
-          <li>Upload your favorite photos</li>
-          <li>Create stunning coloring book pages automatically</li>
-          <li>Choose from different book formats</li>
-          <li>Order printed copies or download digital versions</li>
+          <li>Upload your vacation, family, or pet photos</li>
+          <li>Instantly create unique coloring pages from your images</li>
+          <li>Download and print your creations at home</li>
+          <li>Share your coloring pages with friends and family</li>
         </ul>
         
-        <div style="background-color: #f8f4e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <p style="margin: 0;"><strong>Ready to get started?</strong> Go to your dashboard and create your first coloring book!</p>
+        <div style="background-color: #f8f4e6; padding: 15px; border-radius: 5px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0;"><strong>Ready to get started?</strong></p>
         </div>
-        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="https://storyincolor.com/dashboard" 
+             style="display: inline-block; background-color: #f97316; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-size: 18px; font-weight: bold;">
+            Go to Your Dashboard
+          </a>
+        </div>
         <p>If you have any questions, please don't hesitate to contact our support team.</p>
         
-        <p>Best regards,<br/>The StoryInColor Team</p>
+        <p>Happy coloring!<br/>The StoryInColor Team</p>
       </body>
     </html>
   `;
