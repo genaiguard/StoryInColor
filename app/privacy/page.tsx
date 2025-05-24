@@ -162,6 +162,19 @@ export default function PrivacyPage() {
                     If you have any questions about this Privacy Policy, please contact us at <a href="mailto:privacy@storyincolor.com" className="text-orange-500 hover:underline">privacy@storyincolor.com</a>.
                   </p>
                 </div>
+
+                <div className="mb-10 pb-8 border-b border-gray-200">
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-4">14. Facebook Pixel and Tracking Technologies</h2>
+                  <p className="text-gray-700 mb-4">
+                    We use Facebook Pixel to understand user interactions and improve our advertising efforts.
+                  </p>
+                  <p className="text-gray-700 mb-4">
+                    Facebook Pixel may collect information such as your IP address and actions on our site. This data is used in accordance with Facebook's Data Policy.
+                  </p>
+                  <p className="text-gray-700 mb-4">
+                    You can manage your preferences through Facebook ad settings or your browser settings.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
