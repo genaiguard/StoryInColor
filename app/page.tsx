@@ -65,11 +65,11 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col overflow-x-hidden">
       <LandingPageSEO />
       <StructuredData />
       <Header activeSection={activeSection} scrollToSection={scrollToSection} />
-      <main className="flex-1">
+      <main className="flex-1 overflow-x-hidden">
         <HeroSection scrollToSection={scrollToSection} />
         <ExamplesSection />
         <HowItWorksSection />

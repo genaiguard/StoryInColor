@@ -6,7 +6,7 @@ import StructuredData from '@/components/seo/structured-data'
 import FacebookPixel from '@/components/tracking/facebook-pixel'
 import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'StoryInColor - AI Coloring Books',
   description: 'Turn your photos into beautiful custom coloring pages with AI. Create personalized coloring books from family photos, pet portraits, and vacation memories.',
   icons: {
@@ -15,18 +15,20 @@ export const metadata = {
   },
 }
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="overflow-x-hidden">
       <head>
-        {/* Facebook Pixel - Only load in production or when explicitly enabled */}
-        {FACEBOOK_PIXEL_CONFIG.ENABLED && (
-          <FacebookPixel pixelId={FACEBOOK_PIXEL_CONFIG.PIXEL_ID} />
-        )}
         <Script id="clarity-tracking" strategy="afterInteractive">
           {`
             (function(c,l,a,r,i,t,y){
@@ -91,8 +93,12 @@ export default function RootLayout({
             })();
           `}
         </Script>
+        {/* Facebook Pixel - Only load in production or when explicitly enabled */}
+        {FACEBOOK_PIXEL_CONFIG.ENABLED && (
+          <FacebookPixel pixelId={FACEBOOK_PIXEL_CONFIG.PIXEL_ID} />
+        )}
       </head>
-      <body>
+      <body className="overflow-x-hidden">
         <FirebaseProvider>
           {children}
         </FirebaseProvider>
