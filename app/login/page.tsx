@@ -120,7 +120,9 @@ function LoginForm() {
             'sendWelcomeEmailNotification'
           );
           
-          await sendWelcomeEmailNotification();
+          // Pass displayName for Google sign-in
+          const userDisplayName = result.user?.displayName || result.user?.email?.split('@')[0];
+          await sendWelcomeEmailNotification({ displayName: userDisplayName });
           
           console.log("Welcome email notification sent for new Google user");
         } catch (emailError) {
