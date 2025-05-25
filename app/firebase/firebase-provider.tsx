@@ -173,6 +173,9 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     if (!initialized) throw new Error("Firebase is not initialized")
     const auth = getAuth()
     const provider = new GoogleAuthProvider()
+    // Explicitly request email and profile scopes
+    provider.addScope('email');
+    provider.addScope('profile');
     const result = await signInWithPopup(auth, provider)
     return result // Return the auth result
   }
