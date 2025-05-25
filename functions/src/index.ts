@@ -218,55 +218,49 @@ export const sendWelcomeEmailNotification = onCall({
   ],
 }, async (request) => {
   // Verbose logging for debugging
-  console.log('[Email Debug] Welcome email function called with request:', JSON.stringify({
-    auth: request.auth ? {
-      uid: request.auth.uid,
-      email: request.auth.token.email,
-      name: request.auth.token.name,
-    } : 'No auth',
-    data: request.data
-  }));
+  console.log('[Email Debug] Welcome email function called. Request Auth:', JSON.stringify(request.auth));
+  console.log('[Email Debug] Request Data:', JSON.stringify(request.data));
   
-  console.log('[Email Debug] Using AWS credentials:', {
-    region: AWS_REGION.value(),
-    sender: SENDER_EMAIL_ADDRESS.value(),
-    keyIdPrefix: AWS_ACCESS_KEY_ID.value().substring(0, 5) + '...' // Log only the prefix for security
-  });
+  // console.log('[Email Debug] Using AWS credentials:', {
+  //   region: AWS_REGION.value(),
+  //   sender: SENDER_EMAIL_ADDRESS.value(),
+  //   keyIdPrefix: AWS_ACCESS_KEY_ID.value().substring(0, 5) + '...' // Log only the prefix for security
+  // });
   
   // Verify authentication
-  if (!request.auth) {
-    console.error('[Email] Unauthorized attempt to send welcome email');
-    throw new Error('Unauthorized - User must be authenticated');
+  if (!request.auth || !request.auth.token) {
+    console.error('[Email] Unauthorized attempt to send welcome email or token missing.');
+    throw new HttpsError('unauthenticated', 'User must be authenticated and token must be present.');
   }
   
   // Get user details
-  // Note: userId is logged but not otherwise used
   const userEmail = request.auth.token.email;
-  const displayName = request.auth.token.name || request.data?.displayName;
-  
   if (!userEmail) {
-    console.error('[Email] User email is required but not found in token');
-    throw new Error('User email is required');
+    console.error('[Email] User email is required but not found in auth token');
+    throw new HttpsError('invalid-argument', 'User email not found in auth token.');
   }
   
-  console.log(`[Email] Sending welcome email to ${userEmail} (user: ${request.auth.uid})`);
+  // Prioritize displayName from client data, then from auth token.
+  let finalDisplayName = request.data?.displayName || request.auth.token.name;
   
+  console.log(`[Email Debug] Attempting to use displayName: '${finalDisplayName}' for user: ${userEmail}. request.data?.displayName was '${request.data?.displayName}', request.auth.token.name was '${request.auth.token.name}'.`);
+
+  // The email-service's sendWelcomeEmail function has its own fallback "there" if finalDisplayName is undefined or empty.
+
   try {
-    // Send email notification
-    console.log('[Email Debug] About to call sendWelcomeEmail');
-    const result = await sendWelcomeEmail(userEmail, displayName);
-    console.log(`[Email Debug] Email sending result: ${result}`);
-    
-    console.log(`[Email] Successfully sent welcome email to ${userEmail}`);
-    return { success: true, message: 'Welcome email sent' };
-  } catch (error) {
-    console.error('[Email] Error sending welcome email:', error);
-    // Return the error details to help with debugging
-    return { 
-      success: false, 
-      message: 'Failed to send welcome email', 
-      error: error instanceof Error ? error.message : String(error)
-    };
+    // Pass the determined email and displayName to the email service
+    const success = await sendWelcomeEmail(userEmail, finalDisplayName); 
+    if (success) {
+      console.log(`[Email] Welcome email successfully queued for ${userEmail}`);
+      return { success: true, message: "Welcome email sent." };
+    } else {
+      console.error(`[Email] sendWelcomeEmail returned false for ${userEmail}. Check email-service logs.`);
+      throw new HttpsError('internal', 'Failed to send welcome email via email service.');
+    }
+  } catch (error: any) {
+    console.error(`[Email] Error in sendWelcomeEmailNotification for ${userEmail}:`, error.message, error.stack);
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('internal', `Error processing welcome email: ${error.message}`);
   }
 });
 
