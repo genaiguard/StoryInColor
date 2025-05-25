@@ -40,33 +40,6 @@ export default function RootLayout({
             clarity("set", "iframeSelector", "iframe[src*='firebaseapp.com'], iframe[src*='web.app']");
           `}
         </Script>
-        <Script id="spa-routing-script" strategy="beforeInteractive">
-          {`
-            (function() {
-              if (typeof window === 'undefined') return;
-              
-              var query = window.location.search.substring(1);
-              var params = {};
-              query.split('&').forEach(function(param) {
-                if (!param) return;
-                var pair = param.split('=');
-                params[pair[0]] = pair[1];
-              });
-              
-              if (params.p) {
-                var path = params.p.replace(/~and~/g, '&');
-                var query = params.q ? '?' + params.q.replace(/~and~/g, '&') : '';
-                var hash = window.location.hash;
-                
-                window.history.replaceState(
-                  null,
-                  null,
-                  window.location.pathname.split('?')[0] + (path === '/' ? '' : path) + query + hash
-                );
-              }
-            })();
-          `}
-        </Script>
         <Script id="fix-image-paths" strategy="afterInteractive">
           {`
             (function() {

@@ -308,55 +308,6 @@ export const submitContactForm = onCall({
   }
 });
 
-// Add this function to the end of the file to fetch user data by admin
-
-export const getAuthUserData = onCall({
-  secrets: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, SENDER_EMAIL_ADDRESS],
-}, async (request) => {
-  // Verify admin access
-  if (!request.auth) {
-    console.error('[Admin API] Unauthorized attempt to access user data');
-    throw new Error('Unauthorized - User must be authenticated');
-  }
-  
-  // Only allow the admin email to call this function
-  if (request.auth.token.email !== 'ipekcioglu@me.com') {
-    console.error(`[Admin API] User ${request.auth.token.email} attempted to access admin function`);
-    throw new Error('Unauthorized - Admin access only');
-  }
-  
-  const userId = request.data.userId;
-  
-  if (!userId) {
-    throw new Error('User ID is required');
-  }
-  
-  try {
-    // Get user from Auth
-    const userRecord = await admin.auth().getUser(userId);
-    
-    // Return user data
-    return {
-      success: true,
-      userData: {
-        uid: userRecord.uid,
-        email: userRecord.email,
-        displayName: userRecord.displayName,
-        photoURL: userRecord.photoURL,
-        providerData: userRecord.providerData,
-        createdAt: userRecord.metadata.creationTime
-      }
-    };
-  } catch (error) {
-    console.error('[Admin API] Error fetching user data:', error);
-    return { 
-      success: false, 
-      message: 'Failed to fetch user data', 
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-});
-
 // Helper for memory management
 function cleanupMemory(): Promise<void> {
     // Set a small delay to allow garbage collection to run
