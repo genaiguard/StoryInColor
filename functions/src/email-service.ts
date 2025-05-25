@@ -135,53 +135,6 @@ export const sendContactFormEmail = async (
   }
 };
 
-// Send project processed email
-export const sendProjectProcessedEmail = async (
-  email: string, 
-  projectDetails: {
-    projectId: string,
-    title: string
-  }
-) => {
-  console.log(`[AWS SES] Preparing to send project processed email to ${email}`);
-  
-  const ses = configureSES();
-  
-  const params = {
-    Source: senderEmail.value(),
-    Destination: { 
-      ToAddresses: [email],
-      BccAddresses: ['info@ipekai.com'] // Only keeping the original BCC address
-    },
-    Message: {
-      Subject: { Data: `Your StoryInColor Book "${projectDetails.title}" Is Ready!` },
-      Body: {
-        Html: {
-          Data: generateProjectProcessedTemplate(projectDetails)
-        }
-      }
-    }
-  };
-  
-  // Add explicit logging for BCC address
-  console.log(`[AWS SES] Email configuration with BCC: ToAddresses=${params.Destination.ToAddresses.join(',')} BccAddresses=${params.Destination.BccAddresses ? params.Destination.BccAddresses.join(',') : 'none'}`);
-  
-  try {
-    const result = await ses.sendEmail(params).promise();
-    console.log(`[AWS SES] Project processed email sent to ${email}, MessageId: ${result.MessageId}`);
-    // Log full result details without sensitive data
-    console.log('[AWS SES] SES response received');
-    return true;
-  } catch (err) {
-    const error = err as AWSError;
-    console.error('[AWS SES] Error sending project processed email:', error);
-    if (error.code) {
-      console.error(`[AWS SES] Error code: ${error.code}, message: ${error.message}`);
-    }
-    return false;
-  }
-};
-
 // Email template generators
 // Force redeploy - Updated 2025-05-25
 function generateWelcomeEmailTemplate(name: string): string {
@@ -237,41 +190,6 @@ function generateContactFormTemplate(name: string, email: string, subject: strin
         </div>
         
         <p>You can reply directly to this email to respond to the sender.</p>
-      </body>
-    </html>
-  `;
-}
-
-// Generate project processed email template
-function generateProjectProcessedTemplate(projectDetails: any): string {
-  const projectUrl = `https://storyincolor.com/dashboard?projectId=${projectDetails.projectId}`;
-  
-  return `
-    <html>
-      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #f97316;">Your Coloring Pages Are Ready!</h1>
-        </div>
-        
-        <p>Great news! Your personalized coloring pages PDF for "${projectDetails.title}" has been generated and is ready for download.</p>
-        
-        <div style="background-color: #f8f4e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <h2 style="margin-top: 0; color: #f97316;">Project Details</h2>
-          <p><strong>Title:</strong> ${projectDetails.title}</p>
-        </div>
-        
-        <p style="text-align: center; margin: 30px 0;">
-          <a href="${projectUrl}" 
-             style="background-color: #f97316; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-            View Your Coloring Pages
-          </a>
-        </p>
-        
-        <p>Click the button above to go to your dashboard where you can download the PDF.</p>
-        
-        <p>Thank you for creating with StoryInColor!</p>
-        
-        <p>Best regards,<br/>The StoryInColor Team</p>
       </body>
     </html>
   `;

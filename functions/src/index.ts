@@ -13,11 +13,7 @@ import PDFDocument from 'pdfkit'; // Import PDFKit for PDF generation
 import * as fs from 'fs'; // Import fs for file operations
 import * as os from 'os'; // Import os for temp directory access
 import * as path from 'path'; // Import path for file path operations
-import { rebuildFirestoreFromStorage } from './recovery-utils'; // Import recovery utility
 import { CREDIT_PACKAGES } from './credit-packages';
-
-// Export the recovery utility
-export { rebuildFirestoreFromStorage };
 
 // Version log - update this to verify deployments
 console.log('Cloud Functions initializing - OpenAI Integration Version');
