@@ -35,6 +35,23 @@ export const sendWelcomeEmail = async (email: string, name?: string) => {
   try {
     const ses = configureSES();
     
+    // Generate the email template
+    const emailTemplate = generateWelcomeEmailTemplate(name || 'there');
+    
+    // Log comprehensive debugging information
+    console.log(`[AWS SES] Email template preview (first 300 chars): ${emailTemplate.substring(0, 300)}...`);
+    console.log(`[AWS SES] Template contains button: ${emailTemplate.includes('Go to Your Dashboard')}`);
+    console.log(`[AWS SES] Template contains old text 'Order printed copies': ${emailTemplate.includes('Order printed copies')}`);
+    console.log(`[AWS SES] Template contains old text 'our platform': ${emailTemplate.includes('our platform')}`);
+    console.log(`[AWS SES] Template contains old text 'book formats': ${emailTemplate.includes('book formats')}`);
+    console.log(`[AWS SES] Template contains new text 'StoryInColor!': ${emailTemplate.includes('StoryInColor!')}`);
+    console.log(`[AWS SES] Full template length: ${emailTemplate.length} characters`);
+    
+    // Log AWS configuration being used
+    console.log(`[AWS SES] Using AWS Region: ${awsRegion.value()}`);
+    console.log(`[AWS SES] Using Sender Email: ${senderEmail.value()}`);
+    console.log(`[AWS SES] AWS Access Key ID prefix: ${awsAccessKeyId.value().substring(0, 8)}...`);
+    
     // Construct email params
     const params = {
       Source: senderEmail.value(),
@@ -43,7 +60,7 @@ export const sendWelcomeEmail = async (email: string, name?: string) => {
         Subject: { Data: 'Welcome to StoryInColor!' },
         Body: {
           Html: {
-            Data: generateWelcomeEmailTemplate(name || 'there')
+            Data: emailTemplate
           }
         }
       }
@@ -166,6 +183,7 @@ export const sendProjectProcessedEmail = async (
 };
 
 // Email template generators
+// Force redeploy - Updated 2025-05-25
 function generateWelcomeEmailTemplate(name: string): string {
   return `
     <html>

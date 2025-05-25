@@ -14,17 +14,17 @@ export default function Footer() {
             <p className="text-xs text-gray-500">© 2023 StoryInColor. All rights reserved.</p>
           </div>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
-            <nav className="flex gap-4 md:gap-6">
-              <Link href="/terms" className="text-xs hover:underline underline-offset-4">
-                Terms
-              </Link>
-              <Link href="/privacy" className="text-xs hover:underline underline-offset-4">
-                Privacy
-              </Link>
-              <Link href="/contact" className="text-xs hover:underline underline-offset-4">
-                Contact
-              </Link>
-            </nav>
+          <nav className="flex gap-4 md:gap-6">
+            <Link href="/terms" className="text-xs hover:underline underline-offset-4">
+              Terms
+            </Link>
+            <Link href="/privacy" className="text-xs hover:underline underline-offset-4">
+              Privacy
+            </Link>
+            <Link href="/contact" className="text-xs hover:underline underline-offset-4">
+              Contact
+            </Link>
+          </nav>
             <div className="flex gap-3">
               <Link 
                 href="https://www.facebook.com/profile.php?id=61576557967079" 
