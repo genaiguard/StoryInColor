@@ -101,6 +101,7 @@ function CreatePageContent() {
   const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false)
   const [showWatermarkNoticeAlert, setShowWatermarkNoticeAlert] = useState<boolean>(false)
   const [pdfGenerationProceedAnyway, setPdfGenerationProceedAnyway] = useState<boolean>(false)
+  const [printButtonDisabledReason, setPrintButtonDisabledReason] = useState<string | null>(null)
 
   // Add state for notice visibility
   const [showNotices, setShowNotices] = useState({
@@ -758,6 +759,27 @@ function CreatePageContent() {
     setShowPdfLink(false);
   };
 
+  // --- Effect to determine print button disabled reason ---
+  useEffect(() => {
+    if (generatingPDF) {
+      setPrintButtonDisabledReason("Generating PDF, please wait...");
+    } else if (isSaving) {
+      setPrintButtonDisabledReason("Saving project, please wait...");
+    } else if (pages.length === 0) {
+      setPrintButtonDisabledReason("Please add pages to your project to enable printing.");
+    } else if (pages.some(p => !p.originalImage)) {
+      setPrintButtonDisabledReason("Please ensure all pages have an uploaded image.");
+    } else if (pages.some(p => !p.selectedVersionId)) {
+      setPrintButtonDisabledReason("Please ensure all pages have a converted coloring version selected.");
+    } else if (pages.some(p => p.isProcessing)) {
+      setPrintButtonDisabledReason("Some pages are still processing. Please wait until all pages are ready.");
+    } else if (pages.some(p => p.isPreparingToRegenerate)) {
+      setPrintButtonDisabledReason("Some pages are being prepared for regeneration. Please wait.");
+    } else {
+      setPrintButtonDisabledReason(null);
+    }
+  }, [generatingPDF, isSaving, pages]);
+
   // --- Render Logic ---
   if (!projectId) {
     // Show loading or placeholder while projectId is being initialized
@@ -805,25 +827,32 @@ function CreatePageContent() {
             >
               Exit
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="whitespace-nowrap"
-              disabled={generatingPDF || isSaving || totalPages === 0 || pages.some(p => !p.originalImage || !p.selectedVersionId || p.isProcessing || p.isPreparingToRegenerate)}
-              onClick={handleGeneratePDF}
-            >
-              {generatingPDF ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <FileDown className="mr-2 h-4 w-4" />
-                  Print
-                </>
+            <div className="flex flex-col items-end">
+              <Button
+                size="sm"
+                variant="outline"
+                className="whitespace-nowrap"
+                disabled={generatingPDF || isSaving || totalPages === 0 || pages.some(p => !p.originalImage || !p.selectedVersionId || p.isProcessing || p.isPreparingToRegenerate)}
+                onClick={handleGeneratePDF}
+              >
+                {generatingPDF ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Print
+                  </>
+                )}
+              </Button>
+              {printButtonDisabledReason && (
+                <p className="text-xs text-gray-500 mt-1 text-right">
+                  {printButtonDisabledReason}
+                </p>
               )}
-            </Button>
+            </div>
           </div>
         </div>
       </header>
