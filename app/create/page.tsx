@@ -768,13 +768,13 @@ function CreatePageContent() {
     } else if (pages.length === 0) {
       setPrintButtonDisabledReason("Please add pages to your project to enable printing.");
     } else if (pages.some(p => !p.originalImage)) {
-      setPrintButtonDisabledReason("Please ensure all pages have an uploaded image.");
-    } else if (pages.some(p => !p.selectedVersionId)) {
-      setPrintButtonDisabledReason("Please ensure all pages have a converted coloring version selected.");
+      setPrintButtonDisabledReason("Please upload an image for each page or delete empty pages.");
     } else if (pages.some(p => p.isProcessing)) {
       setPrintButtonDisabledReason("Some pages are still processing. Please wait until all pages are ready.");
     } else if (pages.some(p => p.isPreparingToRegenerate)) {
       setPrintButtonDisabledReason("Some pages are being prepared for regeneration. Please wait.");
+    } else if (pages.some(p => !p.selectedVersionId)) {
+      setPrintButtonDisabledReason("Please convert your images to coloring pages or delete unused pages.");
     } else {
       setPrintButtonDisabledReason(null);
     }
@@ -802,32 +802,33 @@ function CreatePageContent() {
     <div className="flex min-h-screen flex-col bg-gray-50">
       {/* Header */}
       <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
-        <div className="container mx-auto max-w-7xl flex h-14 items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-2">
-            <Link href="/" className="flex items-center">
-              <span className="text-lg font-bold">
-                Story<span className="text-orange-500">InColor</span>
-              </span>
-            </Link>
-          </div>
-          <div className="flex items-center gap-2">
-            {!isLoadingCredits && (
-              <div 
-                className="flex items-center gap-1 mr-2 bg-blue-50 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-blue-100 transition-colors"
-                onClick={() => router.push('/credits')}
+        <div className="container mx-auto max-w-7xl px-4 md:px-6">
+          {/* Top row with all interactive elements */}
+          <div className="flex h-14 items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Link href="/" className="flex items-center">
+                <span className="text-lg font-bold">
+                  Story<span className="text-orange-500">InColor</span>
+                </span>
+              </Link>
+            </div>
+            <div className="flex items-center gap-2">
+              {!isLoadingCredits && (
+                <div 
+                  className="flex items-center gap-1 mr-2 bg-blue-50 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-blue-100 transition-colors"
+                  onClick={() => router.push('/credits')}
+                >
+                  <Sparkles className="h-4 w-4 text-blue-500" />
+                  <span>{formatCreditBalance(credits)}</span>
+                </div>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => router.push('/dashboard')}
               >
-                <Sparkles className="h-4 w-4 text-blue-500" />
-                <span>{formatCreditBalance(credits)}</span>
-              </div>
-            )}
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => router.push('/dashboard')}
-            >
-              Exit
-            </Button>
-            <div className="flex flex-col items-end">
+                Exit
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
@@ -847,13 +848,16 @@ function CreatePageContent() {
                   </>
                 )}
               </Button>
-              {printButtonDisabledReason && (
-                <p className="text-xs text-gray-500 mt-1 text-right">
-                  {printButtonDisabledReason}
-                </p>
-              )}
             </div>
           </div>
+          {/* Bottom row for disabled reason message */}
+          {printButtonDisabledReason && (
+            <div className="flex justify-end pb-2">
+              <p className="text-xs text-gray-500">
+                {printButtonDisabledReason}
+              </p>
+            </div>
+          )}
         </div>
       </header>
 
