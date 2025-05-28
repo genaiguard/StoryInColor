@@ -182,8 +182,7 @@ export default function DashboardPage() {
               setIsProcessingCreditPurchase(false);
               sessionStorage.setItem(acknowledgedSessionKey, 'true'); // Acknowledge
               
-              // Track Facebook Pixel purchase event
-              trackPurchase(mostRecentPurchase.pricePaid / 100, 'USD') // Convert cents to dollars
+              // Track Facebook Pixel purchase event with detailed parameters
               trackEvent('Purchase', {
                 content_name: 'Credit Purchase',
                 content_category: 'credits',
