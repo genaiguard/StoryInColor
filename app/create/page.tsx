@@ -379,6 +379,11 @@ function CreatePageContent() {
     }
     setPages(prevPages => [...prevPages, newPage])
     console.log("Added new page:", newPage.id)
+
+    // Scroll to the bottom after a short delay to allow DOM update
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }, 100);
   }
 
   const removePage = async (pageId: string) => {
@@ -935,13 +940,6 @@ function CreatePageContent() {
                   >
                      <ShoppingCart className="mr-2 h-4 w-4" />
                     Purchase Credits
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShowWatermarkNoticeAlert(false)}
-                  >
-                    Cancel
                   </Button>
                 </div>
               </AlertDescription>
