@@ -51,11 +51,11 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
     <section ref={containerRef} className="relative overflow-hidden bg-[#f7f4f3] border-b py-12 md:py-16 lg:py-20">
       {/* Background shape */}
       <motion.div 
-        className="absolute -top-[10%] -right-[5%] w-[50%] h-[50%] rounded-full bg-gradient-to-r from-purple-100 to-pink-100 blur-3xl opacity-60"
+        className="absolute -top-[10%] -right-[5%] w-[50%] h-[50%] rounded-full bg-gradient-to-r from-purple-100 to-pink-100 blur-3xl opacity-60 force-hardware-acceleration"
         style={{ y: y1 }}
       />
       <motion.div 
-        className="absolute bottom-[10%] -left-[5%] w-[30%] h-[30%] rounded-full bg-gradient-to-r from-orange-100 to-amber-100 blur-3xl opacity-50"
+        className="absolute bottom-[10%] -left-[5%] w-[30%] h-[30%] rounded-full bg-gradient-to-r from-orange-100 to-amber-100 blur-3xl opacity-50 force-hardware-acceleration"
         style={{ y: y2 }}
       />
 
@@ -130,7 +130,7 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
               transition={{ delay: 1.4 }}
               className="text-sm text-gray-500"
             >
-              Sign up today and try our service with free starter credits
+              Sign up today! Free pages for a limited time.
             </motion.p>
           </motion.div>
           <motion.div 
