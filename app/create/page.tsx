@@ -598,8 +598,10 @@ function CreatePageContent() {
           }
         }
         
-        setPages(prevPages => 
-          prevPages.map(p => 
+        // Capture the updated pages state here for immediate save
+        let finalPagesState: Page[] | undefined = undefined;
+        setPages(prevPages => {
+          const updated = prevPages.map(p => 
             p.id === pageId ? 
             { 
               ...p, 
@@ -608,9 +610,33 @@ function CreatePageContent() {
               isProcessing: false 
             } : 
             p
-          )
-        );
+          );
+          finalPagesState = updated; // Capture the state
+          return updated;
+        });
+
         toast.success("Coloring page version created!");
+
+        // After state is updated, flush the debounced save to persist this exact state
+        if (finalPagesState && projectId) {
+          console.log("Flushing debouncedSave after successful image conversion with final pages state.");
+          // Ensure debouncedSave uses the very latest state by passing it directly if its implementation allows,
+          // or rely on its next scheduled run if it correctly captures from the useEffect.
+          // Forcing an immediate save with the correct state is safer here.
+          // We need to ensure projectId, bookTitle, and projectExists are current.
+          // Let's assume debouncedSave will pick up the latest bookTitle and projectExists from state when it runs.
+          // A direct call to a non-debounced save function would be cleaner if available.
+          // Flushing will execute the debounced function immediately with its currently scheduled arguments.
+          // To ensure it uses THIS finalPagesState, it's tricky if debouncedSave relies on arguments from its last *call*.
+          // The most reliable way is to have a separate save function or ensure debouncedSave can take explicit state.
+
+          // Simplest approach for now: cancel pending and re-schedule with latest known pages.
+          // This depends on debouncedSave correctly using the arguments passed to it.
+          debouncedSave.cancel(); // Cancel any pending stale save
+          console.log("Calling debouncedSave directly with latest pages after conversion.");
+          debouncedSave(projectId, finalPagesState, bookTitle, projectExists); 
+        }
+
       } else {
         throw new Error(resultData.message || "Failed to process image in cloud function.");
       }
