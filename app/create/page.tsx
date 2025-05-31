@@ -914,7 +914,7 @@ function CreatePageContent() {
               <AlertTitle>Generate PDF Preview</AlertTitle>
               <AlertDescription className="flex flex-col space-y-2">
                 <p>You are using the free version. Your PDF will include watermarked images. Purchase any credit package (starting at $3.50 for 5 credits) to generate PDFs with high-quality, unwatermarked images.</p>
-                <div className="mt-1 flex gap-2">
+                <div className="mt-1 flex flex-wrap gap-2">
                   <Button
                     size="sm"
                     onClick={() => {
@@ -1101,7 +1101,7 @@ function CreatePageContent() {
             </Button>
 
             {/* Center: Saving Indicator */}
-            <div className="text-sm text-gray-500 flex items-center gap-1">
+            <div className="text-xs text-gray-500 flex items-center gap-1">
               {isSaving ? (
                 <> <Loader2 className="h-4 w-4 animate-spin" /> Saving... </>
               ) : lastSaved ? (
