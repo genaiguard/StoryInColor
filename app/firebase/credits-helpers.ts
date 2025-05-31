@@ -1,4 +1,4 @@
-import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, Timestamp, arrayUnion } from "firebase/firestore"
+import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, Timestamp, arrayUnion, runTransaction } from "firebase/firestore"
 
 // Constants
 export const FREE_CREDITS_PER_USER = 2;
@@ -121,48 +121,53 @@ export async function getUserCredits(userId: string): Promise<UserCredits> {
   return userCreditsDoc.data() as UserCredits;
 }
 
-// Use a credit for image generation
+// Use a credit for image generation (Refactored with Firestore Transaction)
 export async function useCredit(userId: string, projectId: string, pageId: string): Promise<boolean> {
   const db = getFirestore();
   const userCreditsRef = doc(db, "userCredits", userId);
 
-  // Get current credits to check balance.
-  const userCreditsSnap = await getDoc(userCreditsRef);
+  try {
+    await runTransaction(db, async (transaction) => {
+      const userCreditsDoc = await transaction.get(userCreditsRef);
 
-  if (!userCreditsSnap.exists()) {
-    console.error(`User credits document for ${userId} does not exist in useCredit. Attempting to initialize.`);
-    // Attempt to initialize credits if they don't exist, then re-check
-    await initializeUserCredits(userId);
-    const recheckCreditsSnap = await getDoc(userCreditsRef);
-    if (!recheckCreditsSnap.exists() || recheckCreditsSnap.data()?.balance <= 0) {
-      console.error(`Failed to initialize or insufficient credits after init for ${userId}`);
-      return false; 
-    }
-    // If initialization was successful and balance is positive, proceed with this new snap
-    const currentBalance = recheckCreditsSnap.data()?.balance;
-    if (currentBalance <= 0) return false;
+      if (!userCreditsDoc.exists()) {
+        console.error(`User credits document for ${userId} does not exist in useCredit transaction.`);
+        throw new Error("User credits not initialized. Please log out and log back in, or contact support if the issue persists."); 
+      }
 
-  } else {
-    // If document exists, check balance
-    const currentBalance = userCreditsSnap.data().balance;
-    if (currentBalance <= 0) {
-      return false;
-    }
+      const currentData = userCreditsDoc.data();
+      const currentBalance = currentData?.balance;
+
+      if (currentBalance === undefined || currentBalance === null) {
+        console.error(`User credits balance is invalid or missing for ${userId}. Current data: ${JSON.stringify(currentData)}`);
+        throw new Error("Credit balance is invalid. Please contact support.");
+      }
+
+      if (currentBalance <= 0) {
+        throw new Error("Insufficient credits."); 
+      }
+
+      transaction.update(userCreditsRef, {
+        balance: increment(-1),
+        used: increment(1),
+        usageHistory: arrayUnion({
+          projectId,
+          pageId,
+          date: Timestamp.now()
+        }),
+        lastUpdated: Timestamp.now()
+      });
+    });
+
+    console.log(`Credit used successfully for user ${userId}, project ${projectId}`);
+    return true;
+  } catch (error: any) {
+    console.error(`Failed to use credit for user ${userId}, projectId ${projectId}. Error: ${error.message}`);
+    // Optionally, re-throw specific errors or handle them if needed by the caller
+    // For example, if error.message is "Insufficient credits.", the UI can show a specific message.
+    // toast.error(error.message); // Example of how UI might be updated, but this logic is in calling code.
+    return false;
   }
-
-  // Update credit balance and add to usage history atomically
-  await updateDoc(userCreditsRef, {
-    balance: increment(-1),
-    used: increment(1),
-    usageHistory: arrayUnion({ // Use arrayUnion for atomic addition
-      projectId,
-      pageId,
-      date: Timestamp.now()
-    }),
-    lastUpdated: Timestamp.now()
-  });
-
-  return true;
 }
 
 // Add purchased credits to user's balance
