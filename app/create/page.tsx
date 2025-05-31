@@ -1086,6 +1086,19 @@ function CreatePageContent() {
         </div>
       </main>
 
+      {/* Saving Indicator (Moved out of footer) */}
+      <div className="py-3 text-center">
+        <div className="text-xs text-gray-500 inline-flex items-center gap-1">
+          {isSaving ? (
+            <> <Loader2 className="h-4 w-4 animate-spin" /> Saving... </>
+          ) : lastSaved ? (
+            <> <Check className="h-4 w-4 text-green-500" /> Last saved: {lastSaved.toLocaleTimeString()} </>
+          ) : (
+            "Unsaved changes"
+          )}
+        </div>
+      </div>
+
       {/* Footer */}
       <footer className="sticky bottom-0 z-50 bg-white border-t shadow-md py-3">
         <div className="container mx-auto max-w-7xl px-4 md:px-6">
@@ -1099,17 +1112,6 @@ function CreatePageContent() {
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Add Page
             </Button>
-
-            {/* Center: Saving Indicator */}
-            <div className="text-xs text-gray-500 flex items-center gap-1">
-              {isSaving ? (
-                <> <Loader2 className="h-4 w-4 animate-spin" /> Saving... </>
-              ) : lastSaved ? (
-                <> <Check className="h-4 w-4 text-green-500" /> Saved: {lastSaved.toLocaleTimeString()} </>
-              ) : (
-                "Unsaved" 
-              )}
-            </div>
 
             {/* Right side: Download Button (Formerly Print) */}
             <Button
