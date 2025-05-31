@@ -610,7 +610,7 @@ function CreatePageContent() {
               isProcessing: false 
             } : 
             p
-          );
+        );
           finalPagesState = updated; // Capture the state
           return updated;
         });
@@ -665,6 +665,8 @@ function CreatePageContent() {
 
   // PDF Generation Function (wrapped in useCallback)
   const handleGeneratePDF = useCallback(async () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to top
+
     if (!projectId || !user) {
       toast.error("Project ID or user not available. Cannot proceed.");
       return;
@@ -792,15 +794,15 @@ function CreatePageContent() {
     } else if (isSaving) {
       setPrintButtonDisabledReason("Saving project, please wait...");
     } else if (pages.length === 0) {
-      setPrintButtonDisabledReason("Please add pages to your project to enable printing.");
+      setPrintButtonDisabledReason("Please add pages to your project to enable PDF download.");
     } else if (pages.some(p => !p.originalImage)) {
-      setPrintButtonDisabledReason("Please upload an image for each page or delete empty pages.");
+      setPrintButtonDisabledReason("Please upload an image for each page to enable PDF download.");
     } else if (pages.some(p => p.isProcessing)) {
-      setPrintButtonDisabledReason("Some pages are still processing. Please wait until all pages are ready.");
+      setPrintButtonDisabledReason("Some pages are still processing. Please wait to download PDF.");
     } else if (pages.some(p => p.isPreparingToRegenerate)) {
-      setPrintButtonDisabledReason("Some pages are being prepared for regeneration. Please wait.");
+      setPrintButtonDisabledReason("Some pages are being prepared. Please wait to download PDF.");
     } else if (pages.some(p => !p.selectedVersionId)) {
-      setPrintButtonDisabledReason("Please convert your images to coloring pages or delete unused pages.");
+      setPrintButtonDisabledReason("Please convert your images to coloring pages to enable PDF download.");
     } else {
       setPrintButtonDisabledReason(null);
     }
@@ -855,40 +857,13 @@ function CreatePageContent() {
               >
                 Exit
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="whitespace-nowrap"
-                disabled={generatingPDF || isSaving || totalPages === 0 || pages.some(p => !p.originalImage || !p.selectedVersionId || p.isProcessing || p.isPreparingToRegenerate)}
-                onClick={handleGeneratePDF}
-              >
-                {generatingPDF ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Print
-                  </>
-                )}
-              </Button>
             </div>
           </div>
-          {/* Bottom row for disabled reason message */}
-          {printButtonDisabledReason && (
-            <div className="flex justify-end pb-2">
-              <p className="text-xs text-gray-500">
-                {printButtonDisabledReason}
-              </p>
-            </div>
-          )}
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 py-6 md:py-8 px-4">
+      <main className="flex-1 py-6 md:py-8 px-4 pb-24">
         <div className="container mx-auto max-w-7xl">
           {/* PDF Download Link Panel */}
           {showPdfLink && currentPdfUrl && (
@@ -1045,7 +1020,7 @@ function CreatePageContent() {
                 <Crop className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm text-blue-700">
-                    <span className="font-medium">Tip:</span> For best results, trim and crop your images before uploading to remove unnecessary backgrounds.
+                    <span className="font-medium">Tip:</span> For best results, trim and crop your images before uploading.
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => dismissNotice('trimming')}>
@@ -1064,21 +1039,6 @@ function CreatePageContent() {
                   </p>
                 </div>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => dismissNotice('portrait')}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-            
-            {/* Copyright Notice */}
-            {showNotices.copyright && (
-              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm text-amber-700">
-                    <span className="font-medium">Important:</span> Please ensure you have rights to the images you upload. Do not use copyrighted material without permission.
-                  </p>
-                </div>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => dismissNotice('copyright')}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
@@ -1102,46 +1062,84 @@ function CreatePageContent() {
                 <p className="text-gray-500">Your project is empty. Click "Add Page" to start!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {pages.map((page, index) => (
-                  <PageCard
-                    key={page.id}
-                    page={page}
-                    index={index}
-                    onMovePage={movePage}
-                    onRemovePage={() => removePage(page.id)}
-                    onImageUpload={(file) => handleImageUpload(page.id, file)}
-                    onConvertImage={(artStyle) => handleConvertImage(page.id, artStyle)}
-                    onSelectVersion={(versionId) => selectVersion(page.id, versionId)}
-                    onPrepareToRegenerate={() => prepareForRegeneration(page.id)}
-                    onCancelRegeneration={() => cancelRegeneration(page.id)}
-                    debouncedSave={debouncedSave}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {pages.map((page, index) => (
+                    <PageCard
+                      key={page.id}
+                      page={page}
+                      index={index}
+                      onMovePage={movePage}
+                      onRemovePage={() => removePage(page.id)}
+                      onImageUpload={(file) => handleImageUpload(page.id, file)}
+                      onConvertImage={(artStyle) => handleConvertImage(page.id, artStyle)}
+                      onSelectVersion={(versionId) => selectVersion(page.id, versionId)}
+                      onPrepareToRegenerate={() => prepareForRegeneration(page.id)}
+                      onCancelRegeneration={() => cancelRegeneration(page.id)}
+                      debouncedSave={debouncedSave}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-white mt-8">
-        <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
-          {/* Saving indicator moved to footer */}
-          <div className="flex justify-center items-center mb-2">
+      <footer className="sticky bottom-0 z-50 bg-white border-t shadow-md py-3">
+        <div className="container mx-auto max-w-7xl px-4 md:px-6">
+          <div className="flex justify-between items-center">
+            {/* Left side: Add Page Button */}
+            <Button
+              onClick={addPage}
+              disabled={totalPages >= MAX_PAGES}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              size="sm"
+            >
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Page
+            </Button>
+
+            {/* Center: Saving Indicator */}
             <div className="text-sm text-gray-500 flex items-center gap-1">
               {isSaving ? (
-                <> <Loader2 className="h-4 w-4 animate-spin" /> Saving changes... </>
+                <> <Loader2 className="h-4 w-4 animate-spin" /> Saving... </>
               ) : lastSaved ? (
-                <> <Check className="h-4 w-4 text-green-500" /> Last saved: {lastSaved.toLocaleTimeString()} </>
+                <> <Check className="h-4 w-4 text-green-500" /> Saved: {lastSaved.toLocaleTimeString()} </>
               ) : (
-                "Unsaved changes"
+                "Unsaved" 
               )}
             </div>
+
+            {/* Right side: Download Button (Formerly Print) */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="whitespace-nowrap"
+              disabled={printButtonDisabledReason !== null}
+              onClick={handleGeneratePDF}
+            >
+              {generatingPDF ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Download
+                </>
+              )}
+            </Button>
           </div>
-          <div className="text-center text-xs text-gray-500">
-            © {new Date().getFullYear()} StoryInColor. All rights reserved. | Project ID: {projectId}
-          </div>
+          {/* ADDED Print button disabled reason message to footer */}
+          {printButtonDisabledReason && (
+            <div className="flex justify-end pt-1">
+              <p className="text-xs text-gray-500">
+                {printButtonDisabledReason}
+              </p>
+            </div>
+          )}
         </div>
       </footer>
     </div>

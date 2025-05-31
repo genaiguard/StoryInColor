@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="overflow-x-hidden">
+    <html lang="en" className="">
       <head>
         <Script id="clarity-tracking" strategy="afterInteractive">
           {`
@@ -71,7 +71,7 @@ export default function RootLayout({
           <FacebookPixel pixelId={FACEBOOK_PIXEL_CONFIG.PIXEL_ID} />
         )}
       </head>
-      <body className="overflow-x-hidden">
+      <body className="">
         <FirebaseProvider>
           {children}
         </FirebaseProvider>
