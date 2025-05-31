@@ -1,4 +1,4 @@
-import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, Timestamp } from "firebase/firestore"
+import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, Timestamp, arrayUnion } from "firebase/firestore"
 
 // Constants
 export const FREE_CREDITS_PER_USER = 2;
@@ -125,27 +125,43 @@ export async function getUserCredits(userId: string): Promise<UserCredits> {
 export async function useCredit(userId: string, projectId: string, pageId: string): Promise<boolean> {
   const db = getFirestore();
   const userCreditsRef = doc(db, "userCredits", userId);
-  
-  // Get current credits
-  const userCredits = await getUserCredits(userId);
-  
-  // Check if user has enough credits
-  if (userCredits.balance <= 0) {
-    return false;
+
+  // Get current credits to check balance.
+  const userCreditsSnap = await getDoc(userCreditsRef);
+
+  if (!userCreditsSnap.exists()) {
+    console.error(`User credits document for ${userId} does not exist in useCredit. Attempting to initialize.`);
+    // Attempt to initialize credits if they don't exist, then re-check
+    await initializeUserCredits(userId);
+    const recheckCreditsSnap = await getDoc(userCreditsRef);
+    if (!recheckCreditsSnap.exists() || recheckCreditsSnap.data()?.balance <= 0) {
+      console.error(`Failed to initialize or insufficient credits after init for ${userId}`);
+      return false; 
+    }
+    // If initialization was successful and balance is positive, proceed with this new snap
+    const currentBalance = recheckCreditsSnap.data()?.balance;
+    if (currentBalance <= 0) return false;
+
+  } else {
+    // If document exists, check balance
+    const currentBalance = userCreditsSnap.data().balance;
+    if (currentBalance <= 0) {
+      return false;
+    }
   }
-  
-  // Update credit balance and add to usage history
+
+  // Update credit balance and add to usage history atomically
   await updateDoc(userCreditsRef, {
     balance: increment(-1),
     used: increment(1),
-    usageHistory: [...userCredits.usageHistory, {
+    usageHistory: arrayUnion({ // Use arrayUnion for atomic addition
       projectId,
       pageId,
       date: Timestamp.now()
-    }],
+    }),
     lastUpdated: Timestamp.now()
   });
-  
+
   return true;
 }
 
@@ -153,19 +169,23 @@ export async function useCredit(userId: string, projectId: string, pageId: strin
 export async function addCredits(userId: string, packageId: string, creditAmount: number, pricePaid: number): Promise<void> {
   const db = getFirestore();
   const userCreditsRef = doc(db, "userCredits", userId);
+
+  // Ensure user credits document exists, otherwise initialize it.
+  const userCreditsSnap = await getDoc(userCreditsRef);
+  if (!userCreditsSnap.exists()) {
+    // Initialize credits. Note: initializeUserCredits itself adds an initial purchase history entry.
+    // We are adding another one here for the actual purchase.
+    await initializeUserCredits(userId);
+  }
   
-  // Get current credits
-  const userCredits = await getUserCredits(userId);
-  
-  // Add credits and update purchase history
   await updateDoc(userCreditsRef, {
     balance: increment(creditAmount),
-    purchaseHistory: [...userCredits.purchaseHistory, {
+    purchaseHistory: arrayUnion({ // Using arrayUnion for atomic and non-duplicative addition
       packageId,
       creditAmount,
       pricePaid,
       purchaseDate: Timestamp.now()
-    }],
+    }),
     lastUpdated: Timestamp.now()
   });
 }
