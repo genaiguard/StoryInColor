@@ -149,6 +149,7 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
               height={600}
               className="w-full h-auto"
               priority
+              sizes="(max-width: 767px) 100vw, (max-width: 1023px) 80vw, 600px"
             />
           </motion.div>
         </div>

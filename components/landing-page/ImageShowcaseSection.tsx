@@ -33,7 +33,7 @@ export default function ImageShowcaseSection() {
             alt="Example showing the transformation of a regular photo into a coloring page"
             width={1920} 
             height={1080}
-            layout="responsive"
+            sizes="(max-width: 767px) 100vw, (max-width: 1200px) 80vw, 1000px"
             className="w-full h-auto"
           />
         </motion.div>

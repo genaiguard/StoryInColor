@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import dynamic from 'next/dynamic'
 import Header from "@/components/landing-page/header"
 import HeroSection from "@/components/landing-page/hero-section"
-import ImageShowcaseSection from "@/components/landing-page/ImageShowcaseSection"
+const ImageShowcaseSection = dynamic(() => import("@/components/landing-page/ImageShowcaseSection"))
 const ExamplesSection = dynamic(() => import('@/components/landing-page/examples-section'))
 const HowItWorksSection = dynamic(() => import('@/components/landing-page/how-it-works-section'))
 const PetPortraitsSection = dynamic(() => import('@/components/landing-page/pet-portraits-section'))
