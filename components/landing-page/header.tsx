@@ -12,9 +12,7 @@ export default function Header({ activeSection, scrollToSection }) {
   return (
     <header className="border-b sticky top-0 bg-white z-50">
       <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 md:px-6">
-        <div
-          className="opacity-0 animate-fadeInHeaderLogo"
-        >
+        <div>
         <Link href="/" className="flex items-center gap-2">
           <span className="text-xl font-bold">
             Story<span className="text-orange-500">InColor</span>
