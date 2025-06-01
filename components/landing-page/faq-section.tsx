@@ -15,18 +15,8 @@ export default function FAQSection() {
 
         <div className="mx-auto max-w-3xl mt-12">
           <Accordion type="single" collapsible className="space-y-4">
-            <AccordionItem value="credits" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-bold">How does the credit system work?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-              We use a simple credit system. You receive free starter credits when you sign up. Each credit lets you create one coloring page. 
-              Additional credits are available for purchase, with pricing that rewards bulk purchases.
-            </p>
-              </AccordionContent>
-            </AccordionItem>
-
             <AccordionItem value="generation" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-bold">How long does it take to generate my coloring pages?</AccordionTrigger>
+              <AccordionTrigger className="text-lg font-semibold text-left">How long does it take to generate my coloring pages?</AccordionTrigger>
               <AccordionContent>
                 <p className="text-gray-700">
               Your custom coloring pages are generated almost instantly. You can download them right away and print them at home 
@@ -36,7 +26,7 @@ export default function FAQSection() {
             </AccordionItem>
 
             <AccordionItem value="photos" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-bold">What type of photos work best?</AccordionTrigger>
+              <AccordionTrigger className="text-lg font-semibold text-left">What type of photos work best?</AccordionTrigger>
               <AccordionContent>
                 <p className="text-gray-700">
               Clear photos with good lighting work best. Photos with distinct subjects and minimal background clutter
@@ -47,7 +37,7 @@ export default function FAQSection() {
             </AccordionItem>
 
             <AccordionItem value="expiry" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-bold">Do credits expire?</AccordionTrigger>
+              <AccordionTrigger className="text-lg font-semibold text-left">Do credits expire?</AccordionTrigger>
               <AccordionContent>
                 <p className="text-gray-700">
               Your credits remain available in your account for an extended period. We design our system so you can use them 
@@ -57,7 +47,7 @@ export default function FAQSection() {
             </AccordionItem>
 
             <AccordionItem value="pets" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-bold">Can I create coloring books of my pets?</AccordionTrigger>
+              <AccordionTrigger className="text-lg font-semibold text-left">Can I create coloring books of my pets?</AccordionTrigger>
               <AccordionContent>
                 <p className="text-gray-700">
               Pet portraits make wonderful coloring pages. Our AI technology works great with dogs, cats, and other
@@ -68,7 +58,7 @@ export default function FAQSection() {
             </AccordionItem>
 
             <AccordionItem value="preview" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-bold">Can I preview my coloring pages before finalizing?</AccordionTrigger>
+              <AccordionTrigger className="text-lg font-semibold text-left">Can I preview my coloring pages before finalizing?</AccordionTrigger>
               <AccordionContent>
                 <p className="text-gray-700">
               Yes! You can see a preview of how your photos will look as coloring pages before finalizing your creation. 

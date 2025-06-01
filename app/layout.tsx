@@ -18,6 +18,9 @@ export const metadata: Metadata = {
     { rel: 'icon', type: 'image/png', sizes: '512x512', url: '/web-app-manifest-512x512.png' },
     { rel: 'apple-touch-icon', url: '/apple-touch-icon.png', type: 'image/png' },
   ],
+  other: {
+    'apple-mobile-web-app-title': 'StoryInColor',
+  }
 }
 
 export const viewport = {
