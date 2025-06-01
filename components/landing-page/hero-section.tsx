@@ -133,14 +133,8 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
               Sign up today! Free pages for a limited time.
             </motion.p>
           </motion.div>
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ 
-              duration: 0.5, 
-              delay: 0.2 // Simple fade-in, slightly delayed
-            }}
-            className="relative flex items-center justify-center lg:justify-end"
+          <div
+            className="relative flex items-center justify-center lg:justify-end opacity-0 animate-fadeInHeroImage"
           >
             <Image
               src="/images/best-6.webp"
@@ -151,7 +145,7 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
               priority
               sizes="(max-width: 767px) 100vw, (max-width: 1023px) 80vw, 600px"
             />
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>
