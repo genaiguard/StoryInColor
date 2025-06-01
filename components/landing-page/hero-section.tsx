@@ -65,17 +65,13 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
             style={{ opacity }}
             className="flex flex-col justify-center space-y-6"
           >
-            <motion.div 
-              variants={textVariants}
-              initial="hidden"
-              animate="visible"
-              className="space-y-4"
+            <div 
+              className="space-y-4 opacity-0 animate-fadeInHeroTextContainer"
             >
               <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl flex flex-wrap">
                 {words.map((word, i) => (
-                  <motion.span 
+                  <span 
                     key={i} 
-                    variants={wordVariants}
                     className="mr-3 inline-block"
                   >
                     {word === "Photos" ? (
@@ -85,30 +81,17 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
                     ) : (
                       word
                     )}
-                  </motion.span>
+                  </span>
                 ))}
               </h1>
-              <motion.p 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8, type: "spring", damping: 12 }}
+              <p 
                 className="max-w-[600px] text-gray-700 md:text-xl"
               >
                 Upload your vacation photos and we'll create beautiful custom coloring pages you can download and print instantly.
-              </motion.p>
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ 
-                delay: 1.2, 
-                type: "spring", 
-                stiffness: 200, 
-                damping: 15 
-              }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex flex-col gap-2 min-[400px]:flex-row"
+              </p>
+            </div>
+            <div 
+              className="flex flex-col gap-2 min-[400px]:flex-row opacity-0 animate-fadeInHeroButton"
             >
               <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-base font-medium" asChild>
                 <Link 
@@ -123,15 +106,12 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
                   Start Free
                 </Link>
               </Button>
-            </motion.div>
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.4 }}
-              className="text-sm text-gray-500"
+            </div>
+            <p 
+              className="text-sm text-gray-500 opacity-0 animate-fadeInHeroSubtext"
             >
               Sign up today! Free pages for a limited time.
-            </motion.p>
+            </p>
           </motion.div>
           <div
             className="relative flex items-center justify-center lg:justify-end opacity-0 animate-fadeInHeroImage"
