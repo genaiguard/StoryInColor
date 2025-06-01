@@ -9,10 +9,14 @@ import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
 export const metadata: Metadata = {
   title: 'StoryInColor - AI Coloring Books',
   description: 'Turn your photos into beautiful custom coloring pages with AI. Create personalized coloring books from family photos, pet portraits, and vacation memories.',
-  icons: {
-    icon: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
-  },
+  icons: [
+    { rel: 'icon', url: '/favicon.ico', type: 'image/x-icon' },
+    { rel: 'icon', url: '/favicon.svg', type: 'image/svg+xml' },
+    { rel: 'icon', type: 'image/png', sizes: '96x96', url: '/favicon-96x96.png' },
+    { rel: 'icon', type: 'image/png', sizes: '192x192', url: '/web-app-manifest-192x192.png' },
+    { rel: 'icon', type: 'image/png', sizes: '512x512', url: '/web-app-manifest-512x512.png' },
+    { rel: 'apple-touch-icon', url: '/apple-touch-icon.png', type: 'image/png' },
+  ],
 }
 
 export const viewport = {
