@@ -12,17 +12,15 @@ export default function Header({ activeSection, scrollToSection }) {
   return (
     <header className="border-b sticky top-0 bg-white z-50">
       <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 md:px-6">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
+        <div
+          className="opacity-0 animate-fadeInHeaderLogo"
         >
         <Link href="/" className="flex items-center gap-2">
           <span className="text-xl font-bold">
             Story<span className="text-orange-500">InColor</span>
           </span>
         </Link>
-        </motion.div>
+        </div>
         <nav className="hidden md:flex items-center gap-6">
           <motion.button
             onClick={() => scrollToSection("examples")}

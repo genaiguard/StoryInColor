@@ -111,5 +111,9 @@
       opacity: 1;
     }
   }
+
+  .animate-fadeInHeaderLogo {
+    animation: fadeInGeneral 0.3s ease-out 0.1s forwards; /* Faster, earlier fade-in for logo */
+  }
 }
 
