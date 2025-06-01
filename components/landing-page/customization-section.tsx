@@ -1,8 +1,37 @@
 "use client"
 
 import { PathImg } from "@/components/ui/pathed-image"
+import { useEffect, useRef } from "react"
 
 export default function CustomizationSection() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    const videoElement = videoRef.current
+    if (!videoElement) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            videoElement.play().catch(error => console.error("Video play failed:", error));
+          } else {
+            videoElement.pause();
+          }
+        })
+      },
+      { threshold: 0.5 } // Start playing when 50% of the video is visible
+    )
+
+    observer.observe(videoElement)
+
+    return () => {
+      if (videoElement) {
+        observer.unobserve(videoElement)
+      }
+    }
+  }, [])
+
   return (
     <section className="py-12 md:py-16 lg:py-20" style={{ backgroundColor: '#ffffff' }}>
       <div className="container mx-auto max-w-7xl px-6 md:px-8">
@@ -48,6 +77,7 @@ export default function CustomizationSection() {
                 }}
               />
               <video 
+                ref={videoRef}
                 src="/images/VideoDemo.mp4" 
                 className="w-full h-auto relative z-0"
                 style={{ 
@@ -58,7 +88,6 @@ export default function CustomizationSection() {
                   transform: 'none',
                   outline: 'none'
                 }}
-                autoPlay
                 playsInline
                 muted
                 loop

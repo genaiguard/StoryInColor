@@ -260,8 +260,8 @@ export default function ExamplesSection() {
               <button
                 key={i}
                 onClick={() => goToSlide(i)}
-                className={`w-3 h-3 rounded-full transition-colors duration-300 ${
-                  i === currentIndex ? "bg-orange-500" : "bg-gray-300 hover:bg-gray-400"
+                className={`w-3 h-3 rounded-full ${ 
+                  i === currentIndex ? "bg-orange-500" : "bg-gray-300"
                 }`}
                 aria-label={`Go to slide ${i + 1}`}
               />

@@ -18,7 +18,7 @@ export default function TestimonialsSection() {
                 <div className="h-10 w-10 rounded-full bg-gray-200"></div>
               </div>
               <div>
-                <h4 className="font-semibold">Sarah T.</h4>
+                <h3 className="font-semibold">Sarah T.</h3>
                 <p className="text-sm text-gray-500">Family Vacation Pages</p>
               </div>
             </div>
@@ -51,7 +51,7 @@ export default function TestimonialsSection() {
                 <div className="h-10 w-10 rounded-full bg-gray-200"></div>
               </div>
               <div>
-                <h4 className="font-semibold">Michael R.</h4>
+                <h3 className="font-semibold">Michael R.</h3>
                 <p className="text-sm text-gray-500">Anniversary Pages</p>
               </div>
             </div>
@@ -84,7 +84,7 @@ export default function TestimonialsSection() {
                 <div className="h-10 w-10 rounded-full bg-gray-200"></div>
               </div>
               <div>
-                <h4 className="font-semibold">Jennifer L.</h4>
+                <h3 className="font-semibold">Jennifer L.</h3>
                 <p className="text-sm text-gray-500">Pet Portrait Pages</p>
               </div>
             </div>
