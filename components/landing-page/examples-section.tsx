@@ -112,8 +112,7 @@ export default function ExamplesSection() {
   const examples = [
     { src: "/images/example1.webp", alt: "Example coloring page 1" },
     { src: "/images/example2.webp", alt: "Example coloring page 2" },
-    { src: "/images/example3.webp", alt: "Example coloring page 3" },
-    { src: "/images/example4.webp", alt: "Example coloring page 4" }
+    { src: "/images/example3.webp", alt: "Example coloring page 3" }
   ]
 
   const [direction, setDirection] = useState(0);
