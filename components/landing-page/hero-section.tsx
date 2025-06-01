@@ -134,15 +134,12 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
             </motion.p>
           </motion.div>
           <motion.div 
-            initial={{ opacity: 0, x: 60 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ 
-              duration: 0.8, 
-              type: "spring", 
-              damping: 20,
-              stiffness: 100
+              duration: 0.5, 
+              delay: 0.2 // Simple fade-in, slightly delayed
             }}
-            whileHover={{ scale: 1.02, transition: { duration: 0.3 } }}
             className="relative flex items-center justify-center lg:justify-end"
           >
             <Image
