@@ -19,11 +19,10 @@ export default function PetPortraitsSection() {
             }}
           >
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
-              Even Your Furry Friends in <span className="text-orange-500">Detail</span>
+              Pet Portraits
             </h2>
             <p className="text-gray-700 md:text-lg mb-6">
-              Transform your pet photos into beautiful coloring pages. Our AI captures every detail, from whiskers to expressions, 
-              creating perfect coloring pages for all ages.
+              Turn your pet photos into coloring pages
             </p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -34,7 +33,7 @@ export default function PetPortraitsSection() {
               whileTap={{ scale: 0.95 }}
             >
               <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-base font-medium" asChild>
-                <Link href="/login">Create Your Pet Portrait Pages</Link>
+                <Link href="/login">Create Pet Pages</Link>
               </Button>
             </motion.div>
           </motion.div>

@@ -38,10 +38,10 @@ export default function CustomizationSection() {
         <div className="flex flex-col gap-8">
           <div className="text-center mx-auto max-w-3xl">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
-              Easy Customization
+              One-Click Magic
             </h2>
             <p className="text-gray-700 md:text-lg mb-6">
-              Our intuitive interface makes it simple to create your perfect coloring pages in minutes.
+              Transform your photos into coloring pages with a single click
             </p>
           </div>
 

@@ -72,10 +72,10 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
                 {words.map((word, i) => (
                   <span 
                     key={i} 
-                    className="mr-3 inline-block"
+                    className="mr-3 inline-block whitespace-nowrap"
                   >
                     {word === "Photos" ? (
-                <span className="bg-gradient-to-r from-purple-600 via-red-500 to-orange-500 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-purple-600 via-red-500 to-orange-500 bg-clip-text text-transparent pr-1">
                         {word}
                 </span>
                     ) : (
@@ -117,11 +117,11 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
             className="relative flex items-center justify-center lg:justify-end opacity-0 animate-fadeInHeroImage"
           >
             <Image
-              src="/images/best-6.webp"
-              alt="Coloring page of a family at the beach alongside the original framed photo and colored pencils"
+              src="/images/SHARING.webp"
+              alt="Example showing the transformation of a regular photo into a coloring page"
               width={600}
               height={600}
-              className="w-full h-auto"
+              className="w-full h-auto opacity-90"
               priority
               sizes="(max-width: 767px) 100vw, (max-width: 1023px) 80vw, 600px"
             />

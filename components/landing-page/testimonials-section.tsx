@@ -1,3 +1,5 @@
+import { User, UserCircle, UserRound } from "lucide-react"
+
 export default function TestimonialsSection() {
   return (
     <section id="testimonials" className="bg-gray-50 py-12 md:py-16 lg:py-20">
@@ -14,8 +16,8 @@ export default function TestimonialsSection() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-12">
           <div className="flex flex-col rounded-lg border bg-white p-6 shadow-sm">
             <div className="flex items-center gap-4">
-              <div className="rounded-full bg-gray-100 p-1">
-                <div className="h-10 w-10 rounded-full bg-gray-200"></div>
+              <div className="rounded-full bg-orange-100 p-2">
+                <User className="h-6 w-6 text-orange-500" />
               </div>
               <div>
                 <h3 className="font-semibold">Sarah T.</h3>
@@ -47,8 +49,8 @@ export default function TestimonialsSection() {
 
           <div className="flex flex-col rounded-lg border bg-white p-6 shadow-sm">
             <div className="flex items-center gap-4">
-              <div className="rounded-full bg-gray-100 p-1">
-                <div className="h-10 w-10 rounded-full bg-gray-200"></div>
+              <div className="rounded-full bg-purple-100 p-2">
+                <UserCircle className="h-6 w-6 text-purple-500" />
               </div>
               <div>
                 <h3 className="font-semibold">Michael R.</h3>
@@ -80,8 +82,8 @@ export default function TestimonialsSection() {
 
           <div className="flex flex-col rounded-lg border bg-white p-6 shadow-sm">
             <div className="flex items-center gap-4">
-              <div className="rounded-full bg-gray-100 p-1">
-                <div className="h-10 w-10 rounded-full bg-gray-200"></div>
+              <div className="rounded-full bg-pink-100 p-2">
+                <UserRound className="h-6 w-6 text-pink-500" />
               </div>
               <div>
                 <h3 className="font-semibold">Jennifer L.</h3>
