@@ -30,7 +30,7 @@ export default function PetPortraitsSection() {
               whileTap={{ scale: 0.95 }}
             >
               <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-base font-medium" asChild>
-                <Link href="/login">Create Pet Pages</Link>
+                <Link href="/login">Start for free</Link>
               </Button>
             </motion.div>
           </motion.div>
