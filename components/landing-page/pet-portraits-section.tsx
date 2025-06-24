@@ -19,11 +19,8 @@ export default function PetPortraitsSection() {
             }}
           >
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
-              Pet Portraits
-            </h2>
-            <p className="text-gray-700 md:text-lg mb-6">
               Turn your pet photos into coloring pages
-            </p>
+            </h2>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
