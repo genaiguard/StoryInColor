@@ -7,7 +7,7 @@ import FacebookPixel from '@/components/tracking/facebook-pixel'
 import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
 
 export const metadata: Metadata = {
-  title: 'StoryInColor - AI Coloring Books',
+  title: 'StoryInColor - Custom Coloring Books',
   description: 'Turn your photos into beautiful custom coloring pages with AI. Create personalized coloring books from family photos, pet portraits, and vacation memories.',
   manifest: '/site.webmanifest',
   icons: [
