@@ -85,7 +85,7 @@ export default function PricingSection() {
 
   const featureList1 = [
     { icon: <Gift className="h-5 w-5 text-orange-500" />, text: "Free starter credits included" },
-    { icon: <Sparkles className="h-5 w-5 text-orange-500" />, text: "Pay per AI generation" },
+    { icon: <Sparkles className="h-5 w-5 text-orange-500" />, text: "Pay per conversion" },
     { icon: <Folders className="h-5 w-5 text-orange-500" />, text: "Create multiple projects" },
     { icon: <Download className="h-5 w-5 text-orange-500" />, text: "Instant download of print-ready coloring pages" }
   ]

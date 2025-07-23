@@ -159,7 +159,7 @@ export default function HowItWorksSection() {
             <motion.div variants={textVariants}>
             <h3 className="text-2xl font-bold text-center">2. Preview & Customize</h3>
               <p className="text-center text-gray-500 mt-2">
-              Our AI converts your photos into coloring pages. Preview and make adjustments to get the best results.
+              Convert your photos to custom coloring pages. Preview and make adjustments to get the best results.
             </p>
             </motion.div>
           </motion.div>
