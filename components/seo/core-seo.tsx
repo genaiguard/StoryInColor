@@ -4,7 +4,7 @@ export default function CoreSEO() {
   // Website URL
   const siteUrl = 'https://storyincolor.com';
   
-  // Define structured data for rich search results
+  // Define structured data for rich search results:
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
