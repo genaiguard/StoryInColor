@@ -1,26 +1,87 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Homepage -->
-  <url>
-    <loc>https://storyincolor.com/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-
-  <!-- Public Pages -->
-  <url>
-    <loc>https://storyincolor.com/contact</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://storyincolor.com/privacy</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://storyincolor.com/terms</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-</urlset> 
+<url>
+<loc>https://storyincolor.com</loc>
+<lastmod>2025-09-02T05:12:37.086Z</lastmod>
+<changefreq>daily</changefreq>
+<priority>1</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/contact</loc>
+<lastmod>2025-09-02T05:12:37.086Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.8</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/privacy</loc>
+<lastmod>2025-09-02T05:12:37.086Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.5</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/terms</loc>
+<lastmod>2025-09-02T05:12:37.086Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.5</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/blog</loc>
+<lastmod>2025-09-02T05:12:37.086Z</lastmod>
+<changefreq>weekly</changefreq>
+<priority>0.8</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/blog/getting-started-with-coloring-pages</loc>
+<lastmod>2024-01-15T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.8</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/blog/best-photos-for-coloring-pages</loc>
+<lastmod>2024-01-18T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.8</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/blog/family-coloring-activities</loc>
+<lastmod>2024-01-20T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/blog/how-to-turn-photos-into-coloring-pages</loc>
+<lastmod>2024-01-25T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.8</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/blog/unique-gift-ideas-personalized-coloring-books</loc>
+<lastmod>2024-01-28T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/blog/custom-pet-portraits-coloring-pages</loc>
+<lastmod>2024-02-01T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/blog/mindful-coloring-stress-relief-custom-photos</loc>
+<lastmod>2024-02-05T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.8</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/blog/vacation-memories-coloring-pages-travel-photos</loc>
+<lastmod>2024-02-08T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+<url>
+<loc>https://storyincolor.com/blog/printable-coloring-pages-from-photos-instant-diy-fun</loc>
+<lastmod>2024-02-12T00:00:00.000Z</lastmod>
+<changefreq>monthly</changefreq>
+<priority>0.6</priority>
+</url>
+</urlset>
