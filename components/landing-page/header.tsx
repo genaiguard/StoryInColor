@@ -74,6 +74,17 @@ export default function Header({ activeSection, scrollToSection }) {
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
+            <Link
+              href="/blog"
+              className="text-sm font-medium transition-colors hover:text-orange-500"
+            >
+              Blog
+            </Link>
+          </motion.div>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+          >
           <Button className="bg-orange-500 hover:bg-orange-600 text-white" asChild>
             <Link href="/login">Login</Link>
           </Button>
@@ -151,6 +162,12 @@ export default function Header({ activeSection, scrollToSection }) {
             >
               FAQ
             </button>
+            <Link
+              href="/blog"
+              className="text-sm font-medium px-4 py-2 hover:bg-gray-100 rounded-md text-left"
+            >
+              Blog
+            </Link>
             <Button className="bg-orange-500 hover:bg-orange-600 text-white mx-4" asChild>
               <Link href="/login">Login</Link>
             </Button>

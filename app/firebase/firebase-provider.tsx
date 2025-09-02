@@ -1,23 +1,69 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app"
-import {
-  getAuth,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  sendPasswordResetEmail,
-  connectAuthEmulator,
-  type User,
-  type UserCredential,
-} from "firebase/auth"
-import { getAnalytics, isSupported } from "firebase/analytics"
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore"
-import { getStorage, connectStorageEmulator } from "firebase/storage"
+
+// Use any types to avoid static imports during build
+type FirebaseApp = any
+type User = any
+type UserCredential = any
+
+// Dynamic imports for Firebase modules
+let firebaseModules: any = null
+
+const loadFirebaseModules = async () => {
+  if (firebaseModules) return firebaseModules
+
+  // Only load Firebase in browser environment
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase can only be loaded in browser environment')
+  }
+
+  const [
+    { initializeApp, getApps },
+    {
+      getAuth,
+      onAuthStateChanged,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signOut,
+      sendPasswordResetEmail,
+      connectAuthEmulator,
+    },
+    { getAnalytics, isSupported },
+    { getFirestore, connectFirestoreEmulator },
+    { getStorage, connectStorageEmulator },
+  ] = await Promise.all([
+    import("firebase/app"),
+    import("firebase/auth"),
+    import("firebase/analytics"),
+    import("firebase/firestore"),
+    import("firebase/storage"),
+  ])
+
+  firebaseModules = {
+    initializeApp,
+    getApps,
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    sendPasswordResetEmail,
+    connectAuthEmulator,
+    getAnalytics,
+    isSupported,
+    getFirestore,
+    connectFirestoreEmulator,
+    getStorage,
+    connectStorageEmulator,
+  }
+
+  return firebaseModules
+}
 
 // Development environment detection
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -47,105 +93,135 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
 
   // Initialize Firebase
   useEffect(() => {
-    // Define config object inside useEffect to ensure it uses build-time values
-    const effectiveFirebaseConfig = {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-      measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-    };
-
-    try {
-      // Check if all required config values are present
-      if (!effectiveFirebaseConfig.apiKey || !effectiveFirebaseConfig.authDomain || !effectiveFirebaseConfig.projectId) {
-        console.warn("Firebase config is incomplete. Authentication features will not work.", effectiveFirebaseConfig);
-        setLoading(false);
-        // Set initialized to false if config is missing, otherwise subsequent calls might think it's initialized
-        setInitialized(false);
-        return;
-      }
-
-      // Check if Firebase app has already been initialized
-      const apps = getApps();
-      let firebaseApp;
-
-      if (apps.length === 0) {
-        // Initialize using the config derived from build-time env vars
-        firebaseApp = initializeApp(effectiveFirebaseConfig);
-      } else {
-        firebaseApp = apps[0];
-      }
-
-      setApp(firebaseApp)
-      
-      // Initialize Firebase services
-      const auth = getAuth(firebaseApp);
-      const db = getFirestore(firebaseApp);
-      const storage = getStorage(firebaseApp);
-      
-      // Connect to emulators in development environment
-      if (isDevelopment) {
-        try {
-          // Auth needs special handling for different local development URLs
-          if (window.location.hostname === 'localhost') {
-            // Emulators are commented out for troubleshooting
-            // connectAuthEmulator(auth, 'http://localhost:9099');
-            // connectFirestoreEmulator(db, 'localhost', 8080);
-            // connectStorageEmulator(storage, 'localhost', 9199);
-            
-            console.log("Emulator connections disabled for troubleshooting");
-          } else {
-            // For local IP address development (like 192.168.x.x)
-            console.log("Using production Firebase instance for development");
-          }
-        } catch (emulatorError) {
-          console.warn("Connection error", emulatorError);
-        }
-      }
-      
-      setInitialized(true)
-
-      // Initialize Analytics if running in browser and measurement ID is available
-      if (typeof window !== 'undefined' && effectiveFirebaseConfig.measurementId) {
-        isSupported().then(supported => {
-          if (supported) {
-            getAnalytics(firebaseApp)
-            // Don't log Analytics initialization
-          }
-        })
-      }
-
-      // Set up auth state listener
-      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser)
-        setLoading(false)
-      })
-
-      return () => unsubscribe()
-    } catch (error) {
-      console.error("Initialization error");
+    // Only initialize Firebase on the client side
+    if (typeof window === 'undefined') {
       setLoading(false)
       setInitialized(false)
+      return
+    }
+
+    const initializeFirebase = async () => {
+      try {
+        // Load Firebase modules dynamically
+        const modules = await loadFirebaseModules()
+      } catch (error) {
+        console.warn("Failed to load Firebase modules:", error.message)
+        setLoading(false)
+        setInitialized(false)
+        return
+      }
+
+      try {
+        // Continue with Firebase initialization
+        const modules = firebaseModules
+
+        // Define config object inside useEffect to ensure it uses build-time values
+        const effectiveFirebaseConfig = {
+          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+          measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+        };
+
+        // Check if all required config values are present
+        if (!effectiveFirebaseConfig.apiKey || !effectiveFirebaseConfig.authDomain || !effectiveFirebaseConfig.projectId) {
+          console.warn("Firebase config is incomplete. Authentication features will not work.", effectiveFirebaseConfig);
+          setLoading(false);
+          setInitialized(false);
+          return;
+        }
+
+        // Check if Firebase app has already been initialized
+        const apps = modules.getApps();
+        let firebaseApp;
+
+        if (apps.length === 0) {
+          // Initialize using the config derived from build-time env vars
+          firebaseApp = modules.initializeApp(effectiveFirebaseConfig);
+        } else {
+          firebaseApp = apps[0];
+        }
+
+        setApp(firebaseApp)
+
+        // Initialize Firebase services
+        const auth = modules.getAuth(firebaseApp);
+        const db = modules.getFirestore(firebaseApp);
+        const storage = modules.getStorage(firebaseApp);
+
+        // Connect to emulators in development environment
+        if (isDevelopment) {
+          try {
+            // Auth needs special handling for different local development URLs
+            if (window.location.hostname === 'localhost') {
+              // Emulators are commented out for troubleshooting
+              // modules.connectAuthEmulator(auth, 'http://localhost:9099');
+              // modules.connectFirestoreEmulator(db, 'localhost', 8080);
+              // modules.connectStorageEmulator(storage, 'localhost', 9199);
+
+              console.log("Emulator connections disabled for troubleshooting");
+            } else {
+              // For local IP address development (like 192.168.x.x)
+              console.log("Using production Firebase instance for development");
+            }
+          } catch (emulatorError) {
+            console.warn("Connection error", emulatorError);
+          }
+        }
+
+        setInitialized(true)
+
+        // Initialize Analytics if running in browser and measurement ID is available
+        if (typeof window !== 'undefined' && effectiveFirebaseConfig.measurementId) {
+          modules.isSupported().then((supported: boolean) => {
+            if (supported) {
+              modules.getAnalytics(firebaseApp)
+              // Don't log Analytics initialization
+            }
+          })
+        }
+
+        // Set up auth state listener
+        const unsubscribe = modules.onAuthStateChanged(auth, (currentUser: User | null) => {
+          setUser(currentUser)
+          setLoading(false)
+        })
+
+        return () => unsubscribe()
+      } catch (error) {
+        console.error("Firebase initialization error:", error);
+        setLoading(false)
+        setInitialized(false)
+      }
+    }
+
+    const cleanup = initializeFirebase()
+
+    return () => {
+      cleanup.then(cleanupFn => {
+        if (cleanupFn) cleanupFn()
+      })
     }
   }, [])
 
-  // Auth functions
+    // Auth functions
   const signIn = async (email: string, password: string) => {
     if (!initialized) throw new Error("Firebase is not initialized")
     try {
-      const auth = getAuth()
-      await signInWithEmailAndPassword(auth, email, password)
+      const modules = await loadFirebaseModules()
+      const auth = modules.getAuth()
+      await modules.signInWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
       console.error("Sign In Error:", error.code, error.message);
-      
+
       // Handle network errors with more information
       if (error.code === 'auth/network-request-failed') {
         throw new Error("Network connection failed. Please check your internet connection and try again.");
       }
-      
+
       // Re-throw the original error for other handlers
       throw error;
     }
@@ -154,16 +230,17 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string) => {
     if (!initialized) throw new Error("Firebase is not initialized")
     try {
-      const auth = getAuth()
-      await createUserWithEmailAndPassword(auth, email, password)
+      const modules = await loadFirebaseModules()
+      const auth = modules.getAuth()
+      await modules.createUserWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
       console.error("Sign Up Error:", error.code, error.message);
-      
+
       // Handle network errors with more information
       if (error.code === 'auth/network-request-failed') {
         throw new Error("Network connection failed. Please check your internet connection and try again.");
       }
-      
+
       // Re-throw the original error for other handlers
       throw error;
     }
@@ -171,25 +248,28 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
 
   const googleSignIn = async () => {
     if (!initialized) throw new Error("Firebase is not initialized")
-    const auth = getAuth()
-    const provider = new GoogleAuthProvider()
+    const modules = await loadFirebaseModules()
+    const auth = modules.getAuth()
+    const provider = new modules.GoogleAuthProvider()
     // Explicitly request email and profile scopes
     provider.addScope('email');
     provider.addScope('profile');
-    const result = await signInWithPopup(auth, provider)
+    const result = await modules.signInWithPopup(auth, provider)
     return result // Return the auth result
   }
 
   const resetPassword = async (email: string) => {
     if (!initialized) throw new Error("Firebase is not initialized")
-    const auth = getAuth()
-    await sendPasswordResetEmail(auth, email)
+    const modules = await loadFirebaseModules()
+    const auth = modules.getAuth()
+    await modules.sendPasswordResetEmail(auth, email)
   }
 
   const logout = async () => {
     if (!initialized) throw new Error("Firebase is not initialized")
-    const auth = getAuth()
-    await signOut(auth)
+    const modules = await loadFirebaseModules()
+    const auth = modules.getAuth()
+    await modules.signOut(auth)
   }
 
   const value = {
