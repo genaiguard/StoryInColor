@@ -3,24 +3,24 @@ import Header from "@/components/landing-page/header";
 import Footer from "@/components/landing-page/footer";
 import { ToolGrid } from "@/components/tools/tool-grid";
 import { TOOLS } from "@/lib/tools/registry";
+import { TOOL_COUNT_WORD } from "@/lib/tools/copy";
+
+const SHORT_DESCRIPTION = `${TOOL_COUNT_WORD} AI photo tools. One upload. A magazine-quality result in seconds.`;
 
 export const metadata: Metadata = {
   title: "All AI Photo Tools | StoryInColor",
-  description:
-    "Eleven AI photo tools in one place. Upload one photo and get a magazine-quality result — coloring book, palmistry, style audits, plant care, and more.",
+  description: `${TOOL_COUNT_WORD} AI photo tools in one place. Upload one photo and get a magazine-quality result — coloring book, palmistry, style audits, plant care, and more.`,
   alternates: { canonical: "https://storyincolor.com/tools" },
   openGraph: {
     title: "All AI Photo Tools | StoryInColor",
-    description:
-      "Eleven AI photo tools. One upload. A magazine-quality result in seconds.",
+    description: SHORT_DESCRIPTION,
     type: "website",
     url: "https://storyincolor.com/tools",
   },
   twitter: {
     card: "summary_large_image",
     title: "All AI Photo Tools | StoryInColor",
-    description:
-      "Eleven AI photo tools. One upload. A magazine-quality result in seconds.",
+    description: SHORT_DESCRIPTION,
   },
 };
 
@@ -29,8 +29,7 @@ function CatalogJsonLd() {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "StoryInColor AI photo tools",
-    description:
-      "Eleven AI photo tools that turn one upload into a finished, share-ready result.",
+    description: `${TOOL_COUNT_WORD} AI photo tools that turn one upload into a finished, share-ready result.`,
     numberOfItems: TOOLS.length,
     itemListElement: TOOLS.map((tool, idx) => ({
       "@type": "ListItem",
@@ -58,7 +57,7 @@ export default function ToolsCatalogPage() {
         <section className="container mx-auto max-w-7xl px-4 md:px-6 py-12 md:py-16">
           <div className="max-w-3xl">
             <h1 className="text-4xl font-bold tracking-tight text-gray-900 md:text-5xl">
-              Eleven AI photo tools. One upload. Pick yours.
+              {TOOL_COUNT_WORD} AI photo tools. One upload. Pick yours.
             </h1>
             <p className="mt-4 text-lg text-gray-600">
               From a print-ready coloring page to a magazine-quality palm reading,

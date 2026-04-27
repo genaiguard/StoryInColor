@@ -27,15 +27,29 @@ export const generateForTool = onCall(
       throw new HttpsError("unauthenticated", "User must be authenticated.");
     }
     const userId = request.auth.uid;
-    const { toolId, photoStoragePath } = (request.data ?? {}) as {
+    const {
+      toolId,
+      photoStoragePath,
+      jobId: clientJobId,
+    } = (request.data ?? {}) as {
       toolId?: unknown;
       photoStoragePath?: unknown;
+      jobId?: unknown;
     };
     if (typeof toolId !== "string" || typeof photoStoragePath !== "string") {
       throw new HttpsError(
         "invalid-argument",
         "Missing toolId or photoStoragePath.",
       );
+    }
+    // Validate optional client-supplied jobId — must be a UUID. Accepting
+    // this lets the client navigate to /result?jobId=… BEFORE the long
+    // OpenAI call returns, so the user sees the polling result page
+    // immediately instead of staring at the upload card for 30s.
+    const uuidRe =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (clientJobId !== undefined && (typeof clientJobId !== "string" || !uuidRe.test(clientJobId))) {
+      throw new HttpsError("invalid-argument", "Invalid jobId — must be a UUID.");
     }
     // SECURITY: ensure the storage path belongs to the caller's user folder.
     // Without this check, a malicious user could submit a path pointing at
@@ -51,7 +65,7 @@ export const generateForTool = onCall(
       throw new HttpsError("invalid-argument", `Unknown toolId: ${toolId}`);
     }
 
-    const jobId = uuidv4();
+    const jobId = (clientJobId as string | undefined) ?? uuidv4();
     const generationId = uuidv4();
     const jobRef = db
       .collection("users")
@@ -67,8 +81,16 @@ export const generateForTool = onCall(
     // 1) Pre-create job + deduct credits in one transactional motion.
     // This runs OUTSIDE the try/catch below — a deduction failure (e.g.,
     // insufficient credits) propagates straight to the caller and must NOT
-    // trigger a refund attempt.
+    // trigger a refund attempt. The transaction is idempotent on jobId: if
+    // a job doc already exists for this jobId (client retry / double-fire),
+    // we no-op rather than double-deduct.
+    let alreadyStarted = false;
     await db.runTransaction(async (tx) => {
+      const existingJob = await tx.get(jobRef);
+      if (existingJob.exists) {
+        alreadyStarted = true;
+        return;
+      }
       const credRef = db.collection("userCredits").doc(userId);
       const credSnap = await tx.get(credRef);
       if (!credSnap.exists) {
@@ -103,6 +125,13 @@ export const generateForTool = onCall(
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     });
+
+    // Idempotency: if the job already existed when we entered, skip the
+    // generation work entirely. The original call (or a sibling retry) is
+    // already producing or has produced the output.
+    if (alreadyStarted) {
+      return { success: true, jobId, alreadyStarted: true };
+    }
 
     // 2) Run generation; on ANY failure, refund and mark failed.
     try {

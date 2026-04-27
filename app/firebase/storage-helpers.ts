@@ -47,7 +47,7 @@ export const getDownloadURLWithRetry = async (imagePath: string, maxRetries = 3)
       }
       
       const url = await getDownloadURL(imageRef);
-      console.log(`Successfully got download URL on attempt ${attempt + 1}`);
+      if (process.env.NODE_ENV !== "production") console.log(`Successfully got download URL on attempt ${attempt + 1}`);
       // Add a token to bypass CORS
       return `${url}&token=cors-bypass`;
     } catch (error: any) {
@@ -240,7 +240,7 @@ export const compressProcessedImage = async (
 ): Promise<File> => {
   // If file is already small enough, return it as is
   if (file.size <= maxSize) {
-    console.log("File already under size limit, no compression needed");
+    if (process.env.NODE_ENV !== "production") console.log("File already under size limit, no compression needed");
     return file;
   }
 
@@ -253,7 +253,7 @@ export const compressProcessedImage = async (
     }
 
     try {
-      console.log(`Compressing image with quality: ${quality}`);
+      if (process.env.NODE_ENV !== "production") console.log(`Compressing image with quality: ${quality}`);
       
       // Create a maximum width/height to resize large images
       // Higher quality but larger size than thumbnails
@@ -310,12 +310,12 @@ export const compressProcessedImage = async (
                   lastModified: Date.now(),
                 });
                 
-                console.log(`Compressed size: ${compressedFile.size} bytes (${(compressedFile.size / (1024 * 1024)).toFixed(2)}MB)`);
+                if (process.env.NODE_ENV !== "production") console.log(`Compressed size: ${compressedFile.size} bytes (${(compressedFile.size / (1024 * 1024)).toFixed(2)}MB)`);
                 
                 // If still too large, try with lower quality
                 if (compressedFile.size > maxSize && quality > 0.3) {
                   const nextQuality = quality - 0.1;
-                  console.log(`File still too large, trying lower quality: ${nextQuality}`);
+                  if (process.env.NODE_ENV !== "production") console.log(`File still too large, trying lower quality: ${nextQuality}`);
                   resolve(await compressWithQuality(nextQuality));
                 } else {
                   resolve(compressedFile);
@@ -378,7 +378,7 @@ export const getSignedDownloadURL = async (imagePath: string): Promise<string> =
       
       // Construct a direct download URL as a fallback
       const directUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(sanitizedPath)}?alt=media&timestamp=${Date.now()}`;
-      console.log('Using fallback direct URL:', directUrl);
+      if (process.env.NODE_ENV !== "production") console.log('Using fallback direct URL:', directUrl);
       return directUrl;
     }
     

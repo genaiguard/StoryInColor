@@ -1,56 +1,57 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
     // Admin access (more permissive)
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'ipekcioglu@me.com';
     }
 
-    // Allow admin full access to everything
+    // Allow admin full read access to everything
     match /{document=**} {
       allow read: if isAdmin();
     }
-    
-    // jobs and generations are written exclusively by the server (admin SDK
-    // bypasses rules). These explicit blocks document intent: clients may
-    // read their own records, and we mark write as `if false`. NOTE:
-    // Firestore OR's allow rules across matching match blocks, so the
-    // wildcard `match /users/{userId}/{document=**}` below still grants
-    // write to jobs/generations to the owner. Tightening that requires
-    // narrowing the wildcard to specific subcollections (e.g. projects).
-    // For now we keep the wildcard as-is (conservative, no behavior change
-    // for existing client code) and rely on these explicit blocks as the
-    // canonical intent + admin override path.
+
+    // jobs and generations are written EXCLUSIVELY by the server (admin SDK
+    // bypasses rules). Clients can read their own records but cannot write —
+    // this prevents a malicious user from forging "complete" job docs with
+    // arbitrary outputDownloadUrls. Owner-read + admin-read only.
     match /users/{userId}/jobs/{jobId} {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow write: if false;
+      allow write: if isAdmin();
     }
     match /users/{userId}/generations/{genId} {
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
-    // Allow users to read and write their own data
-    // Note: the {document=**} wildcard covers user-owned subcollections
-    // (e.g. projects). The explicit blocks above narrow jobs/generations
-    // to read-only for clients; server-side writes happen via admin SDK.
-    match /users/{userId}/{document=**} {
+    // Other user-owned subcollections (projects, uploads, etc.) — owner has
+    // full read/write. We enumerate `projects` and `uploads` explicitly so
+    // jobs/generations rules above are NOT shadowed by a permissive wildcard.
+    match /users/{userId}/projects/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow admin to read and write all user data
       allow read, write: if isAdmin();
     }
-    
-    // Allow users to read and write their own credits
+    match /users/{userId}/uploads/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isAdmin();
+    }
+    // Top-level user doc (fields directly on /users/{userId})
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isAdmin();
+    }
+
+    // User credit ledger
     match /userCredits/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow admin to manage all user credits
       allow read, write: if isAdmin();
     }
-    
-    // Public data can be read by anyone but only written by authenticated users
+
+    // Public data
     match /public/{document=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }
   }
-} 
+}

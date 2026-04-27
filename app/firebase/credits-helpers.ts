@@ -180,7 +180,7 @@ export async function useCredit(
       });
     });
 
-    console.log(`Credit used successfully for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}`);
+    if (process.env.NODE_ENV !== "production") console.log(`Credit used successfully for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}`);
     return true;
   } catch (error: any) {
     console.error(`Failed to use credit for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}. Error: ${error.message}`);
@@ -226,7 +226,7 @@ export async function refundCredit(
       });
     });
 
-    console.log(`Credit refunded successfully for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}`);
+    if (process.env.NODE_ENV !== "production") console.log(`Credit refunded successfully for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}`);
     return true;
   } catch (error: any) {
     console.error(`Failed to refund credit for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}. Error: ${error.message}`);

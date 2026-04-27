@@ -206,23 +206,35 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
       setUploadProgress(100);
 
       const functions = getFunctions();
-      const generate = httpsCallable(functions, "generateForTool");
-      const result = await generate({
+      // 5 minutes — matches the server-side timeoutSeconds: 300 on the
+      // callable. The default httpsCallable timeout is 70s which would surface
+      // as "Generation failed" on slow OpenAI runs even though the server
+      // is still working.
+      const generate = httpsCallable(functions, "generateForTool", { timeout: 5 * 60 * 1000 });
+
+      // Pre-generate jobId so the client knows where to poll. The server
+      // accepts this jobId and uses it for the job/generation docs, which
+      // means we can navigate to /result immediately and let the result
+      // page subscribe to the job — the user no longer stares at the
+      // upload card for 30s.
+      const jobId = uuidv4();
+
+      // Fire-and-forget: the Cloud Function continues running on the server
+      // even if the client disconnects, and it writes the final state to
+      // users/{uid}/jobs/{jobId} which the result page is subscribed to.
+      // We still surface uncaught errors via console.error so they show up
+      // in Sentry-style telemetry if present; the user-facing failure path
+      // is the job doc flipping to status=failed (which the result page
+      // surfaces as "Generation failed — credits refunded").
+      void generate({
         toolId: tool.id,
         photoStoragePath: storagePath,
+        jobId,
+      }).catch((err) => {
+        console.error("generateForTool error:", err);
       });
-      const data = result.data as {
-        success?: boolean;
-        jobId?: string;
-        generationId?: string;
-        outputDownloadUrl?: string;
-      };
 
-      if (!data?.success || !data?.jobId) {
-        throw new Error("Generation failed. Please try again.");
-      }
-
-      router.push(`/tools/${tool.slug}/result?jobId=${data.jobId}`);
+      router.push(`/tools/${tool.slug}/result?jobId=${jobId}`);
     } catch (err: any) {
       console.error("Generate error:", err);
       const message =

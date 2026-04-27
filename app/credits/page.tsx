@@ -23,6 +23,13 @@ export default function CreditsPage() {
   const [firstActivityTimestamp, setFirstActivityTimestamp] = useState<any>(null)
   const [packageIdLoading, setPackageIdLoading] = useState<string | null>(null)
 
+  // Auth gate: send unauthenticated visitors to /login (preserving intent)
+  useEffect(() => {
+    if (firebaseInitialized && !user) {
+      router.replace("/login?next=/credits")
+    }
+  }, [firebaseInitialized, user, router])
+
   // Load user credits and history on mount
   useEffect(() => {
     async function loadUserCredits() {

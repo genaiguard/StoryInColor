@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowRight } from "lucide-react"
+import { TOOL_COUNT_WORD } from "@/lib/tools/copy"
 
 interface HeroSectionProps {
   scrollToSection?: (id: string) => void
@@ -36,7 +37,7 @@ export default function HeroSection({ scrollToSection }: HeroSectionProps) {
               back.
             </h1>
             <p className="max-w-[600px] text-gray-700 md:text-xl">
-              Eleven AI photo tools — palmistry, face reading, style audits, plant care, and more. One upload.
+              {TOOL_COUNT_WORD} AI photo tools — palmistry, face reading, style audits, plant care, and more. One upload.
               One credit click. A finished, magazine-quality result in seconds.
             </p>
 

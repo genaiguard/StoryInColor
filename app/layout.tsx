@@ -5,10 +5,12 @@ import Script from 'next/script'
 import StructuredData from '@/components/seo/structured-data'
 import FacebookPixel from '@/components/tracking/facebook-pixel'
 import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
+import { TOOL_COUNT_WORD, TOOL_NAMES_COMMA_LOWER } from '@/lib/tools/copy'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://storyincolor.com'),
   title: 'StoryInColor — AI Photo Tools',
-  description: 'Upload a photo, get something incredible back. Eleven AI-powered photo tools — coloring book, palm reading, face reading, aura reading, iridology, handwriting, style audit, skincare glow, plate analysis, plant care, room vibes — in one place.',
+  description: `Upload a photo, get something incredible back. ${TOOL_COUNT_WORD} AI-powered photo tools — ${TOOL_NAMES_COMMA_LOWER} — in one place.`,
   manifest: '/site.webmanifest',
   icons: [
     { rel: 'icon', url: '/favicon.ico', type: 'image/x-icon' },

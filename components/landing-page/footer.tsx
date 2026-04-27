@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { TOOLS } from "@/lib/tools/registry"
+import { TOOL_COUNT_WORD } from "@/lib/tools/copy"
 
 export default function Footer() {
   return (
@@ -14,7 +15,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-sm text-gray-600 max-w-xs">
-              Eleven AI photo tools. One upload. A magazine-quality result in seconds.
+              {TOOL_COUNT_WORD} AI photo tools. One upload. A magazine-quality result in seconds.
             </p>
             <div className="flex gap-3 pt-1">
               <Link
