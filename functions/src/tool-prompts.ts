@@ -1,8 +1,24 @@
+// Server-only canonical authority for tool prompts + API parameters.
+// Client never trusts its own creditCost/prompt — this file is the source of
+// truth. Per-tool API mode and quality are tuned per Agent C's research.
+
+export type ToolEndpoint = "edits" | "generations";
+export type ToolQuality = "low" | "medium" | "high" | "auto";
+export type ToolPreprocessing =
+  | "none"
+  | "contrast" // boost ink-vs-paper for handwriting
+  | "exif-rotate" // auto-rotate top-down meals
+  | "detail"; // higher fidelity input (1536px PNG) for fine-detail tools
+
 export type ServerToolConfig = {
   prompt: string;
   creditCost: number;
   outputType: "image" | "image+guide";
-  imageSize: string; // gpt-image-1 size param, e.g. "1024x1536" or "1024x1024"
+  imageSize: string; // "1024x1024" | "1024x1536" | "1536x1024"
+  endpoint: ToolEndpoint; // edits (input photo conditioned) vs generations (text-only)
+  quality: ToolQuality;
+  inputFidelity: "high" | "low"; // only applied to edits
+  preprocessing: ToolPreprocessing;
 };
 
 export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
@@ -12,6 +28,10 @@ export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
     creditCost: 1,
     outputType: "image",
     imageSize: "1024x1536",
+    endpoint: "edits",
+    quality: "medium",
+    inputFidelity: "high",
+    preprocessing: "none",
   },
   "palm-reading": {
     prompt:
@@ -19,6 +39,10 @@ export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
     creditCost: 10,
     outputType: "image+guide",
     imageSize: "1024x1536",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "detail",
   },
   "face-reading": {
     prompt:
@@ -26,27 +50,47 @@ export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
     creditCost: 10,
     outputType: "image+guide",
     imageSize: "1024x1536",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "none",
   },
   "aura-reading": {
+    // Switched to /v1/images/generations: the aura reading is a stylized halo
+    // composite where preserving an exact face hurts the result and risks
+    // identity drift. Text-only generation is cheaper and produces a cleaner,
+    // more idealized output.
     prompt:
-      "Based on my photo, intuit an aura reading describing the dominant aura colors (red, orange, yellow, green, blue, indigo, violet) and the seven auric layers — etheric, emotional, mental, astral, etheric template, celestial, causal — and how they relate to the seven main chakras. Render it as a clean, minimal editorial spread with thin concentric rings, rounded cards explaining each color and layer, a soft watercolor-style aura halo overlaid behind the subject, and an overall expensive, ethereal magazine feel. Add a small black-on-white contour line-art silhouette of the head and shoulders as a decorative anchor. Frame the reading as a reflective entertainment piece, not a spiritual diagnosis. Do your best.",
+      "Intuit an aura reading for a contemplative subject, describing the dominant aura colors (red, orange, yellow, green, blue, indigo, violet), the seven auric layers (etheric, emotional, mental, astral, etheric template, celestial, causal), and how they relate to the seven main chakras (root, sacral, solar plexus, heart, throat, third eye, crown). Render it as a clean, minimal editorial spread with thin concentric rings, generous whitespace, rounded cards explaining each color and layer, a soft watercolor halo overlaid behind a stylized silhouette of the subject, refined serif-and-sans typography, and an expensive ethereal magazine feel. Add a small black-on-white contour line-art silhouette of the head and shoulders as a decorative anchor. This is a reflective entertainment piece, not a spiritual diagnosis. Do your best.",
     creditCost: 10,
     outputType: "image+guide",
     imageSize: "1024x1536",
+    endpoint: "generations",
+    quality: "high",
+    inputFidelity: "high", // unused on generations
+    preprocessing: "none",
   },
-  "iridology": {
+  iridology: {
     prompt:
       "Based on my eye, create an iridology-style wellness reflection mapping the iris zones — pupillary zone, collarette (autonomic nerve wreath), ciliary zone, and outer rim — and noting visible markings such as lacunae, crypts, and radii, organized around a classic iris chart. Lay it out as a clean, minimal editorial infographic with thin lines, rounded cards for each zone, a refined neutral palette, and a premium clinical-but-elegant feel. Include a small black-on-white contour line-art of the iris and pupillary frill as a decorative emblem. This is a wellness reflection for entertainment only, not a medical diagnosis or health claim — keep all language gentle, suggestive, and lifestyle-oriented. Do your best.",
     creditCost: 10,
     outputType: "image+guide",
     imageSize: "1024x1536",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "detail",
   },
-  "handwriting": {
+  handwriting: {
     prompt:
       "Based on my handwriting sample, perform a graphology-style personality sketch analyzing slant (left, vertical, right), baseline trend (rising, straight, falling, wavy), pressure (light, medium, heavy), letter size, spacing, connectivity, zones (upper, middle, lower), and signature character. Present it as a clean, minimal editorial card set with thin lines, rounded panels per trait, elegant typography, and an expensive stationery-magazine feel. Add a small black-on-white contour line-art of a fountain-pen stroke or a traced signature flourish as a decorative element. Frame the result as a playful personality reflection for entertainment, not a clinical or deterministic verdict. Do your best.",
     creditCost: 10,
     outputType: "image+guide",
     imageSize: "1024x1536",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "contrast",
   },
   "style-audit": {
     prompt:
@@ -54,6 +98,10 @@ export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
     creditCost: 10,
     outputType: "image+guide",
     imageSize: "1024x1536",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "none",
   },
   "skincare-glow": {
     prompt:
@@ -61,13 +109,21 @@ export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
     creditCost: 10,
     outputType: "image+guide",
     imageSize: "1024x1536",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "detail",
   },
   "plate-analysis": {
     prompt:
       "Based on my plate photo, give a dietitian-style infographic breakdown estimating the macro split (protein, carbohydrate, fat), portion balance, fiber and produce coverage, plating composition, and color theory of the food. Lay it out as a clean, minimal editorial nutrition card with thin lines, rounded panels per macro and observation, a small donut chart for the macro ratio, and a refined cookbook-magazine feel that looks expensive. Include a small black-on-white contour line-art of the plate from above as a decorative emblem. Frame it as general wellness reflection and balanced-eating inspiration, not medical or prescriptive nutrition advice. Do your best.",
     creditCost: 10,
     outputType: "image+guide",
-    imageSize: "1024x1536",
+    imageSize: "1024x1024",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "exif-rotate",
   },
   "plant-care": {
     prompt:
@@ -75,13 +131,21 @@ export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
     creditCost: 10,
     outputType: "image+guide",
     imageSize: "1024x1536",
+    endpoint: "edits",
+    quality: "medium",
+    inputFidelity: "high",
+    preprocessing: "none",
   },
   "room-vibes": {
     prompt:
-      "Based on my room photo, give an interior-styling read covering palette, materials and textures, lighting, furniture silhouettes, era cues, and the closest design archetype (mid-century modern, Scandinavian, Japandi, minimalist, maximalist, industrial, coastal, or eclectic), plus a \"bookshelf-as-personality\" note on objects on display. Lay it out as a clean, minimal editorial interiors spread with thin lines, rounded cards per category, swatch chips for the palette, and an expensive shelter-magazine feel. Include a small black-on-white contour line-art of the room's key silhouette as a decorative vignette. Frame everything as styling inspiration, not a verdict on taste. Do your best.",
+      'Based on my room photo, give an interior-styling read covering palette, materials and textures, lighting, furniture silhouettes, era cues, and the closest design archetype (mid-century modern, Scandinavian, Japandi, minimalist, maximalist, industrial, coastal, or eclectic), plus a "shelf-as-personality" note on objects on display. Lay it out as a clean, minimal editorial interiors spread in landscape orientation with thin lines, rounded cards per category, swatch chips for the palette, refined serif-and-sans typography, and an expensive shelter-magazine feel. Include a small black-on-white contour line-art of the room\'s key silhouette as a decorative vignette. Frame everything as styling inspiration, not a verdict on taste. Do your best.',
     creditCost: 10,
     outputType: "image+guide",
-    imageSize: "1024x1536",
+    imageSize: "1536x1024",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "none",
   },
 };
 

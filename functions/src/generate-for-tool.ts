@@ -106,32 +106,70 @@ export const generateForTool = onCall(
 
     // 2) Run generation; on ANY failure, refund and mark failed.
     try {
-      // Download original + resize (mirror processImageWithOpenAI settings)
-      const [origBuffer] = await bucket.file(photoStoragePath).download();
-      const resized = await sharp(origBuffer)
-        .resize({
-          width: 1024,
-          height: 1024,
+      // Per-tool input preprocessing — `detail` tools get a 1536px high-quality
+      // input, `contrast` boosts ink/paper for handwriting, `exif-rotate` fixes
+      // sideways meal photos. Output_format/moderation params follow Agent C's
+      // gpt-image-1 research recommendations.
+      let inputBuffer: Buffer | null = null;
+      let inputContentType = "image/jpeg";
+      let inputFilename = "image.jpg";
+
+      if (config.endpoint === "edits") {
+        // SECURITY guard already enforced photoStoragePath.startsWith(`users/${userId}/`).
+        const [origBuffer] = await bucket.file(photoStoragePath).download();
+        let pipeline = sharp(origBuffer);
+
+        if (config.preprocessing === "exif-rotate") {
+          pipeline = pipeline.rotate(); // honors EXIF orientation
+        }
+        if (config.preprocessing === "contrast") {
+          pipeline = pipeline.normalise().linear(1.2, -10);
+        }
+
+        const detail = config.preprocessing === "detail";
+        const targetDim = detail ? 1536 : 1024;
+        pipeline = pipeline.resize({
+          width: targetDim,
+          height: targetDim,
           fit: sharp.fit.inside,
           withoutEnlargement: true,
-        })
-        .jpeg({ quality: 65 })
-        .toBuffer();
+        });
 
-      // OpenAI gpt-image-1 /v1/images/edits — same wire pattern as
-      // processImageWithOpenAI. DO NOT CHANGE the formData shape.
+        if (detail) {
+          inputBuffer = await pipeline.png({ compressionLevel: 9 }).toBuffer();
+          inputContentType = "image/png";
+          inputFilename = "image.png";
+        } else {
+          inputBuffer = await pipeline.jpeg({ quality: 90 }).toBuffer();
+        }
+      }
+
       const formData = new FormData();
       formData.append("model", "gpt-image-1");
       formData.append("prompt", config.prompt);
       formData.append("n", "1");
       formData.append("size", config.imageSize);
-      formData.append("quality", "auto");
-      formData.append("image", resized, {
-        filename: "image.jpg",
-        contentType: "image/jpeg",
-      });
+      formData.append("quality", config.quality);
+      formData.append("output_format", "png");
+      formData.append("moderation", "low");
 
-      const resp = await fetch("https://api.openai.com/v1/images/edits", {
+      if (config.endpoint === "edits") {
+        if (!inputBuffer) {
+          throw new Error("Internal: input buffer missing for edits endpoint");
+        }
+        formData.append("input_fidelity", config.inputFidelity);
+        formData.append("image", inputBuffer, {
+          filename: inputFilename,
+          contentType: inputContentType,
+        });
+      }
+
+      const apiUrl =
+        config.endpoint === "generations"
+          ? "https://api.openai.com/v1/images/generations"
+          : "https://api.openai.com/v1/images/edits";
+
+      const resp = await fetch(apiUrl, {
         method: "POST",
         headers: {
           ...formData.getHeaders(),
