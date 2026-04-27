@@ -309,8 +309,8 @@ export default function CreditsPage() {
                   </ul>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-2 pt-0">
-                  <Button 
-                    className="w-full"
+                  <Button
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white"
                     onClick={() => handlePurchaseCredits(pkg.id)}
                     disabled={packageIdLoading === pkg.id}
                   >

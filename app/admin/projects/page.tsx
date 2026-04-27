@@ -44,8 +44,6 @@ import { getConfiguredStorage, compressProcessedImage, getSignedDownloadURL } fr
 import { PathImg } from "@/components/ui/pathed-image"
 import { toast } from "sonner"
 import { getFunctions, httpsCallable } from "firebase/functions"
-import { getAuth, onAuthStateChanged } from "firebase/auth"
-import { getApp } from "firebase/app"
 
 // Define types
 
@@ -154,37 +152,6 @@ export default function AdminProjectsPage() {
   // Check if current user is an admin
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
   
-  // Debug Firebase initialization
-  useEffect(() => {
-    if (firebaseInitialized) {
-      console.log("Firebase is initialized");
-      try {
-        const app = getApp();
-        console.log("Firebase app config:", app.options);
-        
-        // Test Functions initialization
-        try {
-          const functions = getFunctions();
-          console.log("Firebase Functions initialized successfully");
-          
-          // Test if we can create callables
-          try {
-            const testCallable = httpsCallable(functions, 'sendProcessingCompleteNotification');
-            console.log("Function reference created successfully:", testCallable);
-          } catch (callableError) {
-            console.error("Error creating function reference:", callableError);
-          }
-        } catch (functionsError) {
-          console.error("Error initializing Firebase Functions:", functionsError);
-        }
-      } catch (appError) {
-        console.error("Error getting Firebase app:", appError);
-      }
-    } else {
-      console.log("Firebase is NOT initialized yet");
-    }
-  }, [firebaseInitialized]);
-  
   // Load projects from Firestore
   useEffect(() => {
     if (!firebaseInitialized || !user || !isAdmin) {
@@ -220,8 +187,6 @@ export default function AdminProjectsPage() {
         // Example: query(projectsRef, where('status', 'in', ['draft', 'pdf_ready', 'ordered']));
         const q = query(projectsRef, orderBy('updatedAt', 'desc')); // Order by update time
         const querySnapshot = await getDocs(q);
-        
-        console.log(`Found ${querySnapshot.docs.length} projects in collection group`);
         
         const projectsData: ProjectInfo[] = [];
         
@@ -305,17 +270,15 @@ export default function AdminProjectsPage() {
   // Modified function to load a single project with detailed pages
   const loadSingleProject = async (db: any, userId: string, projectId: string): Promise<ProjectInfo | null> => {
     try {
-      console.log(`Loading single project ${projectId} for user ${userId}`);
       const projectRef = doc(db, `users/${userId}/projects/${projectId}`);
       const docSnap = await getDoc(projectRef);
-      
+
       if (!docSnap.exists()) {
         console.error("Project not found in loadSingleProject");
         return null;
       }
-      
+
       const data = docSnap.data();
-      console.log("Raw project data:", data);
 
       // Format timestamps nicely (handle potential nulls)
       const formatDate = (timestamp: any): string => {
@@ -330,7 +293,6 @@ export default function AdminProjectsPage() {
       // Process pages: Fetch necessary display URLs
       let processedPages: Page[] = [];
       if (data.pages && Array.isArray(data.pages)) {
-        console.log(`Processing ${data.pages.length} pages found in project data.`);
         // Sort pages just in case
         const sortedPagesData = data.pages.sort((a: any, b: any) => (a.pageNumber || 0) - (b.pageNumber || 0));
         
@@ -380,7 +342,6 @@ export default function AdminProjectsPage() {
             } as Page; // Assert type after processing
           })
         );
-        console.log("Processed pages with URLs:", processedPages);
       } else {
         console.warn(`Project ${projectId} has no pages array or it's empty.`);
       }
@@ -678,7 +639,7 @@ export default function AdminProjectsPage() {
                   Story<span className="text-orange-500">InColor</span>
                 </span>
               </Link>
-              <p className="text-xs text-gray-500">© 2023 StoryInColor. All rights reserved.</p>
+              <p className="text-xs text-gray-500">© 2026 StoryInColor. All rights reserved.</p>
             </div>
           </div>
         </div>
@@ -707,7 +668,6 @@ function ProjectCard({
             fill
             className="object-cover"
             onError={() => {
-              console.log(`Image loading error for project ${project.id}`);
               setImageError(true);
             }}
           />

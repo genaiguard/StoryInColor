@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   Accordion,
   AccordionContent,
@@ -6,7 +7,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import Header from "@/components/landing-page/header";
+import Footer from "@/components/landing-page/footer";
 import type { Tool } from "@/lib/tools/types";
+import { TOOLS } from "@/lib/tools/registry";
 
 /**
  * Server-rendered SEO marketing view for a tool. Always emitted in the static
@@ -16,33 +20,11 @@ import type { Tool } from "@/lib/tools/types";
 export default function MarketingView({ tool }: { tool: Tool }) {
   const ctaHref = `/login?register=true&next=/tools/${tool.slug}`;
   const sample = tool.seo.sampleImage || tool.coverImage;
+  const showSample = sample !== tool.coverImage;
 
   return (
-    <div
-      data-tool-marketing
-      className="min-h-screen bg-gray-50"
-    >
-      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            Story<span className="text-orange-500">{`{InColor}`}</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/tools"
-              className="text-sm font-medium text-gray-700 hover:text-orange-600"
-            >
-              All tools
-            </Link>
-            <Button
-              asChild
-              className="bg-orange-500 text-white hover:bg-orange-600"
-            >
-              <Link href={ctaHref}>Try free — sign in</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div data-tool-marketing className="min-h-screen bg-[#f7f4f3]">
+      <Header />
 
       <main className="mx-auto max-w-6xl px-4 py-10 md:py-16">
         {/* Breadcrumb */}
@@ -81,7 +63,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
                 href="/tools"
                 className="text-sm font-medium text-gray-700 hover:text-orange-600"
               >
-                See all 11 tools
+                See all {TOOLS.length} tools
               </Link>
             </div>
             <p className="mt-4 text-xs text-gray-500">
@@ -92,10 +74,12 @@ export default function MarketingView({ tool }: { tool: Tool }) {
             </p>
           </div>
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={tool.coverImage}
-              alt={`${tool.name} cover`}
+              alt={`${tool.name} preview`}
+              width={600}
+              height={800}
+              priority
               className="h-full w-full object-cover"
             />
           </div>
@@ -163,23 +147,27 @@ export default function MarketingView({ tool }: { tool: Tool }) {
           </ol>
         </section>
 
-        {/* Sample output */}
-        <section className="mt-16">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
-            Sample output
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            A preview of the editorial layout you receive.
-          </p>
-          <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={sample}
-              alt={`${tool.name} sample output`}
-              className="h-full w-full object-cover"
-            />
-          </div>
-        </section>
+        {/* Sample output — only shown when distinct from the cover image */}
+        {showSample && (
+          <section className="mt-16">
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+              Sample output
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              A preview of the editorial layout you receive.
+            </p>
+            <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={sample}
+                alt={`${tool.name} sample output`}
+                width={1200}
+                height={800}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          </section>
+        )}
 
         {/* FAQ */}
         <section className="mt-16">
@@ -228,6 +216,8 @@ export default function MarketingView({ tool }: { tool: Tool }) {
           </div>
         </section>
       </main>
+
+      <Footer />
     </div>
   );
 }

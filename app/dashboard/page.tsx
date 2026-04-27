@@ -317,13 +317,13 @@ export default function DashboardPage() {
           </Link>
           <nav className="flex items-center gap-3 md:gap-6">
             {!isLoadingCredits && (
-              <div
+              <Link
+                href="/credits"
                 className="flex items-center gap-1 mr-2 bg-blue-50 px-3 py-1.5 rounded-full text-sm cursor-pointer hover:bg-blue-100 transition-colors"
-                onClick={() => (window.location.href = "/credits")}
               >
                 <Sparkles className="h-4 w-4 text-blue-500" />
                 <span>{formatCreditBalance(credits)}</span>
-              </div>
+              </Link>
             )}
             <Button variant="outline" size="icon" className="rounded-full" asChild>
               <Link href="/dashboard/settings">
@@ -504,7 +504,7 @@ export default function DashboardPage() {
                   Story<span className="text-orange-500">InColor</span>
                 </span>
               </Link>
-              <p className="text-xs text-gray-500">© 2023 StoryInColor. All rights reserved.</p>
+              <p className="text-xs text-gray-500">© 2026 StoryInColor. All rights reserved.</p>
             </div>
             <nav className="flex gap-4 md:gap-6">
               <Link href="/terms" className="text-xs hover:underline underline-offset-4">

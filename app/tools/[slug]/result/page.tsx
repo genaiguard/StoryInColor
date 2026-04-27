@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TOOLS, getToolBySlug } from "@/lib/tools/registry";
 import ResultView from "./result-view";
@@ -6,6 +7,11 @@ import ResultView from "./result-view";
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
+
+// Result pages are user-private with per-job state; do not index.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export function generateStaticParams() {
   return TOOLS.map((t) => ({ slug: t.slug }));

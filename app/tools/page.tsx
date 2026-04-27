@@ -7,7 +7,7 @@ import { TOOLS } from "@/lib/tools/registry";
 export const metadata: Metadata = {
   title: "All AI Photo Tools | StoryInColor",
   description:
-    "Eleven AI photo tools — coloring book, palm reading, face reading, aura reading, iridology, handwriting, style audit, skincare glow, plate analysis, plant care, room vibes. Upload one photo and get a finished result.",
+    "Eleven AI photo tools in one place. Upload one photo and get a magazine-quality result — coloring book, palmistry, style audits, plant care, and more.",
   alternates: { canonical: "https://storyincolor.com/tools" },
   openGraph: {
     title: "All AI Photo Tools | StoryInColor",

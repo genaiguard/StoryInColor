@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, Suspense } from "react"
+import type React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -13,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useFirebase } from "@/app/firebase/firebase-provider"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { trackEvent, trackSignUp } from "@/components/tracking/facebook-pixel"
+import { toast } from "sonner"
 
 function LoginForm() {
   const [email, setEmail] = useState("")
@@ -23,26 +25,29 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const showRegister = searchParams?.get("register") === "true"
+  const nextParam = searchParams?.get("next")
+  const safeNext = nextParam && nextParam.startsWith("/") ? nextParam : null
   const [activeTab, setActiveTab] = useState(showRegister ? "register" : "login")
   const { signIn, signUp, googleSignIn, resetPassword } = useFirebase()
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
     try {
       await signIn(email, password)
-      router.push("/dashboard")
-    } catch (error) {
+      router.push(safeNext || "/dashboard")
+    } catch (error: unknown) {
       console.error("Login error:", error)
-      setError(error.message || "Failed to sign in. Please check your credentials.")
+      const message = error instanceof Error ? error.message : String(error)
+      setError(message || "Failed to sign in. Please check your credentials.")
     } finally {
       setLoading(false)
     }
   }
 
-  const handleRegister = async (e) => {
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError("")
 
@@ -74,17 +79,16 @@ function LoginForm() {
           // We can pass additional data if needed
           displayName: email.split('@')[0] // Use part of email as a fallback display name
         });
-
-        console.log("Welcome email notification sent");
       } catch (emailError) {
         console.error("Error sending welcome email:", emailError);
         // Don't fail the overall registration if email fails
       }
 
-      router.push("/dashboard")
-    } catch (error) {
+      router.push(safeNext || "/dashboard")
+    } catch (error: unknown) {
       console.error("Registration error:", error)
-      setError(error.message || "Failed to create account. Please try again.")
+      const message = error instanceof Error ? error.message : String(error)
+      setError(message || "Failed to create account. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -123,20 +127,17 @@ function LoginForm() {
           // Pass displayName for Google sign-in
           const userDisplayName = result.user?.displayName || result.user?.email?.split('@')[0];
           await sendWelcomeEmailNotification({ displayName: userDisplayName });
-
-          console.log("Welcome email notification sent for new Google user");
         } catch (emailError) {
           console.error("Error sending welcome email for Google sign-in:", emailError);
           // Don't fail the overall sign-in if email fails
         }
-      } else {
-        console.log("Existing user login - no welcome email sent");
       }
 
-      router.push("/dashboard")
-    } catch (error) {
+      router.push(safeNext || "/dashboard")
+    } catch (error: unknown) {
       console.error("Google sign-in error:", error)
-      setError(error.message || "Failed to sign in with Google. Please try again.")
+      const message = error instanceof Error ? error.message : String(error)
+      setError(message || "Failed to sign in with Google. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -152,10 +153,11 @@ function LoginForm() {
 
     try {
       await resetPassword(email)
-      alert("Password reset email sent. Please check your inbox.")
-    } catch (error) {
+      toast.success("Password reset email sent. Check your inbox.")
+    } catch (error: unknown) {
       console.error("Password reset error:", error)
-      setError(error.message || "Failed to send password reset email. Please try again.")
+      const message = error instanceof Error ? error.message : String(error)
+      setError(message || "Failed to send password reset email. Please try again.")
     } finally {
       setLoading(false)
     }
