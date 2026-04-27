@@ -1670,3 +1670,5 @@ export const disableCurrentUserAccount = onCall(
     }
   }
 );
+
+export * from "./generate-for-tool";
