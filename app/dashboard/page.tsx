@@ -434,8 +434,23 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : filteredGenerations.length === 0 ? (
-              <div className="rounded-lg border bg-white p-6 text-center text-gray-500">
-                No generations yet — pick a tool above and try one.
+              <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Your generations will appear here
+                </h3>
+                <p className="mt-2 text-sm text-gray-600">
+                  {generations.length === 0
+                    ? "Pick a tool above and run your first photo to see it here."
+                    : "Nothing yet in this category — try another filter or a new tool."}
+                </p>
+                <div className="mt-5">
+                  <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white">
+                    <Link href="/tools">Browse all tools</Link>
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">

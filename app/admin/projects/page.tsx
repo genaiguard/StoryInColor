@@ -587,7 +587,52 @@ export default function AdminProjectsPage() {
           ) : (
             /* Show list view for all projects - Tabs removed */
             <div className="w-full">
-              {/* Removed TabsList */}
+              {/* Tool-aware filter chips with live job counts */}
+              <div className="mb-6">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    Live jobs by tool
+                  </h2>
+                  {jobsLoading && (
+                    <span className="text-xs text-gray-500">Loading…</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 overflow-x-auto">
+                  <button
+                    type="button"
+                    onClick={() => setActiveToolFilter("all")}
+                    className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      activeToolFilter === "all"
+                        ? "bg-orange-500 text-white"
+                        : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    All ({allJobs.length})
+                  </button>
+                  {TOOLS.map((t) => {
+                    const count = allJobs.filter(
+                      (j) => j.toolId === t.id
+                    ).length;
+                    if (count === 0 && activeToolFilter !== t.id) return null;
+                    const on = activeToolFilter === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setActiveToolFilter(t.id)}
+                        className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                          on
+                            ? "bg-orange-500 text-white"
+                            : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        {t.name} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* List all projects directly */}
               {loading ? (
                 <div className="flex justify-center items-center p-12">

@@ -258,7 +258,11 @@ export default function CreditsPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+          <div className="mt-8 mb-4 rounded-lg border border-orange-100 bg-orange-50/60 px-4 py-3 text-sm text-orange-800">
+            Coloring book = 1 credit. Premium tools = 10 credits.
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {CREDIT_PACKAGES.map(pkg => (
               <Card key={pkg.id} className="overflow-hidden">
                 <CardHeader className={`bg-gradient-to-r ${
