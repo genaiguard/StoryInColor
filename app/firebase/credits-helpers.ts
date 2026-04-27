@@ -122,7 +122,24 @@ export async function getUserCredits(userId: string): Promise<UserCredits> {
 }
 
 // Use a credit for image generation (Refactored with Firestore Transaction)
-export async function useCredit(userId: string, projectId: string, pageId: string): Promise<boolean> {
+// Supports both new signature: useCredit(userId, cost, ref)
+// and legacy signature: useCredit(userId, projectId, pageId)
+export async function useCredit(
+  userId: string,
+  costOrProjectId: number | string,
+  refOrPageId?: string | { projectId?: string; pageId?: string; toolId?: string; jobId?: string }
+): Promise<boolean> {
+  let cost: number;
+  let ref: { projectId?: string; pageId?: string; toolId?: string; jobId?: string };
+  if (typeof costOrProjectId === "number") {
+    cost = costOrProjectId;
+    ref = (refOrPageId as { projectId?: string; pageId?: string; toolId?: string; jobId?: string }) ?? {};
+  } else {
+    // legacy: useCredit(userId, projectId, pageId)
+    cost = 1;
+    ref = { projectId: costOrProjectId, pageId: typeof refOrPageId === "string" ? refOrPageId : undefined };
+  }
+
   const db = getFirestore();
   const userCreditsRef = doc(db, "userCredits", userId);
 
@@ -132,7 +149,7 @@ export async function useCredit(userId: string, projectId: string, pageId: strin
 
       if (!userCreditsDoc.exists()) {
         console.error(`User credits document for ${userId} does not exist in useCredit transaction.`);
-        throw new Error("User credits not initialized. Please log out and log back in, or contact support if the issue persists."); 
+        throw new Error("User credits not initialized. Please log out and log back in, or contact support if the issue persists.");
       }
 
       const currentData = userCreditsDoc.data();
@@ -143,29 +160,76 @@ export async function useCredit(userId: string, projectId: string, pageId: strin
         throw new Error("Credit balance is invalid. Please contact support.");
       }
 
-      if (currentBalance <= 0) {
-        throw new Error("Insufficient credits."); 
+      if (currentBalance < cost) {
+        throw new Error("Insufficient credits.");
       }
 
       transaction.update(userCreditsRef, {
-        balance: increment(-1),
-        used: increment(1),
+        balance: increment(-cost),
+        used: increment(cost),
         usageHistory: arrayUnion({
-          projectId,
-          pageId,
+          type: "deduct",
+          cost,
+          toolId: ref.toolId ?? null,
+          jobId: ref.jobId ?? null,
+          projectId: ref.projectId ?? null,
+          pageId: ref.pageId ?? null,
           date: Timestamp.now()
         }),
         lastUpdated: Timestamp.now()
       });
     });
 
-    console.log(`Credit used successfully for user ${userId}, project ${projectId}`);
+    console.log(`Credit used successfully for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}`);
     return true;
   } catch (error: any) {
-    console.error(`Failed to use credit for user ${userId}, projectId ${projectId}. Error: ${error.message}`);
+    console.error(`Failed to use credit for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}. Error: ${error.message}`);
     // Optionally, re-throw specific errors or handle them if needed by the caller
     // For example, if error.message is "Insufficient credits.", the UI can show a specific message.
     // toast.error(error.message); // Example of how UI might be updated, but this logic is in calling code.
+    return false;
+  }
+}
+
+// Refund credits to a user (e.g. when a generation fails server-side)
+export async function refundCredit(
+  userId: string,
+  cost: number,
+  ref: { toolId?: string; jobId?: string; projectId?: string; pageId?: string; reason?: string } = {}
+): Promise<boolean> {
+  const db = getFirestore();
+  const userCreditsRef = doc(db, "userCredits", userId);
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const userCreditsDoc = await transaction.get(userCreditsRef);
+
+      if (!userCreditsDoc.exists()) {
+        console.error(`User credits document for ${userId} does not exist in refundCredit transaction.`);
+        throw new Error("User credits not initialized.");
+      }
+
+      transaction.update(userCreditsRef, {
+        balance: increment(cost),
+        used: increment(-cost),
+        usageHistory: arrayUnion({
+          type: "refund",
+          cost,
+          toolId: ref.toolId ?? null,
+          jobId: ref.jobId ?? null,
+          projectId: ref.projectId ?? null,
+          pageId: ref.pageId ?? null,
+          reason: ref.reason ?? null,
+          date: Timestamp.now()
+        }),
+        lastUpdated: Timestamp.now()
+      });
+    });
+
+    console.log(`Credit refunded successfully for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}`);
+    return true;
+  } catch (error: any) {
+    console.error(`Failed to refund credit for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}. Error: ${error.message}`);
     return false;
   }
 }
