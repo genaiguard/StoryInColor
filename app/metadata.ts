@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'StoryInColor - Custom Coloring Books',
-  description: 'Turn your photos into beautiful custom coloring pages. Create personalized coloring books from family photos, pet portraits, and vacation memories.',
-  keywords: 'custom coloring pages, coloring books, AI coloring pages, personalized coloring book, photo to coloring page, family coloring book, pet coloring pages',
+  title: 'StoryInColor — AI Photo Tools',
+  description: 'Upload a photo, get something incredible back. Eleven AI-powered photo tools — coloring book, palm reading, face reading, aura reading, iridology, handwriting, style audit, skincare glow, plate analysis, plant care, room vibes — in one place.',
+  keywords: 'AI photo tools, photo to coloring page, palm reading from photo, face reading, aura reading, iridology, graphology, style audit AI, skincare AI, plate analysis, plant care AI, room vibes',
 }

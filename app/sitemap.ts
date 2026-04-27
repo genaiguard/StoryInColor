@@ -1,4 +1,5 @@
 import { blogPosts } from '@/lib/blog-posts'
+import { TOOLS } from '@/lib/tools/registry'
 
 export const dynamic = 'force-static'
 
@@ -47,5 +48,13 @@ export default function sitemap() {
     priority: post.featured ? 0.8 : 0.6,
   }))
 
-  return [...staticPages, ...blogPages]
+  // Tool pages - automatically generated from the tools registry
+  const toolPages = TOOLS.map((t) => ({
+    url: `${baseUrl}/tools/${t.slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.9,
+  }))
+
+  return [...staticPages, ...blogPages, ...toolPages]
 }
