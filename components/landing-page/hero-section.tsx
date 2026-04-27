@@ -44,7 +44,7 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
     }
   }
 
-  const title = "Turn Your Photos Into Custom Coloring Pages"
+  const title = "Upload a photo. Get something incredible back."
   const words = title.split(" ")
 
   return (
@@ -74,7 +74,7 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
                     key={i} 
                     className="mr-3 inline-block whitespace-nowrap"
                   >
-                    {word === "Photos" ? (
+                    {word.replace(/\W/g, "") === "incredible" ? (
                 <span className="bg-gradient-to-r from-purple-600 via-red-500 to-orange-500 bg-clip-text text-transparent pr-1">
                         {word}
                 </span>
@@ -84,10 +84,10 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
                   </span>
                 ))}
               </h1>
-              <p 
+              <p
                 className="max-w-[600px] text-gray-700 md:text-xl"
               >
-                Upload your vacation photos and we'll create beautiful custom coloring pages you can download and print instantly.
+                Eleven AI photo tools — palm reads, style audits, plant care cards, custom coloring pages, and more — all from a single upload.
               </p>
             </div>
             <div 
@@ -107,18 +107,18 @@ export default function HeroSection({ scrollToSection }: { scrollToSection?: any
                 </Link>
               </Button>
             </div>
-            <p 
+            <p
               className="text-sm text-gray-500 opacity-0 animate-fadeInHeroSubtext"
             >
-              Sign up today! Free pages for a limited time.
+              Sign up — 2 free credits to try any tool.
             </p>
           </motion.div>
           <div
             className="relative flex items-center justify-center lg:justify-end opacity-0 animate-fadeInHeroImage"
           >
             <Image
-              src="/images/SHARING.webp"
-              alt="Example showing the transformation of a regular photo into a coloring page"
+              src="/images/tools/palm-reading.webp"
+              alt="Preview of a StoryInColor AI photo tool result"
               width={600}
               height={600}
               className="w-full h-auto opacity-90"

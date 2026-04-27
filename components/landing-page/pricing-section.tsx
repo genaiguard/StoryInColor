@@ -85,14 +85,14 @@ export default function PricingSection() {
 
   const featureList1 = [
     { icon: <Gift className="h-5 w-5 text-orange-500" />, text: "Free starter credits included" },
-    { icon: <Sparkles className="h-5 w-5 text-orange-500" />, text: "Pay per conversion" },
-    { icon: <Folders className="h-5 w-5 text-orange-500" />, text: "Create multiple projects" },
-    { icon: <Download className="h-5 w-5 text-orange-500" />, text: "Instant download of print-ready coloring pages" }
+    { icon: <Sparkles className="h-5 w-5 text-orange-500" />, text: "Pay per generation" },
+    { icon: <Folders className="h-5 w-5 text-orange-500" />, text: "Eleven tools in one platform" },
+    { icon: <Download className="h-5 w-5 text-orange-500" />, text: "Instant download" }
   ]
 
   const featureList2 = [
     { icon: <Check className="h-5 w-5 text-gray-400" />, text: "Professionally printed" },
-    { icon: <Check className="h-5 w-5 text-gray-400" />, text: "Softcover & Hardcover options" },
+    { icon: <Check className="h-5 w-5 text-gray-400" />, text: "Coloring book softcover" },
     { icon: <Check className="h-5 w-5 text-gray-400" />, text: "Delivered to your door" },
     { icon: <Check className="h-5 w-5 text-gray-400" />, text: "Perfect for gifts" }
   ]
@@ -117,7 +117,7 @@ export default function PricingSection() {
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Simple, Transparent Pricing</h2>
             <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Create your personalized coloring pages with no hidden fees. Print instantly at home!
+              Coloring book = 1 credit. All other tools = 10 credits. Buy in packs to save up to 36%.
             </p>
           </div>
         </motion.div>

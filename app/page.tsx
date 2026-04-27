@@ -6,8 +6,6 @@ import Header from "@/components/landing-page/header"
 import HeroSection from "@/components/landing-page/hero-section"
 const ExamplesSection = dynamic(() => import('@/components/landing-page/examples-section'))
 const HowItWorksSection = dynamic(() => import('@/components/landing-page/how-it-works-section'))
-const PetPortraitsSection = dynamic(() => import('@/components/landing-page/pet-portraits-section'))
-const CustomizationSection = dynamic(() => import('@/components/landing-page/customization-section'))
 const PricingSection = dynamic(() => import('@/components/landing-page/pricing-section'))
 const TestimonialsSection = dynamic(() => import('@/components/landing-page/testimonials-section'))
 const FAQSection = dynamic(() => import('@/components/landing-page/faq-section'))
@@ -73,8 +71,6 @@ export default function Home() {
         <HeroSection scrollToSection={scrollToSection} />
         <ExamplesSection />
         <HowItWorksSection />
-        <PetPortraitsSection />
-        <CustomizationSection />
         <PricingSection />
         <TestimonialsSection />
         <FAQSection />

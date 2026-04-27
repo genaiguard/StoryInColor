@@ -1,4 +1,4 @@
-import { Camera, Book, Download } from "lucide-react"
+import { User, LayoutGrid, Upload } from "lucide-react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { useRef } from "react"
 
@@ -100,10 +100,10 @@ export default function HowItWorksSection() {
           >
             How It Works
           </motion.h2>
-          <motion.p 
+          <motion.p
             className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed"
           >
-              Transform your cherished memories into custom coloring pages in just three simple steps
+              Get a magazine-quality result from a single photo in three simple steps
           </motion.p>
         </motion.div>
 
@@ -122,16 +122,16 @@ export default function HowItWorksSection() {
             style={{ rotateY: rotate1 }}
             className="flex flex-col items-center space-y-4 rounded-2xl border bg-white p-8 shadow-sm"
           >
-            <motion.div 
+            <motion.div
               variants={iconVariants}
               className="rounded-full bg-orange-100 p-6"
             >
-              <Camera className="h-8 w-8 text-orange-500" />
+              <User className="h-8 w-8 text-orange-500" />
             </motion.div>
             <motion.div variants={textVariants}>
-            <h3 className="text-2xl font-bold text-center">1. Upload Photos</h3>
+            <h3 className="text-2xl font-bold text-center">1. Sign in</h3>
               <p className="text-center text-gray-500 mt-2">
-              Upload your vacation photos, family pictures, or any special memories you want to transform.
+              Create a free account in seconds. You'll get 2 free credits to start.
             </p>
             </motion.div>
           </motion.div>
@@ -150,16 +150,16 @@ export default function HowItWorksSection() {
             style={{ rotateY: rotate2 }}
             className="flex flex-col items-center space-y-4 rounded-2xl border bg-white p-8 shadow-sm"
           >
-            <motion.div 
+            <motion.div
               variants={iconVariants}
               className="rounded-full bg-purple-100 p-6"
             >
-              <Book className="h-8 w-8 text-purple-500" />
+              <LayoutGrid className="h-8 w-8 text-purple-500" />
             </motion.div>
             <motion.div variants={textVariants}>
-            <h3 className="text-2xl font-bold text-center">2. Preview & Customize</h3>
+            <h3 className="text-2xl font-bold text-center">2. Pick a tool</h3>
               <p className="text-center text-gray-500 mt-2">
-              Convert your photos to custom coloring pages. Preview and make adjustments to get the best results.
+              Choose from eleven AI tools — coloring book, palm reading, style audit, and more.
             </p>
             </motion.div>
           </motion.div>
@@ -178,16 +178,16 @@ export default function HowItWorksSection() {
             style={{ rotateY: rotate3 }}
             className="flex flex-col items-center space-y-4 rounded-2xl border bg-white p-8 shadow-sm"
           >
-            <motion.div 
+            <motion.div
               variants={iconVariants}
               className="rounded-full bg-pink-100 p-6"
             >
-              <Download className="h-8 w-8 text-pink-500" />
+              <Upload className="h-8 w-8 text-pink-500" />
             </motion.div>
             <motion.div variants={textVariants}>
-            <h3 className="text-2xl font-bold text-center">3. Download Your Pages</h3>
+            <h3 className="text-2xl font-bold text-center">3. Upload your photo</h3>
               <p className="text-center text-gray-500 mt-2">
-              Download your personalized coloring pages instantly and print them at home for immediate enjoyment.
+              Drop in one photo and let the AI do the rest. Your result downloads instantly.
             </p>
             </motion.div>
           </motion.div>
