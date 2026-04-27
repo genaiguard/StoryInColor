@@ -17,6 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import { getUserCredits, formatCreditBalance } from "@/app/firebase/credits-helpers";
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers";
@@ -32,7 +38,54 @@ const ACCEPTED_TYPES: Record<string, string[]> = {
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
+/**
+ * Client-side authenticated workflow for a tool. Sits alongside the static
+ * MarketingView in /tools/[slug]/page.tsx; on hydration we set
+ * `data-auth="signed-in" | "signed-out"` on <html>, and CSS in globals hides
+ * the SEO marketing view for signed-in visitors and hides this workflow for
+ * signed-out visitors.
+ */
 export default function ToolWorkflow({ tool }: Props) {
+  const { user, loading, initialized } = useFirebase();
+
+  // Drive page-level visibility: marketing view shows for signed-out, this
+  // workflow shows for signed-in. While auth resolves, both can be hidden via
+  // a "loading" state but for simplicity we keep marketing visible (it's the
+  // crawl-ready surface) and only swap once we know there's a user.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    if (!initialized || loading) {
+      root.setAttribute("data-tool-auth", "loading");
+      return;
+    }
+    root.setAttribute(
+      "data-tool-auth",
+      user ? "signed-in" : "signed-out"
+    );
+    return () => {
+      root.removeAttribute("data-tool-auth");
+    };
+  }, [user, loading, initialized]);
+
+  if (loading || !initialized) {
+    // Don't render anything; the static marketing view is visible underneath.
+    return null;
+  }
+
+  if (!user) {
+    // Marketing view (server-rendered, sibling) handles the unauth UI.
+    return null;
+  }
+
+  return <AuthenticatedWorkflow tool={tool} />;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Authenticated upload + generate workflow                                   */
+/* -------------------------------------------------------------------------- */
+
+function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
   const { user } = useFirebase();
   const router = useRouter();
 
@@ -104,6 +157,11 @@ export default function ToolWorkflow({ tool }: Props) {
     insufficientCredits ||
     !user?.uid;
 
+  const creditsShort =
+    credits !== null && credits < tool.creditCost
+      ? tool.creditCost - credits
+      : 0;
+
   async function handleGenerate() {
     if (!file || !user?.uid) return;
 
@@ -117,7 +175,6 @@ export default function ToolWorkflow({ tool }: Props) {
     setError(null);
 
     try {
-      // Lazy-load Firebase modules (matches firebase-provider's pattern)
       const [{ ref, uploadBytesResumable }, { getFunctions, httpsCallable }] =
         await Promise.all([
           import("firebase/storage"),
@@ -129,7 +186,6 @@ export default function ToolWorkflow({ tool }: Props) {
       const storagePath = `users/${user.uid}/uploads/${uuidv4()}.${ext}`;
       const storageRef = ref(storage, storagePath);
 
-      // Upload with progress
       await new Promise<void>((resolve, reject) => {
         const task = uploadBytesResumable(storageRef, file, {
           contentType: file.type || undefined,
@@ -149,7 +205,6 @@ export default function ToolWorkflow({ tool }: Props) {
 
       setUploadProgress(100);
 
-      // Call cloud function once upload completes
       const functions = getFunctions();
       const generate = httpsCallable(functions, "generateForTool");
       const result = await generate({
@@ -181,180 +236,233 @@ export default function ToolWorkflow({ tool }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sticky top bar */}
-      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
-            Story<span className="text-orange-500">{`{InColor}`}</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-sm font-medium text-orange-700">
-              {credits === null
-                ? "Loading credits…"
-                : formatCreditBalance(credits)}
-            </span>
-            <Link
-              href="/credits"
-              className="text-sm font-medium text-gray-700 hover:text-orange-600"
-            >
-              Buy credits
+    <TooltipProvider delayDuration={200}>
+      <div data-tool-workflow className="min-h-screen bg-gray-50">
+        {/* Sticky top bar */}
+        <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+            <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
+              Story<span className="text-orange-500">{`{InColor}`}</span>
             </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-4 py-8 md:py-12">
-        <div className="grid gap-8 md:grid-cols-2">
-          {/* Left: form */}
-          <section>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
-              {tool.name}
-            </h1>
-            <p className="mt-2 text-lg text-gray-700">{tool.tagline}</p>
-            <p className="mt-4 text-sm text-gray-600">{tool.heroCopy}</p>
-
-            <Card className="mt-6">
-              <CardContent className="p-6">
-                <div
-                  {...getRootProps()}
-                  className={`flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors ${
-                    isDragActive
-                      ? "border-orange-400 bg-orange-50"
-                      : "border-gray-300 bg-white hover:border-orange-300 hover:bg-orange-50/40"
-                  } ${isSubmitting ? "pointer-events-none opacity-60" : ""}`}
-                >
-                  <input {...getInputProps()} />
-                  {previewUrl ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <img
-                        src={previewUrl}
-                        alt="Selected preview"
-                        className="max-h-40 rounded-md border border-gray-200 object-contain"
-                      />
-                      <p className="text-sm text-gray-700">
-                        {file?.name}{" "}
-                        <span className="text-gray-500">
-                          ({Math.round((file?.size ?? 0) / 1024)} KB)
-                        </span>
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Click or drop another to replace
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-base font-medium text-gray-900">
-                        {isDragActive
-                          ? "Drop your photo here"
-                          : "Drag & drop a photo, or click to choose"}
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        PNG, JPG, or WEBP up to 10MB
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                <p className="mt-3 text-xs text-gray-500">{tool.inputHint}</p>
-
-                {/* Upload progress */}
-                {isSubmitting && (
-                  <div className="mt-4">
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                      <div
-                        className="h-full bg-orange-500 transition-all"
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 text-xs text-gray-600">
-                      {uploadProgress < 100
-                        ? `Uploading… ${Math.round(uploadProgress)}%`
-                        : "Starting generation…"}
-                    </p>
-                  </div>
-                )}
-
-                {error && (
-                  <p className="mt-3 text-sm text-red-600" role="alert">
-                    {error}
-                  </p>
-                )}
-
-                <div className="mt-6 flex items-center justify-between gap-4">
-                  <p className="text-sm text-gray-600">
-                    Cost:{" "}
-                    <span className="font-medium text-gray-900">
-                      {tool.creditCost}{" "}
-                      {tool.creditCost === 1 ? "credit" : "credits"}
-                    </span>
-                  </p>
-                  <Button
-                    onClick={handleGenerate}
-                    disabled={generateDisabled}
-                    className="bg-orange-500 text-white hover:bg-orange-600"
-                  >
-                    {isSubmitting ? "Working…" : "Generate"}
-                  </Button>
-                </div>
-
-                {insufficientCredits && (
-                  <p className="mt-3 text-xs text-amber-700">
-                    You need {tool.creditCost} credits to use {tool.name}. You
-                    have {credits ?? 0}.{" "}
-                    <Link
-                      href="/credits"
-                      className="font-medium text-orange-600 underline"
-                    >
-                      Buy more credits
-                    </Link>
-                    .
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </section>
-
-          {/* Right: cover + hint */}
-          <aside>
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-              <img
-                src={tool.coverImage}
-                alt={`${tool.name} cover`}
-                className="h-full w-full object-cover"
-              />
+            <div className="flex items-center gap-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-sm font-medium text-orange-700">
+                    {credits === null
+                      ? "Loading credits…"
+                      : formatCreditBalance(credits)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {tool.creditCost === 1
+                    ? "1 credit will be deducted on generate"
+                    : `${tool.creditCost} credits will be deducted on generate`}
+                </TooltipContent>
+              </Tooltip>
+              <Link
+                href="/credits"
+                className="text-sm font-medium text-gray-700 hover:text-orange-600"
+              >
+                Buy credits
+              </Link>
             </div>
-            <p className="mt-4 text-sm text-gray-600">{tool.inputHint}</p>
-          </aside>
-        </div>
-      </main>
+          </div>
+        </header>
 
-      {/* Insufficient credits dialog */}
-      <Dialog open={creditDialogOpen} onOpenChange={setCreditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Not enough credits</DialogTitle>
-            <DialogDescription>
-              You need {tool.creditCost} credits to use {tool.name}. You have{" "}
-              {credits ?? 0}.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setCreditDialogOpen(false)}
+        <main className="mx-auto max-w-6xl px-4 py-6 md:py-10">
+          {/* Back link + breadcrumb */}
+          <div className="mb-4 flex flex-col gap-1">
+            <Link
+              href="/tools"
+              className="text-sm font-medium text-gray-600 hover:text-orange-600"
             >
-              Cancel
-            </Button>
-            <Button
-              asChild
-              className="bg-orange-500 text-white hover:bg-orange-600"
-            >
-              <Link href="/credits">Buy more credits</Link>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+              ← All tools
+            </Link>
+            <nav className="text-xs text-gray-500" aria-label="Breadcrumb">
+              <ol className="flex items-center gap-1.5">
+                <li>
+                  <Link href="/tools" className="hover:text-orange-600">
+                    Tools
+                  </Link>
+                </li>
+                <li aria-hidden="true">/</li>
+                <li className="text-gray-800">{tool.name}</li>
+              </ol>
+            </nav>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2">
+            {/* Left: form */}
+            <section>
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
+                {tool.name}
+              </h1>
+              <p className="mt-2 text-lg text-gray-700">{tool.tagline}</p>
+              <p className="mt-4 text-sm text-gray-600">{tool.heroCopy}</p>
+
+              <Card className="mt-6">
+                <CardContent className="p-6">
+                  <div
+                    {...getRootProps()}
+                    className={`flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors ${
+                      isDragActive
+                        ? "border-orange-400 bg-orange-50"
+                        : "border-gray-300 bg-white hover:border-orange-300 hover:bg-orange-50/40"
+                    } ${isSubmitting ? "pointer-events-none opacity-60" : ""}`}
+                  >
+                    <input {...getInputProps()} />
+                    {previewUrl ? (
+                      <div className="flex flex-col items-center gap-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={previewUrl}
+                          alt="Selected preview"
+                          className="max-h-40 rounded-md border border-gray-200 object-contain"
+                        />
+                        <p className="text-sm text-gray-700">
+                          {file?.name}{" "}
+                          <span className="text-gray-500">
+                            ({Math.round((file?.size ?? 0) / 1024)} KB)
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Click or drop another to replace
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-base font-medium text-gray-900">
+                          {isDragActive
+                            ? "Drop your photo here"
+                            : "Drag & drop a photo, or click to choose"}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          PNG, JPG, or WEBP up to 10MB
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  <p className="mt-3 text-xs text-gray-500">{tool.inputHint}</p>
+
+                  {/* Upload + generate progress bar */}
+                  {isSubmitting && (
+                    <div className="mt-4">
+                      <div
+                        className="h-2 w-full overflow-hidden rounded-full bg-gray-200"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.round(uploadProgress)}
+                      >
+                        <div
+                          className="h-full bg-orange-500 transition-all duration-200 ease-out"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-gray-700">
+                        {uploadProgress < 100
+                          ? `Uploading… ${Math.round(uploadProgress)}%`
+                          : `Working on your ${tool.name}… this usually takes 20-40 seconds`}
+                      </p>
+                    </div>
+                  )}
+
+                  {error && (
+                    <p className="mt-3 text-sm text-red-600" role="alert">
+                      {error}
+                    </p>
+                  )}
+
+                  <div className="mt-6 flex items-center justify-between gap-4">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="cursor-help text-sm text-gray-600">
+                          Cost:{" "}
+                          <span className="font-medium text-gray-900">
+                            {tool.creditCost}{" "}
+                            {tool.creditCost === 1 ? "credit" : "credits"}
+                          </span>
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {tool.creditCost === 1
+                          ? "1 credit will be deducted on generate"
+                          : `${tool.creditCost} credits will be deducted on generate`}
+                      </TooltipContent>
+                    </Tooltip>
+                    <Button
+                      onClick={handleGenerate}
+                      disabled={generateDisabled}
+                      className="bg-orange-500 text-white hover:bg-orange-600"
+                    >
+                      {isSubmitting ? "Working…" : "Generate"}
+                    </Button>
+                  </div>
+
+                  {insufficientCredits && (
+                    <p className="mt-3 text-xs text-amber-700">
+                      You need {tool.creditCost} credits to use {tool.name}. You
+                      have {credits ?? 0}.{" "}
+                      <Link
+                        href="/credits"
+                        className="font-medium text-orange-600 underline"
+                      >
+                        Buy more credits
+                      </Link>
+                      .
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </section>
+
+            {/* Right: cover + hint */}
+            <aside>
+              <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={tool.coverImage}
+                  alt={`${tool.name} cover`}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <p className="mt-4 text-sm text-gray-600">{tool.inputHint}</p>
+            </aside>
+          </div>
+        </main>
+
+        {/* Insufficient credits dialog */}
+        <Dialog open={creditDialogOpen} onOpenChange={setCreditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Not enough credits</DialogTitle>
+              <DialogDescription>
+                You need {tool.creditCost}{" "}
+                {tool.creditCost === 1 ? "credit" : "credits"} to use {tool.name}.
+                Your current balance is {credits ?? 0}.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setCreditDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                asChild
+                className="bg-orange-500 text-white hover:bg-orange-600"
+              >
+                <Link href="/credits">
+                  Buy {creditsShort > 0 ? creditsShort : tool.creditCost} more
+                  credits → /credits
+                </Link>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
   );
 }

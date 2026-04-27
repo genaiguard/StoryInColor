@@ -117,3 +117,12 @@
   }
 }
 
+
+/* Tool page dual-mode visibility:
+   server emits both [data-tool-marketing] (SEO) and [data-tool-workflow]
+   (auth UI). The client workflow sets data-tool-auth on <html> after the
+   Firebase auth state resolves, and we toggle which is visible.            */
+[data-tool-workflow] { display: none; }
+html[data-tool-auth="signed-in"] [data-tool-marketing] { display: none; }
+html[data-tool-auth="signed-in"] [data-tool-workflow] { display: block; }
+

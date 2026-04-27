@@ -1,6 +1,19 @@
 export type ToolCategory = "creative" | "mystical" | "analysis";
 export type OutputType = "image" | "image+guide";
 
+export interface ToolFAQ {
+  q: string;
+  a: string;
+}
+
+export interface ToolSEO {
+  metaTitle: string;
+  metaDescription: string;
+  whatYouGet: string[]; // 3-5 bullets
+  faq: ToolFAQ[]; // 4-6 entries per tool
+  sampleImage?: string; // path to sample output preview (placeholder for now)
+}
+
 export interface Tool {
   id: string;
   slug: string;
@@ -12,6 +25,7 @@ export interface Tool {
   category: ToolCategory;
   inputHint: string;
   outputType: OutputType;
+  seo: ToolSEO;
 }
 
 export type JobStatus = "processing" | "complete" | "failed";

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,23 @@ type Props = { tool: Tool };
 
 export default function ResultView({ tool }: Props) {
   const { user, initialized, loading } = useFirebase();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const jobId = searchParams?.get("jobId") ?? null;
 
   const [job, setJob] = useState<Job | null>(null);
   const [docMissing, setDocMissing] = useState<boolean>(false);
   const [subError, setSubError] = useState<string | null>(null);
+
+  // If the visitor is not signed in, send them to sign-in and back here.
+  useEffect(() => {
+    if (initialized && !loading && !user) {
+      const next = jobId
+        ? `/tools/${tool.slug}/result?jobId=${encodeURIComponent(jobId)}`
+        : `/tools/${tool.slug}`;
+      router.replace(`/login?register=true&next=${encodeURIComponent(next)}`);
+    }
+  }, [initialized, loading, user, router, jobId, tool.slug]);
 
   useEffect(() => {
     if (!user?.uid || !jobId) return;
@@ -63,6 +74,18 @@ export default function ResultView({ tool }: Props) {
     };
   }, [user?.uid, jobId]);
 
+  // Auth still loading
+  if (loading || !initialized) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="mx-auto max-w-2xl px-4 py-16">
+          <Spinner message="Loading…" />
+        </main>
+      </div>
+    );
+  }
+
   // No jobId in query string
   if (!jobId) {
     return (
@@ -89,18 +112,6 @@ export default function ResultView({ tool }: Props) {
               </div>
             </CardContent>
           </Card>
-        </main>
-      </div>
-    );
-  }
-
-  // Auth still loading
-  if (loading || !initialized) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <main className="mx-auto max-w-2xl px-4 py-16">
-          <Spinner message="Loading…" />
         </main>
       </div>
     );
@@ -147,8 +158,13 @@ export default function ResultView({ tool }: Props) {
                 Generation failed
               </h1>
               <p className="mt-2 text-sm text-amber-800">
-                {job.error || "Something went wrong while generating your image."}{" "}
-                Your {job.creditCost} credits were refunded.
+                {job.error ||
+                  "Something went wrong while generating your image."}
+              </p>
+              <p className="mt-2 text-sm font-medium text-emerald-800">
+                Credits refunded — your {job.creditCost}{" "}
+                {job.creditCost === 1 ? "credit" : "credits"} have been returned to
+                your balance.
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button
@@ -171,8 +187,25 @@ export default function ResultView({ tool }: Props) {
   // Complete
   if (job?.status === "complete" && job.outputDownloadUrl) {
     const handleShare = async () => {
+      const shareUrl =
+        typeof window !== "undefined" ? window.location.href : "";
+      const nav: any =
+        typeof navigator !== "undefined" ? navigator : undefined;
+      if (nav?.share) {
+        try {
+          await nav.share({
+            title: `My ${tool.name}`,
+            text: `Check out my ${tool.name} from StoryInColor`,
+            url: shareUrl,
+          });
+          return;
+        } catch (err: any) {
+          // User cancelled — fall through silently to clipboard fallback
+          if (err?.name === "AbortError") return;
+        }
+      }
       try {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl);
         toast.success("Link copied");
       } catch {
         toast.error("Couldn't copy link");
@@ -187,9 +220,11 @@ export default function ResultView({ tool }: Props) {
             <h1 className="mb-6 text-center text-2xl font-semibold text-gray-900 md:text-3xl">
               Your {tool.name} is ready
             </h1>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={job.outputDownloadUrl}
               alt={`${tool.name} result`}
+              loading="eager"
               className="mx-auto w-full max-w-2xl rounded-2xl shadow-lg"
             />
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -205,7 +240,10 @@ export default function ResultView({ tool }: Props) {
                 Share
               </Button>
               <Button asChild variant="outline">
-                <Link href="/dashboard">Try another tool</Link>
+                <Link href={`/tools/${tool.slug}`}>Generate another</Link>
+              </Button>
+              <Button asChild variant="ghost">
+                <Link href="/dashboard">Back to dashboard</Link>
               </Button>
             </div>
           </div>
@@ -220,7 +258,7 @@ export default function ResultView({ tool }: Props) {
       <Header />
       <main className="mx-auto max-w-2xl px-4 py-16">
         <div className="animate-in fade-in duration-500">
-          <Spinner message={`Generating your ${tool.name}…`} showDots />
+          <ProcessingAnimation toolName={tool.name} />
           {docMissing && (
             <p className="mt-4 text-center text-xs text-gray-500">
               Waiting for the job to start…
@@ -250,30 +288,86 @@ function Header() {
   );
 }
 
-function Spinner({
-  message,
-  showDots = false,
-}: {
-  message: string;
-  showDots?: boolean;
-}) {
+function Spinner({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-10">
       <div className="h-10 w-10 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
-      <p className="mt-4 text-sm font-medium text-gray-700">
-        {message}
-        {showDots && <ProgressDots />}
-      </p>
+      <p className="mt-4 text-sm font-medium text-gray-700">{message}</p>
     </div>
   );
 }
 
-function ProgressDots() {
+function ProcessingAnimation({ toolName }: { toolName: string }) {
   return (
-    <span className="ml-1 inline-flex">
-      <span className="animate-pulse [animation-delay:0ms]">.</span>
-      <span className="animate-pulse [animation-delay:200ms]">.</span>
-      <span className="animate-pulse [animation-delay:400ms]">.</span>
-    </span>
+    <div className="flex flex-col items-center justify-center py-10">
+      <svg
+        width="120"
+        height="120"
+        viewBox="0 0 120 120"
+        aria-hidden="true"
+        className="mb-6"
+      >
+        <circle
+          cx="60"
+          cy="60"
+          r="46"
+          fill="none"
+          stroke="#fed7aa"
+          strokeWidth="2"
+          opacity="0.6"
+        >
+          <animate
+            attributeName="r"
+            values="32;52;32"
+            dur="2.4s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="opacity"
+            values="0.7;0.1;0.7"
+            dur="2.4s"
+            repeatCount="indefinite"
+          />
+        </circle>
+        <circle
+          cx="60"
+          cy="60"
+          r="34"
+          fill="none"
+          stroke="#fb923c"
+          strokeWidth="2"
+          opacity="0.7"
+        >
+          <animate
+            attributeName="r"
+            values="22;40;22"
+            dur="2.4s"
+            begin="0.4s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="opacity"
+            values="0.8;0.2;0.8"
+            dur="2.4s"
+            begin="0.4s"
+            repeatCount="indefinite"
+          />
+        </circle>
+        <circle cx="60" cy="60" r="10" fill="#f97316">
+          <animate
+            attributeName="r"
+            values="9;12;9"
+            dur="1.6s"
+            repeatCount="indefinite"
+          />
+        </circle>
+      </svg>
+      <p className="text-base font-semibold text-gray-900">
+        Working on your {toolName}…
+      </p>
+      <p className="mt-1 text-sm text-gray-600">
+        Usually 20-40 seconds
+      </p>
+    </div>
   );
 }

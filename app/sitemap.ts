@@ -38,6 +38,12 @@ export default function sitemap() {
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     },
+    {
+      url: `${baseUrl}/tools`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.95,
+    },
   ]
 
   // Dynamic blog posts - automatically generated from shared data

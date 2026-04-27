@@ -1,0 +1,233 @@
+import Link from "next/link";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import type { Tool } from "@/lib/tools/types";
+
+/**
+ * Server-rendered SEO marketing view for a tool. Always emitted in the static
+ * HTML so search engines can crawl rich content. Hidden client-side once a
+ * signed-in visitor's authenticated workflow mounts (see tool-workflow.tsx).
+ */
+export default function MarketingView({ tool }: { tool: Tool }) {
+  const ctaHref = `/login?register=true&next=/tools/${tool.slug}`;
+  const sample = tool.seo.sampleImage || tool.coverImage;
+
+  return (
+    <div
+      data-tool-marketing
+      className="min-h-screen bg-gray-50"
+    >
+      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <Link href="/" className="text-lg font-semibold tracking-tight">
+            Story<span className="text-orange-500">{`{InColor}`}</span>
+          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/tools"
+              className="text-sm font-medium text-gray-700 hover:text-orange-600"
+            >
+              All tools
+            </Link>
+            <Button
+              asChild
+              className="bg-orange-500 text-white hover:bg-orange-600"
+            >
+              <Link href={ctaHref}>Try free — sign in</Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-10 md:py-16">
+        {/* Breadcrumb */}
+        <nav className="mb-4 text-xs text-gray-500" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-1.5">
+            <li>
+              <Link href="/tools" className="hover:text-orange-600">
+                Tools
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li className="text-gray-800">{tool.name}</li>
+          </ol>
+        </nav>
+
+        {/* Hero */}
+        <section className="grid gap-10 md:grid-cols-2 md:items-center">
+          <div>
+            <span className="inline-flex items-center rounded-full bg-orange-50 px-3 py-1 text-xs font-medium uppercase tracking-wide text-orange-700">
+              {tool.category}
+            </span>
+            <h1 className="mt-4 text-4xl font-bold tracking-tight text-gray-900 md:text-5xl">
+              {tool.name}
+            </h1>
+            <p className="mt-3 text-xl text-gray-700">{tool.tagline}</p>
+            <p className="mt-4 text-base text-gray-600">{tool.heroCopy}</p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Button
+                asChild
+                size="lg"
+                className="bg-orange-500 text-white hover:bg-orange-600"
+              >
+                <Link href={ctaHref}>Try free — sign in</Link>
+              </Button>
+              <Link
+                href="/tools"
+                className="text-sm font-medium text-gray-700 hover:text-orange-600"
+              >
+                See all 11 tools
+              </Link>
+            </div>
+            <p className="mt-4 text-xs text-gray-500">
+              {tool.creditCost === 1
+                ? "1 credit"
+                : `${tool.creditCost} credits`}{" "}
+              per generation. Free starter credits when you sign up.
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={tool.coverImage}
+              alt={`${tool.name} cover`}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </section>
+
+        {/* What you get */}
+        <section className="mt-16">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+            What you get
+          </h2>
+          <ul className="mt-6 grid gap-4 md:grid-cols-2">
+            {tool.seo.whatYouGet.map((bullet) => (
+              <li
+                key={bullet}
+                className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4"
+              >
+                <span className="mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.41 0l-3.5-3.5a1 1 0 111.41-1.42L8.5 12.08l6.79-6.79a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </span>
+                <p className="text-sm text-gray-800">{bullet}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* How it works */}
+        <section className="mt-16">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+            How it works
+          </h2>
+          <ol className="mt-6 grid gap-4 md:grid-cols-3">
+            <li className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="text-sm font-semibold text-orange-600">Step 1</div>
+              <h3 className="mt-1 text-lg font-semibold text-gray-900">Upload</h3>
+              <p className="mt-2 text-sm text-gray-600">{tool.inputHint}</p>
+            </li>
+            <li className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="text-sm font-semibold text-orange-600">Step 2</div>
+              <h3 className="mt-1 text-lg font-semibold text-gray-900">Generate</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                We process your photo and craft your {tool.name.toLowerCase()} in
+                roughly 20 to 40 seconds.
+              </p>
+            </li>
+            <li className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="text-sm font-semibold text-orange-600">Step 3</div>
+              <h3 className="mt-1 text-lg font-semibold text-gray-900">Download</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Save the high-resolution image, share the link, or generate
+                another.
+              </p>
+            </li>
+          </ol>
+        </section>
+
+        {/* Sample output */}
+        <section className="mt-16">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+            Sample output
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            A preview of the editorial layout you receive.
+          </p>
+          <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={sample}
+              alt={`${tool.name} sample output`}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="mt-16">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+            Frequently asked
+          </h2>
+          <Accordion
+            type="single"
+            collapsible
+            className="mt-6 rounded-xl border border-gray-200 bg-white"
+          >
+            {tool.seo.faq.map((entry, idx) => (
+              <AccordionItem
+                key={entry.q}
+                value={`faq-${idx}`}
+                className="px-5"
+              >
+                <AccordionTrigger className="text-left text-base font-medium text-gray-900">
+                  {entry.q}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-gray-600">
+                  {entry.a}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </section>
+
+        {/* Final CTA */}
+        <section className="mt-16 rounded-2xl bg-gradient-to-r from-orange-50 to-rose-50 p-8 text-center md:p-12">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+            Ready to try {tool.name}?
+          </h2>
+          <p className="mt-2 text-base text-gray-700">
+            Sign in to upload your photo and get your result in about half a
+            minute.
+          </p>
+          <div className="mt-6">
+            <Button
+              asChild
+              size="lg"
+              className="bg-orange-500 text-white hover:bg-orange-600"
+            >
+              <Link href={ctaHref}>Try free — sign in</Link>
+            </Button>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
