@@ -236,7 +236,7 @@ export default function CreditsPage() {
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Purchase Credits</h1>
             </div>
             <p className="text-gray-500">
-              Credits are used to generate AI coloring pages from your photos.
+              Coloring book = 1 credit per page. Each premium tool (palm reading, face reading, style audit, etc.) = 10 credits per generation.
             </p>
             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
               <div className="flex items-center gap-2">
@@ -288,7 +288,15 @@ export default function CreditsPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>Generate {pkg.credits} coloring pages</span>
+                      <span>
+                        {pkg.id === 'small'
+                          ? '≈ 5 coloring pages OR a half-tool sample'
+                          : pkg.id === 'medium'
+                          ? '≈ 10 coloring pages OR 1 premium analysis'
+                          : pkg.id === 'large'
+                          ? '≈ 20 coloring pages OR 2 premium analyses'
+                          : '≈ 40 coloring pages OR 4 premium analyses'}
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -326,16 +334,13 @@ export default function CreditsPage() {
             </div>
             <div className="space-y-4 text-gray-600">
               <p>
-                Credits are used to generate AI coloring pages from your photos. Each credit allows you to convert one photo into a coloring page.
+                Coloring book = 1 credit per page. Each premium tool (palm reading, face reading, style audit, etc.) = 10 credits per generation.
               </p>
               <p>
-                New users receive 2 free credits to try the service. After using your free credits, you'll need to purchase more to continue generating coloring pages.
+                New users receive 2 free credits to try the service. After using your free credits, you'll need to purchase more to keep creating.
               </p>
               <p>
-                Credits never expire and can be used across multiple projects. 
-              </p>
-              <p>
-                Generate high-quality, unwatermarked PDFs of your creations by purchasing any credit package.
+                Credits never expire and can be used across any tool on the platform.
               </p>
             </div>
           </div>
