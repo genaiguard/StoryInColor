@@ -14,13 +14,18 @@ import type { ToolCategory } from "@/lib/tools/types"
 import { toast } from "sonner"
 import { trackEvent } from "@/components/tracking/facebook-pixel"
 
-// Generation doc as stored in users/{uid}/generations/{genId}
+// Job doc as stored in users/{uid}/jobs/{jobId}. We subscribe to jobs (not
+// generations) so in-progress and failed jobs are visible alongside finished
+// ones — generation docs only exist on success and would hide pending work.
 interface GenerationDoc {
-  generationId: string
+  generationId?: string
   jobId: string
   toolId: string
+  status?: "processing" | "complete" | "failed"
   outputStoragePath?: string
   outputDownloadUrl?: string
+  error?: string
+  refunded?: boolean
   createdAt?: any
 }
 
@@ -188,19 +193,24 @@ export default function DashboardPage() {
     let unsubscribe: (() => void) | undefined
     try {
       const db = getFirestore()
-      const generationsRef = collection(db, "users", user.uid, "generations")
-      const q = query(generationsRef, orderBy("createdAt", "desc"), limit(24))
+      // Subscribe to /jobs (not /generations) so users see processing /
+      // failed states alongside completed work.
+      const jobsRef = collection(db, "users", user.uid, "jobs")
+      const q = query(jobsRef, orderBy("createdAt", "desc"), limit(24))
       unsubscribe = onSnapshot(
         q,
         (snapshot) => {
           const items: GenerationDoc[] = snapshot.docs.map((d) => {
             const data = d.data() as Partial<GenerationDoc>
             return {
-              generationId: data.generationId || d.id,
-              jobId: data.jobId || "",
+              generationId: data.generationId,
+              jobId: data.jobId || d.id,
               toolId: data.toolId || "",
+              status: data.status,
               outputStoragePath: data.outputStoragePath,
               outputDownloadUrl: data.outputDownloadUrl,
+              error: data.error,
+              refunded: data.refunded,
               createdAt: data.createdAt,
             }
           })
@@ -459,9 +469,11 @@ export default function DashboardPage() {
                   const href = tool
                     ? `/tools/${tool.slug}/result?jobId=${encodeURIComponent(gen.jobId)}`
                     : "#"
+                  const isProcessing = gen.status === "processing"
+                  const isFailed = gen.status === "failed"
                   return (
                     <Link
-                      key={gen.generationId}
+                      key={gen.jobId}
                       href={href}
                       className="block rounded-lg overflow-hidden bg-white border border-gray-200 hover:shadow-md transition-shadow"
                     >
@@ -474,6 +486,15 @@ export default function DashboardPage() {
                             className="w-full h-full object-cover"
                             loading="lazy"
                           />
+                        ) : isProcessing ? (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-orange-600 gap-2">
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+                            <span className="text-xs font-medium">Generating…</span>
+                          </div>
+                        ) : isFailed ? (
+                          <div className="w-full h-full flex items-center justify-center text-amber-700 text-xs px-2 text-center">
+                            Failed{gen.refunded ? " — refunded" : ""}
+                          </div>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
                             No preview

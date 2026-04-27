@@ -12,6 +12,18 @@ import Footer from "@/components/landing-page/footer";
 import type { Tool } from "@/lib/tools/types";
 import { TOOLS } from "@/lib/tools/registry";
 
+// Tools that touch wellness-adjacent territory need an inline, visible
+// non-medical disclaimer for legal cover — burying it inside an FAQ accordion
+// is not enough.
+const WELLNESS_DISCLAIMER: Record<string, string> = {
+  iridology:
+    "For entertainment only. This is not medical or diagnostic advice. Consult a qualified healthcare professional for any health concern.",
+  "skincare-glow":
+    "For entertainment only. Cosmetic guidance — not medical advice, diagnosis, or treatment. See a dermatologist for any skin concern.",
+  "plate-analysis":
+    "For entertainment only. General wellness reflection — not medical or prescriptive nutrition advice. See a registered dietitian for personalized guidance.",
+};
+
 /**
  * Server-rendered SEO marketing view for a tool. Always emitted in the static
  * HTML so search engines can crawl rich content. Hidden client-side once a
@@ -21,6 +33,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
   const ctaHref = `/login?register=true&next=/tools/${tool.slug}`;
   const sample = tool.seo.sampleImage || tool.coverImage;
   const showSample = sample !== tool.coverImage;
+  const wellnessNotice = WELLNESS_DISCLAIMER[tool.id];
 
   return (
     <div data-tool-marketing className="min-h-screen bg-[#f7f4f3]">
@@ -84,6 +97,31 @@ export default function MarketingView({ tool }: { tool: Tool }) {
             />
           </div>
         </section>
+
+        {/* Inline non-medical disclaimer for wellness-adjacent tools */}
+        {wellnessNotice && (
+          <aside
+            role="note"
+            className="mt-10 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <p>
+              <strong>Important:</strong> {wellnessNotice}
+            </p>
+          </aside>
+        )}
 
         {/* What you get */}
         <section className="mt-16">

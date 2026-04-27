@@ -49,9 +49,11 @@ export default function ToolWorkflow({ tool }: Props) {
   const { user, loading, initialized } = useFirebase();
 
   // Drive page-level visibility: marketing view shows for signed-out, this
-  // workflow shows for signed-in. While auth resolves, both can be hidden via
-  // a "loading" state but for simplicity we keep marketing visible (it's the
-  // crawl-ready surface) and only swap once we know there's a user.
+  // workflow shows for signed-in. We deliberately do NOT remove the attribute
+  // on unmount — when the user clicks Generate the workflow unmounts as we
+  // navigate to /result, and a cleanup-driven removal would briefly flash the
+  // marketing surface mid-navigation. The attribute persists across pages and
+  // gets re-set on the next workflow mount.
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
@@ -63,9 +65,6 @@ export default function ToolWorkflow({ tool }: Props) {
       "data-tool-auth",
       user ? "signed-in" : "signed-out"
     );
-    return () => {
-      root.removeAttribute("data-tool-auth");
-    };
   }, [user, loading, initialized]);
 
   if (loading || !initialized) {
@@ -259,11 +258,15 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
             <div className="flex items-center gap-3">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="cursor-help rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-sm font-medium text-orange-700">
+                  <button
+                    type="button"
+                    aria-label="Credit balance — tooltip explains generation cost"
+                    className="cursor-help rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-sm font-medium text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                  >
                     {credits === null
                       ? "Loading credits…"
                       : formatCreditBalance(credits)}
-                  </span>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   {tool.creditCost === 1

@@ -22,8 +22,8 @@ export function BlogLayout({ children }: BlogLayoutProps) {
               <Link href="/blog" className="text-orange-500 font-medium">
                 Blog
               </Link>
-              <Link href="/create" className="text-gray-600 hover:text-orange-500">
-                Create
+              <Link href="/tools" className="text-gray-600 hover:text-orange-500">
+                Tools
               </Link>
             </nav>
           </div>
@@ -39,7 +39,7 @@ export function BlogLayout({ children }: BlogLayoutProps) {
       <footer className="border-t bg-white mt-12">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-gray-600">
-            <p>&copy; 2024 StoryInColor. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} StoryInColor. All rights reserved.</p>
           </div>
         </div>
       </footer>

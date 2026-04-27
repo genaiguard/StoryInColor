@@ -301,7 +301,7 @@ export default function CreditsPage() {
                       <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                       <span>
                         {pkg.id === 'small'
-                          ? '≈ 5 coloring pages OR a half-tool sample'
+                          ? '≈ 5 coloring pages — premium tools need 10 credits'
                           : pkg.id === 'medium'
                           ? '≈ 10 coloring pages OR 1 premium analysis'
                           : pkg.id === 'large'

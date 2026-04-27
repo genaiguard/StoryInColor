@@ -161,11 +161,18 @@ export default function ResultView({ tool }: Props) {
                 {job.error ||
                   "Something went wrong while generating your image."}
               </p>
-              <p className="mt-2 text-sm font-medium text-emerald-800">
-                Credits refunded — your {job.creditCost}{" "}
-                {job.creditCost === 1 ? "credit" : "credits"} have been returned to
-                your balance.
-              </p>
+              {job.refunded ? (
+                <p className="mt-2 text-sm font-medium text-emerald-800">
+                  Credits refunded — your {job.creditCost}{" "}
+                  {job.creditCost === 1 ? "credit" : "credits"} have been returned
+                  to your balance.
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-amber-800">
+                  Refund pending — if your balance hasn't been restored within a
+                  few minutes, please contact support.
+                </p>
+              )}
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button
                   asChild

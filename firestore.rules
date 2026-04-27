@@ -47,6 +47,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       allow read, write: if isAdmin();
     }
+    // Per-event usage subcollection — server-only writes (admin SDK bypasses).
+    // Owner can read their own audit log; client cannot forge events.
+    match /userCredits/{userId}/usageEvents/{eventId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
 
     // Public data
     match /public/{document=**} {

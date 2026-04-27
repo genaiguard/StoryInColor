@@ -135,7 +135,11 @@ export default function Header({ activeSection, scrollToSection }: HeaderProps) 
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            {initialized && user ? (
+            {!initialized ? (
+              // Skeleton while Firebase auth resolves so signed-in users
+              // don't see "Sign in" flash on first paint.
+              <div className="h-10 w-24 rounded-full bg-orange-100 animate-pulse" aria-hidden="true" />
+            ) : user ? (
               <Button
                 className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-5"
                 asChild
@@ -195,7 +199,9 @@ export default function Header({ activeSection, scrollToSection }: HeaderProps) 
                 Blog
               </Link>
               <div className="px-2 pt-2">
-                {initialized && user ? (
+                {!initialized ? (
+                  <div className="h-10 w-full rounded-full bg-orange-100 animate-pulse" aria-hidden="true" />
+                ) : user ? (
                   <Button
                     className="bg-orange-500 hover:bg-orange-600 text-white w-full rounded-full"
                     asChild

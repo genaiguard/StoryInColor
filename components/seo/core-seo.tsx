@@ -1,41 +1,41 @@
 import Head from 'next/head';
+import { TOOLS } from '@/lib/tools/registry';
+import { TOOL_COUNT_WORD } from '@/lib/tools/copy';
 
 export default function CoreSEO() {
-  // Website URL
   const siteUrl = 'https://storyincolor.com';
-  
-  // Define structured data for rich search results:
+  const description = `Upload a photo, get something incredible back. ${TOOL_COUNT_WORD} AI photo tools — coloring book, palm reading, face reading, aura, iridology, handwriting, style audit, skincare, plate analysis, plant care, room vibes — in one place.`;
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "StoryInColor",
     "applicationCategory": "MultimediaApplication",
-    "description": "Turn your photos into beautiful custom coloring pages instantly with AI. Create personalized coloring books from vacation photos, family pictures, and pet portraits.",
+    "description": description,
     "offers": {
-      "@type": "Offer",
-      "price": "0.45",
+      "@type": "AggregateOffer",
       "priceCurrency": "USD",
-      "description": "Pay per coloring page generation with credits"
+      "lowPrice": "0.45",
+      "highPrice": "10.00",
+      "offerCount": 4,
+      "description": "Credit packs starting at $3.50 for 5 credits."
     },
-    "screenshot": `${siteUrl}/images/best-6.webp`,
-    "featureList": "AI photo conversion, instant PDF download, multiple art styles",
+    "screenshot": `${siteUrl}/images/SHARING.webp`,
+    "featureList": TOOLS.map((t) => t.name).join(", "),
     "operatingSystem": "Web browser"
   };
-  
+
   return (
     <Head>
-      {/* Enhanced Meta Tags */}
-      <meta name="description" content="Turn your photos into beautiful custom coloring pages instantly with AI. Create personalized coloring books from vacation photos, family pictures, and pet portraits." />
-      <meta name="keywords" content="custom coloring pages, coloring books, AI coloring pages, personalized coloring book, photo to coloring page, family coloring book, pet coloring pages" />
-      
-      {/* Canonical URL */}
+      <meta name="description" content={description} />
+      <meta name="keywords" content="AI photo tools, photo to coloring page, palm reading from photo, face reading, aura reading, iridology, graphology, style audit AI, skincare AI, plate analysis, plant care AI, room vibes" />
+
       <link rel="canonical" href={siteUrl} />
-      
-      {/* Structured Data / JSON-LD */}
-      <script 
+
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
     </Head>
   );
-} 
+}

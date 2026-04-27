@@ -78,6 +78,26 @@ export const generateForTool = onCall(
       .collection("generations")
       .doc(generationId);
 
+    // 0) Rate-limit: cap concurrent in-flight generations per user. A user
+    // with credits could otherwise fire many parallel calls and burn through
+    // OpenAI quota faster than they spend credits (each call costs $0.06–$0.25).
+    // Three concurrent jobs is the cap — generous enough for a power user
+    // running a few tools at once, low enough to absorb accidental loops.
+    const MAX_CONCURRENT_JOBS = 3;
+    const concurrent = await db
+      .collection("users")
+      .doc(userId)
+      .collection("jobs")
+      .where("status", "==", "processing")
+      .limit(MAX_CONCURRENT_JOBS + 1)
+      .get();
+    if (concurrent.size >= MAX_CONCURRENT_JOBS) {
+      throw new HttpsError(
+        "resource-exhausted",
+        `Too many in-flight generations (${MAX_CONCURRENT_JOBS}). Please wait for one to finish.`,
+      );
+    }
+
     // 1) Pre-create job + deduct credits in one transactional motion.
     // This runs OUTSIDE the try/catch below — a deduction failure (e.g.,
     // insufficient credits) propagates straight to the caller and must NOT
@@ -106,14 +126,19 @@ export const generateForTool = onCall(
       tx.update(credRef, {
         balance: admin.firestore.FieldValue.increment(-config.creditCost),
         used: admin.firestore.FieldValue.increment(config.creditCost),
-        usageHistory: admin.firestore.FieldValue.arrayUnion({
-          type: "deduct",
-          toolId,
-          jobId,
-          cost: config.creditCost,
-          date: admin.firestore.Timestamp.now(),
-        }),
         lastUpdated: admin.firestore.Timestamp.now(),
+      });
+      // Append the deduct event to the unbounded subcollection (was an
+      // arrayUnion on userCredits.usageHistory which capped at 1MB).
+      const usageEventRef = credRef
+        .collection("usageEvents")
+        .doc(`deduct-${jobId}`);
+      tx.set(usageEventRef, {
+        type: "deduct",
+        toolId,
+        jobId,
+        cost: config.creditCost,
+        date: admin.firestore.Timestamp.now(),
       });
       tx.set(jobRef, {
         jobId,
@@ -255,29 +280,43 @@ export const generateForTool = onCall(
         outputDownloadUrl: downloadUrl,
       };
     } catch (err: any) {
-      // Refund + mark failed. refundCreditsTx is idempotent on jobId, so a
-      // retry won't double-refund.
+      const reason = String(err?.message ?? "unknown");
+      // Order matters: flip the job to `failed` FIRST so the result page
+      // unblocks even if the refund write throws. The job doc holds
+      // `refunded: false` until the refund succeeds; the result page
+      // surfaces the failure reason regardless. Each step has its own
+      // try/catch so neither can block the other.
+      try {
+        await jobRef.update({
+          status: "failed",
+          error: reason,
+          refunded: false,
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (jobUpdateErr) {
+        console.error(
+          "CRITICAL: failed to mark job as failed — result page will spin",
+          { jobId, reason, jobUpdateErr },
+        );
+      }
       try {
         await refundCreditsTx({
           userId,
           cost: config.creditCost,
           jobId,
           toolId,
-          reason: String(err?.message ?? "unknown"),
+          reason,
         });
-        await jobRef.update({
-          status: "failed",
-          error: String(err?.message ?? "unknown"),
-          refunded: true,
-          completedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        // refund succeeded — flag it on the job for audit visibility
+        await jobRef
+          .update({ refunded: true })
+          .catch((e) =>
+            console.error("Failed to flag job.refunded=true", { jobId, e }),
+          );
       } catch (refundErr) {
-        console.error("Refund failed for job", jobId, refundErr);
+        console.error("CRITICAL: refund failed for job", { jobId, refundErr });
       }
-      throw new HttpsError(
-        "internal",
-        `Generation failed: ${err?.message ?? "unknown"}`,
-      );
+      throw new HttpsError("internal", `Generation failed: ${reason}`);
     }
   },
 );

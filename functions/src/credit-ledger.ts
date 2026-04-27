@@ -3,9 +3,13 @@ import * as admin from "firebase-admin";
 const db = admin.firestore();
 
 /**
- * Atomically deducts `cost` credits from `userCredits/{userId}` and appends a
- * `deduct` entry to `usageHistory`. Throws `Error("INSUFFICIENT_CREDITS")` if
- * the user's balance is below the cost or the doc does not exist.
+ * Atomically deducts `cost` credits from `userCredits/{userId}` and writes a
+ * `deduct` event to userCredits/{userId}/usageEvents/{jobId}. Throws
+ * Error("INSUFFICIENT_CREDITS") if balance is too low or the doc is missing.
+ *
+ * The event is keyed by jobId so retries are deduplicated naturally and the
+ * collection scales linearly with usage (the previous arrayUnion approach
+ * capped at the 1MB doc limit, ~5–10k events per user).
  */
 export async function deductCreditsTx(params: {
   userId: string;
@@ -15,6 +19,7 @@ export async function deductCreditsTx(params: {
 }): Promise<void> {
   const { userId, cost, jobId, toolId } = params;
   const credRef = db.collection("userCredits").doc(userId);
+  const eventRef = credRef.collection("usageEvents").doc(`deduct-${jobId}`);
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(credRef);
@@ -28,22 +33,24 @@ export async function deductCreditsTx(params: {
     tx.update(credRef, {
       balance: admin.firestore.FieldValue.increment(-cost),
       used: admin.firestore.FieldValue.increment(cost),
-      usageHistory: admin.firestore.FieldValue.arrayUnion({
-        type: "deduct",
-        toolId,
-        jobId,
-        cost,
-        date: admin.firestore.Timestamp.now(),
-      }),
       lastUpdated: admin.firestore.Timestamp.now(),
+    });
+    tx.set(eventRef, {
+      type: "deduct",
+      toolId,
+      jobId,
+      cost,
+      date: admin.firestore.Timestamp.now(),
     });
   });
 }
 
 /**
- * Atomically refunds `cost` credits to `userCredits/{userId}` and appends a
- * `refund` entry to `usageHistory`. Idempotent on `jobId` — if a refund entry
- * with this jobId already exists, the operation is a no-op.
+ * Atomically refunds `cost` credits to `userCredits/{userId}` and writes a
+ * `refund` event to userCredits/{userId}/usageEvents/refund-{jobId}.
+ * Idempotent on jobId via a deterministic doc id — re-running the operation
+ * is a no-op (the second tx.set on the same doc inside the transaction guard
+ * detects the existing doc and bails).
  */
 export async function refundCreditsTx(params: {
   userId: string;
@@ -54,35 +61,31 @@ export async function refundCreditsTx(params: {
 }): Promise<void> {
   const { userId, cost, jobId, toolId, reason } = params;
   const credRef = db.collection("userCredits").doc(userId);
+  const eventRef = credRef.collection("usageEvents").doc(`refund-${jobId}`);
 
   await db.runTransaction(async (tx) => {
-    const snap = await tx.get(credRef);
-    if (!snap.exists) {
+    const credSnap = await tx.get(credRef);
+    if (!credSnap.exists) {
       // Nothing to refund against — silently no-op to keep idempotent behavior.
       return;
     }
-    const history = (snap.data()?.usageHistory ?? []) as Array<{
-      type?: string;
-      jobId?: string;
-    }>;
-    const alreadyRefunded = history.some(
-      (entry) => entry?.type === "refund" && entry?.jobId === jobId,
-    );
-    if (alreadyRefunded) {
+    const eventSnap = await tx.get(eventRef);
+    if (eventSnap.exists) {
+      // Already refunded — idempotent no-op
       return;
     }
     tx.update(credRef, {
       balance: admin.firestore.FieldValue.increment(cost),
       used: admin.firestore.FieldValue.increment(-cost),
-      usageHistory: admin.firestore.FieldValue.arrayUnion({
-        type: "refund",
-        toolId,
-        jobId,
-        cost,
-        reason,
-        date: admin.firestore.Timestamp.now(),
-      }),
       lastUpdated: admin.firestore.Timestamp.now(),
+    });
+    tx.set(eventRef, {
+      type: "refund",
+      toolId,
+      jobId,
+      cost,
+      reason,
+      date: admin.firestore.Timestamp.now(),
     });
   });
 }

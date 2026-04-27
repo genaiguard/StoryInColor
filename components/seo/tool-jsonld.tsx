@@ -2,12 +2,29 @@ import type { Tool } from "@/lib/tools/types";
 import { CREDIT_PACKAGES } from "@/app/firebase/credits-helpers";
 
 export function ToolJsonLd({ tool }: { tool: Tool }) {
-  // Read prices from CREDIT_PACKAGES (small pack as canonical retail rate).
-  const smallPack = CREDIT_PACKAGES.find((p) => p.id === "small")!;
-  const priceForTool = (
-    (tool.creditCost * smallPack.pricePerCredit) /
-    100
-  ).toFixed(2);
+  // Compute the actual purchasable price range for ONE generation of this
+  // tool across every credit pack the user can buy. Schema.org rejects a
+  // single misleading "lowest unit rate" price, so emit AggregateOffer with
+  // lowPrice/highPrice and one Offer per pack — Google's rich result tester
+  // accepts this without "Misleading price" warnings.
+  const offers = CREDIT_PACKAGES.map((pack) => {
+    const perCreditCents = pack.price / pack.credits;
+    const priceForTool = ((tool.creditCost * perCreditCents) / 100).toFixed(2);
+    return {
+      "@type": "Offer",
+      price: priceForTool,
+      priceCurrency: "USD",
+      description: `${tool.creditCost} credit${tool.creditCost > 1 ? "s" : ""} from the ${pack.id} pack (${pack.credits} credits / $${(pack.price / 100).toFixed(2)})`,
+      eligibleQuantity: {
+        "@type": "QuantitativeValue",
+        value: 1,
+        unitText: "generation",
+      },
+    };
+  });
+  const prices = offers.map((o) => parseFloat(o.price));
+  const lowPrice = Math.min(...prices).toFixed(2);
+  const highPrice = Math.max(...prices).toFixed(2);
 
   const json = {
     "@context": "https://schema.org",
@@ -25,10 +42,12 @@ export function ToolJsonLd({ tool }: { tool: Tool }) {
         url: `https://storyincolor.com/tools/${tool.slug}`,
         image: `https://storyincolor.com${tool.coverImage}`,
         offers: {
-          "@type": "Offer",
-          price: priceForTool,
+          "@type": "AggregateOffer",
           priceCurrency: "USD",
-          description: `${tool.creditCost} credit${tool.creditCost > 1 ? "s" : ""} per generation`,
+          lowPrice,
+          highPrice,
+          offerCount: offers.length,
+          offers,
         },
       },
       {
