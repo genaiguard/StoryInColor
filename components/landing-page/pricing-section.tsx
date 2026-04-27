@@ -84,10 +84,17 @@ export default function PricingSection() {
   }
 
   const featureList1 = [
-    { icon: <Gift className="h-5 w-5 text-orange-500" />, text: "Free starter credits included" },
-    { icon: <Sparkles className="h-5 w-5 text-orange-500" />, text: "Pay per generation" },
-    { icon: <Folders className="h-5 w-5 text-orange-500" />, text: "Eleven tools in one platform" },
-    { icon: <Download className="h-5 w-5 text-orange-500" />, text: "Instant download" }
+    { icon: <Gift className="h-5 w-5 text-orange-500" />, text: "Free starter credits on sign-up" },
+    { icon: <Sparkles className="h-5 w-5 text-orange-500" />, text: "Coloring book = 1 credit" },
+    { icon: <Folders className="h-5 w-5 text-orange-500" />, text: "All other tools = 10 credits each" },
+    { icon: <Download className="h-5 w-5 text-orange-500" />, text: "Instant download — keep forever" }
+  ]
+
+  const creditPackages = [
+    { credits: 5, price: "$3.50" },
+    { credits: 10, price: "$6" },
+    { credits: 20, price: "$10" },
+    { credits: 40, price: "$18" },
   ]
 
   const featureList2 = [
@@ -115,9 +122,9 @@ export default function PricingSection() {
           className="flex flex-col items-center justify-center space-y-4 text-center"
         >
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Simple, Transparent Pricing</h2>
+            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Simple, transparent pricing</h2>
             <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Coloring book = 1 credit. All other tools = 10 credits. Buy in packs to save up to 36%.
+              Buy credits, generate any tool. Coloring book = 1 credit. Premium tools = 10 credits each. Save up to 36% in larger packs.
             </p>
           </div>
         </motion.div>
@@ -137,32 +144,26 @@ export default function PricingSection() {
             {/* Card accent */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-orange-500 to-pink-500"></div>
             
-            <div className="flex items-center justify-between mb-10">
-              <h3 className="text-2xl font-bold">Print at Home Coloring Pages</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold">Print at home</h3>
             </div>
-            <motion.div 
-              animate={hoverLeft ? { y: -5, scale: 1.05 } : {}}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              className="mb-4 flex justify-center"
-            >
-              <PathImg
-                src="/images/product-pdf.webp"
-                alt="Print at home coloring pages"
-                width={120}
-                height={120}
-                className="h-auto"
-              />
-            </motion.div>
-            <div className="mt-4 text-center">
-              <motion.span 
-                animate={hoverLeft ? { scale: 1.05 } : {}}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                className="text-4xl font-bold inline-block"
-              >
-                Simple Pricing
-              </motion.span>
-              <span className="text-base font-normal text-gray-500 block mt-1">Starting at $0.45 per generation</span>
+            <p className="text-gray-600 text-sm mb-5">
+              Buy credits, generate any tool. Coloring book = 1 credit. All other tools = 10 credits per generation.
+            </p>
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              {creditPackages.map((pkg) => (
+                <div
+                  key={pkg.credits}
+                  className="rounded-lg border border-orange-100 bg-orange-50/60 px-3 py-2.5 text-center"
+                >
+                  <div className="text-lg font-bold text-orange-600">{pkg.price}</div>
+                  <div className="text-xs text-gray-600">{pkg.credits} credits</div>
+                </div>
+              ))}
             </div>
+            <p className="text-xs text-orange-600 font-medium text-center mb-2">
+              First 2 credits free on sign-up
+            </p>
             <ul className="mt-6 space-y-4 flex-1">
               {featureList1.map((feature, i) => (
                 <motion.li 
@@ -217,31 +218,30 @@ export default function PricingSection() {
             onHoverEnd={() => setHoverRight(false)}
             className="flex flex-col rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 shadow-sm order-2 lg:order-none relative overflow-hidden"
           >
-            <div className="flex items-center justify-between mb-10">
-              <h3 className="text-2xl font-bold text-gray-500">Physical Books</h3>
-              <div className="rounded-full bg-gray-200 px-2.5 py-0.5 text-sm text-gray-600">Coming Soon</div>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-600">Physical books</h3>
+              <div className="rounded-full bg-gray-200 px-2.5 py-0.5 text-sm text-gray-600">Coming soon</div>
             </div>
-            <motion.div 
+            <p className="text-gray-500 text-sm mb-5">
+              We're working on professionally printed keepsake books. Sign up to be the first to hear when they're ready.
+            </p>
+            <motion.div
               animate={hoverRight ? { y: -5, scale: 1.05 } : {}}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              className="mb-4 flex justify-center opacity-50"
+              className="mb-4 flex justify-center opacity-60"
             >
               <PathImg
                 src="/images/product-standard.webp"
-                alt="Physical coloring book option - coming soon"
+                alt="Physical book — coming soon"
                 width={120}
                 height={120}
                 className="h-auto"
               />
             </motion.div>
-            <div className="mt-4 text-center text-gray-400">
-              <motion.span 
-                animate={hoverRight ? { scale: 1.05 } : {}}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                className="text-4xl font-bold inline-block"
-              >
-                Coming Soon
-              </motion.span>
+            <div className="mt-2 text-center text-gray-400">
+              <span className="text-xl font-semibold inline-block">
+                On the way
+              </span>
             </div>
             <ul className="mt-6 space-y-4 flex-1 text-gray-500">
               {featureList2.map((feature, i) => (

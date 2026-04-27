@@ -1,64 +1,91 @@
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 
+interface FAQ {
+  value: string
+  question: string
+  answer: string
+}
+
+const FAQS: FAQ[] = [
+  {
+    value: "credits",
+    question: "What are credits?",
+    answer:
+      "Credits are how you pay for generations on StoryInColor. Each tool consumes a small number of credits per result, and new accounts start with 2 free credits.",
+  },
+  {
+    value: "cost",
+    question: "How much does each tool cost?",
+    answer:
+      "The Coloring Book is 1 credit per generation. All ten premium tools (palm reading, face reading, style audit, plant care, and more) are 10 credits each.",
+  },
+  {
+    value: "privacy",
+    question: "Are my photos private?",
+    answer:
+      "Yes. Your photos are only used to generate your result. We never sell your data and never share your uploads with anyone outside our processing pipeline.",
+  },
+  {
+    value: "speed",
+    question: "How long does generation take?",
+    answer:
+      "Most generations finish in under a minute. Larger or more detailed tools can take a little longer, but you'll see progress in real time.",
+  },
+  {
+    value: "commercial",
+    question: "Can I use the result commercially?",
+    answer:
+      "Personal use is always covered. For commercial use, please review our Terms — most outputs are fine for small-scale commercial projects, but some content types have restrictions.",
+  },
+  {
+    value: "refund",
+    question: "What if I don't like the result?",
+    answer:
+      "If a generation fails for technical reasons, your credits are refunded automatically. If you're unhappy with a successful result, contact us — we'll always try to make it right.",
+  },
+  {
+    value: "storage",
+    question: "Do you store my photo after generation?",
+    answer:
+      "We keep your uploads only as long as needed to deliver and re-deliver your result from your dashboard. You can request deletion at any time from your account settings.",
+  },
+  {
+    value: "medical",
+    question: "Is this medical or diagnostic?",
+    answer:
+      "No. StoryInColor's tools — including iridology, skincare, and the reading tools — are intended for entertainment and gentle wellness reflection only. They are not a substitute for medical, psychological, or professional advice.",
+  },
+]
+
 export default function FAQSection() {
   return (
-    <section id="faq" className="py-12 md:py-16 lg:py-20">
+    <section id="faq" className="py-12 md:py-16 lg:py-20 bg-white">
       <div className="container mx-auto max-w-7xl px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Frequently Asked Questions</h2>
-            <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Everything you need to know about StoryInColor's AI photo tools
-            </p>
-          </div>
+        <div className="flex flex-col items-center justify-center space-y-3 text-center">
+          <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+            Frequently asked questions
+          </h2>
+          <p className="max-w-[720px] text-gray-600 md:text-lg">
+            Everything you need to know about StoryInColor's AI photo tools.
+          </p>
         </div>
 
-        <div className="mx-auto max-w-3xl mt-12">
-          <Accordion type="single" collapsible className="space-y-4">
-            <AccordionItem value="photos" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-semibold text-left">What kinds of photos work best?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-                  Bright, in-focus photos with the subject clearly visible work best. For palm/face/iris readings, follow each tool's input hint for framing.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="credits" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-semibold text-left">How does the credit system work?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-                  Coloring book costs 1 credit per generation; the ten premium tools cost 10 credits each. New accounts start with 2 free credits — enough to try the coloring book twice. Top up any time.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="failures" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-semibold text-left">What if a generation fails?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-                  Your credits are automatically refunded if a generation fails for any reason. You'll see the refund in your usage history right away.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="readings" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-semibold text-left">Are the readings (palm, face, aura, iridology) real?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-                  Each reading tool is intended as a playful entertainment piece, not a medical, psychological, or spiritual diagnosis. Iridology and skincare results are presented as wellness reflections, never as health advice.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="expiry" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-semibold text-left">Do credits expire?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-                  Credits don't expire — use them whenever it's convenient.
-                </p>
-              </AccordionContent>
-            </AccordionItem>
+        <div className="mx-auto max-w-3xl mt-10">
+          <Accordion type="single" collapsible className="space-y-3">
+            {FAQS.map((faq) => (
+              <AccordionItem
+                key={faq.value}
+                value={faq.value}
+                className="rounded-lg border bg-white px-6"
+              >
+                <AccordionTrigger className="text-base md:text-lg font-semibold text-left">
+                  {faq.question}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-gray-700">{faq.answer}</p>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
           </Accordion>
         </div>
       </div>

@@ -16,7 +16,7 @@ import StructuredData from "@/components/seo/structured-data"
 export default function Home() {
   const [activeSection, setActiveSection] = useState("")
 
-  const scrollToSection = (elementId) => {
+  const scrollToSection = (elementId: string) => {
     const element = document.getElementById(elementId)
     if (element) {
       const headerOffset = 80
