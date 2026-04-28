@@ -149,7 +149,8 @@ export const stripeWebhook = onRequest(
                                       pricePaid: priceInCents,
                                       purchaseDate: new Date() // Use regular Date instead of server timestamp
                                   }],
-                                  usageHistory: [],
+                                  // usageHistory array intentionally omitted — usage now lives in the
+                                  // userCredits/{uid}/usageEvents subcollection (see credit-ledger.ts).
                                   lastUpdated: admin.firestore.FieldValue.serverTimestamp()
                               });
                                       } else {

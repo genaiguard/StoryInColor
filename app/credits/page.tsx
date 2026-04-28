@@ -9,6 +9,7 @@ import { CreditCard, CheckCircle, AlertTriangle, ArrowLeft, Shield, Sparkles, Cl
 import { toast } from "sonner"
 import { useFirebase } from "@/app/firebase/firebase-provider"
 import { getUserCredits, CREDIT_PACKAGES, formatCreditBalance } from "@/app/firebase/credits-helpers"
+import { getFirestore, collection, query, orderBy, limit, getDocs } from "firebase/firestore"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { loadStripe } from "@stripe/stripe-js"
 
@@ -41,30 +42,36 @@ export default function CreditsPage() {
       try {
         const userCredits = await getUserCredits(user.uid)
         setCredits(userCredits.balance)
-        
-        // Set usage history
-        const sortedUsageHistory = userCredits.usageHistory || [];
-        sortedUsageHistory.sort((a: any, b: any) => b.date.seconds - a.date.seconds);
-        setUsageHistory(sortedUsageHistory);
-        
-        // Set purchase history
-        const sortedPurchaseHistory = userCredits.purchaseHistory || [];
-        sortedPurchaseHistory.sort((a: any, b: any) => b.purchaseDate.seconds - a.purchaseDate.seconds);
-        setPurchaseHistory(sortedPurchaseHistory);
-        
-        // Find earliest timestamp for first activity (for initial credits display)
-        let earliestTimestamp = null;
-        if (sortedUsageHistory.length > 0 && sortedPurchaseHistory.length > 0) {
-          const lastUsageDate = sortedUsageHistory[sortedUsageHistory.length - 1].date;
-          const lastPurchaseDate = sortedPurchaseHistory[sortedPurchaseHistory.length - 1].purchaseDate;
-          earliestTimestamp = lastUsageDate.seconds < lastPurchaseDate.seconds ? lastUsageDate : lastPurchaseDate;
-        } else if (sortedUsageHistory.length > 0) {
-          earliestTimestamp = sortedUsageHistory[sortedUsageHistory.length - 1].date;
-        } else if (sortedPurchaseHistory.length > 0) {
-          earliestTimestamp = sortedPurchaseHistory[sortedPurchaseHistory.length - 1].purchaseDate;
+
+        // Usage events were migrated from a userCredits.usageHistory array to
+        // a userCredits/{uid}/usageEvents/{deduct|refund-jobId} subcollection
+        // (the array hit the 1MB doc cap on heavy users). Read from the
+        // subcollection here. Limit 100 most-recent for display — full audit
+        // is in the admin tools.
+        const db = getFirestore()
+        const eventsRef = collection(db, "userCredits", user.uid, "usageEvents")
+        const eventsQ = query(eventsRef, orderBy("date", "desc"), limit(100))
+        const eventsSnap = await getDocs(eventsQ)
+        const usageEvents = eventsSnap.docs.map((d) => d.data())
+        setUsageHistory(usageEvents)
+
+        // Set purchase history (still on the parent doc — purchases are low-cardinality)
+        const sortedPurchaseHistory = userCredits.purchaseHistory || []
+        sortedPurchaseHistory.sort((a: any, b: any) => b.purchaseDate.seconds - a.purchaseDate.seconds)
+        setPurchaseHistory(sortedPurchaseHistory)
+
+        // Earliest timestamp across both streams for the "since you joined" footer
+        let earliestTimestamp: any = null
+        const oldestUsage = usageEvents.length > 0 ? usageEvents[usageEvents.length - 1].date : null
+        const oldestPurchase = sortedPurchaseHistory.length > 0
+          ? sortedPurchaseHistory[sortedPurchaseHistory.length - 1].purchaseDate
+          : null
+        if (oldestUsage && oldestPurchase) {
+          earliestTimestamp = oldestUsage.seconds < oldestPurchase.seconds ? oldestUsage : oldestPurchase
+        } else {
+          earliestTimestamp = oldestUsage || oldestPurchase
         }
-        
-        setFirstActivityTimestamp(earliestTimestamp);
+        setFirstActivityTimestamp(earliestTimestamp)
       } catch (error) {
         console.error("Error loading user credits:", error)
         setError("Failed to load your credits. Please try refreshing the page.")

@@ -1,4 +1,4 @@
-import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, Timestamp, arrayUnion, runTransaction } from "firebase/firestore"
+import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, Timestamp, arrayUnion } from "firebase/firestore"
 
 // Constants
 export const FREE_CREDITS_PER_USER = 2;
@@ -44,12 +44,13 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   }
 ];
 
-// Interface for user credits
+// Interface for user credits. Usage history was migrated out of this doc
+// (1MB array cap on heavy users) and now lives in
+// userCredits/{uid}/usageEvents/{deduct|refund-jobId}.
 export interface UserCredits {
   balance: number;
   used: number;
   purchaseHistory: CreditPurchase[];
-  usageHistory: CreditUsage[];
   lastUpdated: Timestamp | null;
 }
 
@@ -62,10 +63,13 @@ export interface CreditPurchase {
   isInitialCredits?: boolean;
 }
 
-// Interface for credit usage history
-export interface CreditUsage {
-  projectId: string;
-  pageId: string;
+// Per-event usage record stored in usageEvents subcollection.
+export interface CreditUsageEvent {
+  type: "deduct" | "refund";
+  toolId?: string | null;
+  jobId?: string | null;
+  cost: number;
+  reason?: string | null;
   date: Timestamp;
 }
 
@@ -81,7 +85,8 @@ export async function initializeUserCredits(userId: string): Promise<UserCredits
     // Create timestamp for consistent use
     const currentTimestamp = Timestamp.now();
     
-    // Create new user credits document with initial free credits
+    // Create new user credits document with initial free credits.
+    // usageHistory has moved to a subcollection — see CreditUsageEvent.
     const initialCredits: UserCredits = {
       balance: FREE_CREDITS_PER_USER,
       used: 0,
@@ -92,7 +97,6 @@ export async function initializeUserCredits(userId: string): Promise<UserCredits
         purchaseDate: currentTimestamp,
         isInitialCredits: true
       }],
-      usageHistory: [],
       lastUpdated: currentTimestamp,
     };
     
@@ -121,118 +125,11 @@ export async function getUserCredits(userId: string): Promise<UserCredits> {
   return userCreditsDoc.data() as UserCredits;
 }
 
-// Use a credit for image generation (Refactored with Firestore Transaction)
-// Supports both new signature: useCredit(userId, cost, ref)
-// and legacy signature: useCredit(userId, projectId, pageId)
-export async function useCredit(
-  userId: string,
-  costOrProjectId: number | string,
-  refOrPageId?: string | { projectId?: string; pageId?: string; toolId?: string; jobId?: string }
-): Promise<boolean> {
-  let cost: number;
-  let ref: { projectId?: string; pageId?: string; toolId?: string; jobId?: string };
-  if (typeof costOrProjectId === "number") {
-    cost = costOrProjectId;
-    ref = (refOrPageId as { projectId?: string; pageId?: string; toolId?: string; jobId?: string }) ?? {};
-  } else {
-    // legacy: useCredit(userId, projectId, pageId)
-    cost = 1;
-    ref = { projectId: costOrProjectId, pageId: typeof refOrPageId === "string" ? refOrPageId : undefined };
-  }
-
-  const db = getFirestore();
-  const userCreditsRef = doc(db, "userCredits", userId);
-
-  try {
-    await runTransaction(db, async (transaction) => {
-      const userCreditsDoc = await transaction.get(userCreditsRef);
-
-      if (!userCreditsDoc.exists()) {
-        console.error(`User credits document for ${userId} does not exist in useCredit transaction.`);
-        throw new Error("User credits not initialized. Please log out and log back in, or contact support if the issue persists.");
-      }
-
-      const currentData = userCreditsDoc.data();
-      const currentBalance = currentData?.balance;
-
-      if (currentBalance === undefined || currentBalance === null) {
-        console.error(`User credits balance is invalid or missing for ${userId}. Current data: ${JSON.stringify(currentData)}`);
-        throw new Error("Credit balance is invalid. Please contact support.");
-      }
-
-      if (currentBalance < cost) {
-        throw new Error("Insufficient credits.");
-      }
-
-      transaction.update(userCreditsRef, {
-        balance: increment(-cost),
-        used: increment(cost),
-        usageHistory: arrayUnion({
-          type: "deduct",
-          cost,
-          toolId: ref.toolId ?? null,
-          jobId: ref.jobId ?? null,
-          projectId: ref.projectId ?? null,
-          pageId: ref.pageId ?? null,
-          date: Timestamp.now()
-        }),
-        lastUpdated: Timestamp.now()
-      });
-    });
-
-    if (process.env.NODE_ENV !== "production") console.log(`Credit used successfully for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}`);
-    return true;
-  } catch (error: any) {
-    console.error(`Failed to use credit for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}. Error: ${error.message}`);
-    // Optionally, re-throw specific errors or handle them if needed by the caller
-    // For example, if error.message is "Insufficient credits.", the UI can show a specific message.
-    // toast.error(error.message); // Example of how UI might be updated, but this logic is in calling code.
-    return false;
-  }
-}
-
-// Refund credits to a user (e.g. when a generation fails server-side)
-export async function refundCredit(
-  userId: string,
-  cost: number,
-  ref: { toolId?: string; jobId?: string; projectId?: string; pageId?: string; reason?: string } = {}
-): Promise<boolean> {
-  const db = getFirestore();
-  const userCreditsRef = doc(db, "userCredits", userId);
-
-  try {
-    await runTransaction(db, async (transaction) => {
-      const userCreditsDoc = await transaction.get(userCreditsRef);
-
-      if (!userCreditsDoc.exists()) {
-        console.error(`User credits document for ${userId} does not exist in refundCredit transaction.`);
-        throw new Error("User credits not initialized.");
-      }
-
-      transaction.update(userCreditsRef, {
-        balance: increment(cost),
-        used: increment(-cost),
-        usageHistory: arrayUnion({
-          type: "refund",
-          cost,
-          toolId: ref.toolId ?? null,
-          jobId: ref.jobId ?? null,
-          projectId: ref.projectId ?? null,
-          pageId: ref.pageId ?? null,
-          reason: ref.reason ?? null,
-          date: Timestamp.now()
-        }),
-        lastUpdated: Timestamp.now()
-      });
-    });
-
-    if (process.env.NODE_ENV !== "production") console.log(`Credit refunded successfully for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}`);
-    return true;
-  } catch (error: any) {
-    console.error(`Failed to refund credit for user ${userId}, cost ${cost}, ref ${JSON.stringify(ref)}. Error: ${error.message}`);
-    return false;
-  }
-}
+// NOTE: client-side useCredit / refundCredit were removed in the multi-tool
+// rebuild. Credit deduct + refund are now exclusively a server-side operation
+// (functions/src/credit-ledger.ts), wrapped inside the generateForTool Cloud
+// Function. Keeping orphan client helpers here would have caused split-brain
+// once the migration moved usage events to a subcollection.
 
 // Add purchased credits to user's balance
 export async function addCredits(userId: string, packageId: string, creditAmount: number, pricePaid: number): Promise<void> {

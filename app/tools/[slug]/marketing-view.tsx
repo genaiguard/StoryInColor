@@ -32,7 +32,12 @@ const WELLNESS_DISCLAIMER: Record<string, string> = {
 export default function MarketingView({ tool }: { tool: Tool }) {
   const ctaHref = `/login?register=true&next=/tools/${tool.slug}`;
   const sample = tool.seo.sampleImage || tool.coverImage;
-  const showSample = sample !== tool.coverImage;
+  // When sampleImage is left identical to coverImage in the registry it means
+  // a real sample output hasn't been shipped yet. Render the section anyway
+  // (SEO content density) but flag the image as a placeholder. As soon as
+  // the registry gets a distinct /images/tools/<slug>-sample.webp the badge
+  // disappears automatically.
+  const isPlaceholderSample = sample === tool.coverImage;
   const wellnessNotice = WELLNESS_DISCLAIMER[tool.id];
 
   return (
@@ -185,27 +190,31 @@ export default function MarketingView({ tool }: { tool: Tool }) {
           </ol>
         </section>
 
-        {/* Sample output — only shown when distinct from the cover image */}
-        {showSample && (
-          <section className="mt-16">
-            <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
-              Sample output
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              A preview of the editorial layout you receive.
-            </p>
-            <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={sample}
-                alt={`${tool.name} sample output`}
-                width={1200}
-                height={800}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          </section>
-        )}
+        {/* Sample output */}
+        <section className="mt-16">
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+            Sample output
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            A preview of the editorial layout you receive.
+          </p>
+          <div className="relative mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={sample}
+              alt={`${tool.name} sample output`}
+              width={1200}
+              height={800}
+              className="h-full w-full object-cover"
+            />
+            {isPlaceholderSample && (
+              <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200">
+                Real sample coming soon — placeholder
+              </span>
+            )}
+          </div>
+        </section>
+
 
         {/* FAQ */}
         <section className="mt-16">
