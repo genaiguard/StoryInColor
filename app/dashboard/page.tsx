@@ -17,7 +17,8 @@ import { trackEvent } from "@/components/tracking/facebook-pixel"
 // Job doc as stored in users/{uid}/jobs/{jobId}. We subscribe to jobs (not
 // generations) so in-progress and failed jobs are visible alongside finished
 // ones — generation docs only exist on success and would hide pending work.
-interface GenerationDoc {
+// Renamed from GenerationDoc since the doc actually represents a Job.
+interface JobDoc {
   generationId?: string
   jobId: string
   toolId: string
@@ -72,7 +73,7 @@ export default function DashboardPage() {
   const [pollingComplete, setPollingComplete] = useState<boolean>(false)
 
   // Generations
-  const [generations, setGenerations] = useState<GenerationDoc[]>([])
+  const [generations, setGenerations] = useState<JobDoc[]>([])
   const [isLoadingGenerations, setIsLoadingGenerations] = useState<boolean>(true)
   const [generationsError, setGenerationsError] = useState<string>("")
   const [activeCategory, setActiveCategory] = useState<ToolCategory | "all">("all")
@@ -200,8 +201,8 @@ export default function DashboardPage() {
       unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          const items: GenerationDoc[] = snapshot.docs.map((d) => {
-            const data = d.data() as Partial<GenerationDoc>
+          const items: JobDoc[] = snapshot.docs.map((d) => {
+            const data = d.data() as Partial<JobDoc>
             return {
               generationId: data.generationId,
               jobId: data.jobId || d.id,

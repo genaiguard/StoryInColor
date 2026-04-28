@@ -28,7 +28,9 @@ export default function ResultView({ tool }: Props) {
       const next = jobId
         ? `/tools/${tool.slug}/result?jobId=${encodeURIComponent(jobId)}`
         : `/tools/${tool.slug}`;
-      router.replace(`/login?register=true&next=${encodeURIComponent(next)}`);
+      // No `register=true` — a session expiring mid-job belongs to an existing
+      // user, not someone trying to sign up.
+      router.replace(`/login?next=${encodeURIComponent(next)}`);
     }
   }, [initialized, loading, user, router, jobId, tool.slug]);
 

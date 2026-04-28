@@ -118,11 +118,20 @@
 }
 
 
-/* Tool page dual-mode visibility:
-   server emits both [data-tool-marketing] (SEO) and [data-tool-workflow]
-   (auth UI). The client workflow sets data-tool-auth on <html> after the
-   Firebase auth state resolves, and we toggle which is visible.            */
+/* Tool page dual-mode visibility.
+   Server emits BOTH [data-tool-marketing] (SEO) and [data-tool-workflow]
+   (the auth UI). The client workflow sets data-tool-auth on <html> after
+   Firebase auth state resolves; we toggle which surface is visible.
+
+   Default (no JS / loading / signed-out): marketing visible, workflow hidden.
+   This is the SEO-default — crawlers without JS see only the marketing
+   surface, which is what's indexed. The explicit signed-out rule below is
+   redundant with the default but kept for grep-ability and intent clarity. */
 [data-tool-workflow] { display: none; }
-html[data-tool-auth="signed-in"] [data-tool-marketing] { display: none; }
-html[data-tool-auth="signed-in"] [data-tool-workflow] { display: block; }
+html[data-tool-auth="signed-out"] [data-tool-workflow] { display: none; }
+html[data-tool-auth="signed-out"] [data-tool-marketing] { display: block; }
+html[data-tool-auth="loading"]    [data-tool-workflow] { display: none; }
+html[data-tool-auth="loading"]    [data-tool-marketing] { display: block; }
+html[data-tool-auth="signed-in"]  [data-tool-marketing] { display: none; }
+html[data-tool-auth="signed-in"]  [data-tool-workflow] { display: block; }
 

@@ -1,4 +1,5 @@
-import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, Timestamp, arrayUnion } from "firebase/firestore"
+import { getFirestore, doc, getDoc, Timestamp } from "firebase/firestore"
+import { getFunctions, httpsCallable } from "firebase/functions"
 
 // Constants
 export const FREE_CREDITS_PER_USER = 2;
@@ -12,7 +13,8 @@ export interface CreditPackage {
   discountPercentage: number;
 }
 
-// Credit packages configuration
+// Credit packages configuration. Mirrors functions/src/credit-packages.ts —
+// keep them in sync by hand (no shared module across the two npm trees).
 export const CREDIT_PACKAGES: CreditPackage[] = [
   {
     id: 'small',
@@ -73,90 +75,43 @@ export interface CreditUsageEvent {
   date: Timestamp;
 }
 
-// Initialize user credits in Firestore
+// SECURITY: userCredits/{uid} is locked to admin-only writes in
+// firestore.rules. The client cannot setDoc directly. New users are
+// bootstrapped through the `ensureUserCredits` callable Cloud Function
+// (server-side, idempotent, bypasses rules via admin SDK).
 export async function initializeUserCredits(userId: string): Promise<UserCredits> {
+  const functions = getFunctions();
+  const ensure = httpsCallable(functions, "ensureUserCredits");
+  await ensure({});
+  // Re-read the doc (now guaranteed to exist on the server side)
   const db = getFirestore();
-  const userCreditsRef = doc(db, "userCredits", userId);
-  
-  // Check if user credits document already exists
-  const userCreditsDoc = await getDoc(userCreditsRef);
-  
-  if (!userCreditsDoc.exists()) {
-    // Create timestamp for consistent use
-    const currentTimestamp = Timestamp.now();
-    
-    // Create new user credits document with initial free credits.
-    // usageHistory has moved to a subcollection — see CreditUsageEvent.
-    const initialCredits: UserCredits = {
-      balance: FREE_CREDITS_PER_USER,
-      used: 0,
-      purchaseHistory: [{
-        packageId: 'initial',
-        creditAmount: FREE_CREDITS_PER_USER,
-        pricePaid: 0, // Free
-        purchaseDate: currentTimestamp,
-        isInitialCredits: true
-      }],
-      lastUpdated: currentTimestamp,
-    };
-    
-    await setDoc(userCreditsRef, initialCredits);
-    return initialCredits;
+  const snap = await getDoc(doc(db, "userCredits", userId));
+  if (!snap.exists()) {
+    throw new Error("ensureUserCredits succeeded but userCredits doc still missing");
   }
-  
-  // Return existing credits
-  return userCreditsDoc.data() as UserCredits;
+  return snap.data() as UserCredits;
 }
 
-// Get user's current credits
+// Get user's current credits — bootstraps the doc on first read.
 export async function getUserCredits(userId: string): Promise<UserCredits> {
   const db = getFirestore();
-  const userCreditsRef = doc(db, "userCredits", userId);
-  
-  // Get user credits document
-  const userCreditsDoc = await getDoc(userCreditsRef);
-  
-  // If credits don't exist, initialize them
-  if (!userCreditsDoc.exists()) {
-    return initializeUserCredits(userId);
+  const snap = await getDoc(doc(db, "userCredits", userId));
+  if (snap.exists()) {
+    return snap.data() as UserCredits;
   }
-  
-  // Return existing credits
-  return userCreditsDoc.data() as UserCredits;
+  return initializeUserCredits(userId);
 }
 
-// NOTE: client-side useCredit / refundCredit were removed in the multi-tool
-// rebuild. Credit deduct + refund are now exclusively a server-side operation
-// (functions/src/credit-ledger.ts), wrapped inside the generateForTool Cloud
-// Function. Keeping orphan client helpers here would have caused split-brain
-// once the migration moved usage events to a subcollection.
-
-// Add purchased credits to user's balance
-export async function addCredits(userId: string, packageId: string, creditAmount: number, pricePaid: number): Promise<void> {
-  const db = getFirestore();
-  const userCreditsRef = doc(db, "userCredits", userId);
-
-  // Ensure user credits document exists, otherwise initialize it.
-  const userCreditsSnap = await getDoc(userCreditsRef);
-  if (!userCreditsSnap.exists()) {
-    // Initialize credits. Note: initializeUserCredits itself adds an initial purchase history entry.
-    // We are adding another one here for the actual purchase.
-    await initializeUserCredits(userId);
-  }
-  
-  await updateDoc(userCreditsRef, {
-    balance: increment(creditAmount),
-    purchaseHistory: arrayUnion({ // Using arrayUnion for atomic and non-duplicative addition
-      packageId,
-      creditAmount,
-      pricePaid,
-      purchaseDate: Timestamp.now()
-    }),
-    lastUpdated: Timestamp.now()
-  });
-}
+// NOTE: client-side useCredit / refundCredit / addCredits were removed in the
+// multi-tool rebuild. ALL writes to userCredits go through Cloud Functions
+// (admin SDK bypasses the locked-down firestore.rules):
+//   - generateForTool: deducts on dispatch, refunds on failure
+//   - stripeWebhook: increments balance on checkout.session.completed
+//   - ensureUserCredits: idempotent bootstrap on first sign-in
+// Keeping client helpers that wrote the same fields would have created
+// split-brain and let a malicious client forge balance.
 
 // Get formatted credit balance for display
 export function formatCreditBalance(credits: number): string {
   return credits === 1 ? "1 credit" : `${credits} credits`;
-} 
+}

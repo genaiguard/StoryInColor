@@ -5,16 +5,19 @@ Allow: /
 # Sitemap location
 Sitemap: https://storyincolor.com/sitemap.xml
 
-# Prevent crawling of admin and private areas
-Disallow: /api/
+# Prevent crawling of admin and authed areas
 Disallow: /admin/
 Disallow: /dashboard/
 Disallow: /_next/
 Disallow: /static/
-Disallow: /create/
 Disallow: /login/
 
 # Allow crawling of important content
 Allow: /contact/
 Allow: /privacy/
 Allow: /terms/
+Allow: /tools/
+
+# /create is a 0-second meta-refresh redirect with canonical pointing at
+# /tools/coloring-book. It must be crawlable so the redirect/canonical
+# signals can pass authority from old backlinks.

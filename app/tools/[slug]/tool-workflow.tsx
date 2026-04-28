@@ -221,19 +221,37 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
       // Fire-and-forget: the Cloud Function continues running on the server
       // even if the client disconnects, and it writes the final state to
       // users/{uid}/jobs/{jobId} which the result page is subscribed to.
-      // We still surface uncaught errors via console.error so they show up
-      // in Sentry-style telemetry if present; the user-facing failure path
-      // is the job doc flipping to status=failed (which the result page
-      // surfaces as "Generation failed — credits refunded").
-      void generate({
+      const generatePromise = generate({
         toolId: tool.id,
         photoStoragePath: storagePath,
         jobId,
-      }).catch((err) => {
-        console.error("generateForTool error:", err);
       });
 
       router.push(`/tools/${tool.slug}/result?jobId=${jobId}`);
+
+      // FAST-FAIL bounce-back: rate-limit / insufficient credits / unknown
+      // toolId / forbidden storage path all reject BEFORE any job doc is
+      // written. Without this handler the result page would spin forever
+      // waiting for a job that never exists. On those error codes, route the
+      // user back to the workflow with a toast. After the deduction
+      // transaction succeeds, the catch path is irrelevant (the job doc
+      // exists and the result page subscribes to it).
+      generatePromise.catch((err: any) => {
+        const code = String(err?.code ?? "");
+        const fastFailCodes = [
+          "resource-exhausted",
+          "failed-precondition",
+          "invalid-argument",
+          "permission-denied",
+          "unauthenticated",
+        ];
+        if (fastFailCodes.some((c) => code.endsWith(c))) {
+          toast.error(err?.message ?? "Couldn't start generation");
+          router.replace(`/tools/${tool.slug}`);
+          return;
+        }
+        console.error("generateForTool error:", err);
+      });
     } catch (err: any) {
       console.error("Generate error:", err);
       const message =

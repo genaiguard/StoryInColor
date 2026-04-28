@@ -26,7 +26,17 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const showRegister = searchParams?.get("register") === "true"
   const nextParam = searchParams?.get("next")
-  const safeNext = nextParam && nextParam.startsWith("/") ? nextParam : null
+  // Defense against open-redirect via protocol-relative URLs and Windows-style
+  // backslash paths. router.push("//evil.com/foo") would navigate externally;
+  // router.push("/\\evil.com") normalises the same way on some clients.
+  // Allow only same-origin absolute paths.
+  const safeNext =
+    nextParam &&
+    nextParam.startsWith("/") &&
+    !nextParam.startsWith("//") &&
+    !nextParam.startsWith("/\\")
+      ? nextParam
+      : null
   const [activeTab, setActiveTab] = useState(showRegister ? "register" : "login")
   const { signIn, signUp, googleSignIn, resetPassword } = useFirebase()
 

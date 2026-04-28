@@ -2,7 +2,7 @@ import type { Tool } from "./types";
 
 const PHOTO_PRIVACY_FAQ = {
   q: "Will my photo be saved?",
-  a: "Your upload is processed immediately and the original is retained only for your generation history; you can delete it at any time from your dashboard.",
+  a: "Your upload is processed immediately to generate your result and is retained for your generation history so you can re-download it. Photos are sent to our AI processing provider (OpenAI) for the generation step only; we do not share them for training. You can delete your account and the associated uploads at any time from your account settings.",
 };
 
 export const TOOLS: Tool[] = [
@@ -123,7 +123,7 @@ export const TOOLS: Tool[] = [
         },
         {
           q: "Is it safe?",
-          a: "Yes. Photos are processed over a secure connection and never shared. Reports are generated for you only.",
+          a: "Photos are sent over HTTPS and shared only with our AI processing provider (OpenAI) for the generation step. Reports are stored on your account and visible only to you.",
         },
         PHOTO_PRIVACY_FAQ,
       ],
@@ -150,7 +150,7 @@ export const TOOLS: Tool[] = [
       whatYouGet: [
         "Your dominant aura colors and what they suggest",
         "A seven-layer auric reading from etheric to spiritual",
-        "A soft watercolor halo composited around your portrait",
+        "A soft watercolor halo composited around a stylized portrait",
         "A chakra connection map paired with the aura colors",
       ],
       faq: [
@@ -187,7 +187,7 @@ export const TOOLS: Tool[] = [
       metaTitle:
         "AI iridology — wellness reflection from your iris | StoryInColor",
       metaDescription:
-        "Upload a close-up photo of your iris and get a beautifully-laid-out wellness reflection — iris zones, the autonomic nerve wreath, and observations in a soft neutral aesthetic.",
+        "Upload a close-up photo of your iris and get a beautifully-laid-out wellness reflection — iris zones, the autonomic nerve wreath, and observations in a soft neutral aesthetic. For entertainment, not a medical diagnosis.",
       whatYouGet: [
         "Iris zone map overlaid on a contour of your own eye",
         "Observations of the autonomic nerve wreath and visible markings",
@@ -351,8 +351,8 @@ export const TOOLS: Tool[] = [
       metaDescription:
         "Snap a top-down photo of your meal and get a dietitian-style infographic — estimated macro split, portion balance, and plating notes in a clean editorial layout.",
       whatYouGet: [
-        "Estimated macro split (protein, carbs, fats, fiber)",
-        "A portion balance read across food groups",
+        "Estimated macro split (protein, carbs, fats)",
+        "A portion balance read across food groups, including fiber and produce coverage",
         "Plating and color-theory notes",
         "A dietitian-style infographic you can save",
       ],

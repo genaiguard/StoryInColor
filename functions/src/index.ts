@@ -1673,3 +1673,4 @@ export const disableCurrentUserAccount = onCall(
 );
 
 export * from "./generate-for-tool";
+export * from "./ensure-user-credits";

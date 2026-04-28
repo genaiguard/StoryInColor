@@ -23,7 +23,7 @@
     "@types/pdfkit": "^0.13.9",
     "aws-sdk": "^2.1692.0",
     "cors": "^2.8.5",
-    "firebase-admin": "^11.11.1",
+    "firebase-admin": "^12.7.0",
     "firebase-functions": "^6.3.2",
     "form-data": "^4.0.4",
     "node-fetch": "^2.7.0",
@@ -35,7 +35,6 @@
   },
   "devDependencies": {
     "@types/node-fetch": "^2.6.12",
-    "@types/sharp": "^0.31.1",
     "@types/uuid": "^9.0.0",
     "typescript": "^5.1.6"
   },

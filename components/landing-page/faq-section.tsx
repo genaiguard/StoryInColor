@@ -47,7 +47,7 @@ const FAQS: FAQ[] = [
     value: "storage",
     question: "Do you store my photo after generation?",
     answer:
-      "We keep your uploads only as long as needed to deliver and re-deliver your result from your dashboard. You can request deletion at any time from your account settings.",
+      "We retain uploads as part of your generation history so you can re-download results from your dashboard. Photos are sent to our AI processing provider (OpenAI) for the generation step only and are not used for training. You can delete your account and all associated uploads at any time from your account settings.",
   },
   {
     value: "medical",

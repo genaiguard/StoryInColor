@@ -42,10 +42,14 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // User credit ledger
+    // User credit ledger — owner can READ only. ALL writes happen via Cloud
+    // Functions (admin SDK bypasses these rules): ensureUserCredits bootstrap,
+    // stripeWebhook on purchase, generateForTool on deduct + refund. If the
+    // owner could write here they could grant themselves unlimited balance
+    // from the browser console.
     match /userCredits/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read, write: if isAdmin();
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
     }
     // Per-event usage subcollection — server-only writes (admin SDK bypasses).
     // Owner can read their own audit log; client cannot forge events.
