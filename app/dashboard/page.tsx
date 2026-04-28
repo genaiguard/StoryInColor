@@ -468,7 +468,7 @@ export default function DashboardPage() {
                 {filteredGenerations.map((gen) => {
                   const tool = getToolById(gen.toolId)
                   const href = tool
-                    ? `/tools/${tool.slug}/result?jobId=${encodeURIComponent(gen.jobId)}`
+                    ? `/readings/${tool.slug}/result?jobId=${encodeURIComponent(gen.jobId)}`
                     : "#"
                   const isProcessing = gen.status === "processing"
                   const isFailed = gen.status === "failed"

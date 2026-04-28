@@ -38,7 +38,7 @@ export default function Footer() {
               {TOOLS.map((tool) => (
                 <li key={tool.id}>
                   <Link
-                    href={`/tools/${tool.slug}`}
+                    href={`/readings/${tool.slug}`}
                     className="text-sm text-gray-600 hover:text-orange-500 transition-colors"
                   >
                     {tool.name}

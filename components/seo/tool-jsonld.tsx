@@ -39,7 +39,7 @@ export function ToolJsonLd({ tool }: { tool: Tool }) {
           url: "https://storyincolor.com",
         },
         areaServed: { "@type": "Country", name: "Worldwide" },
-        url: new URL(`/tools/${tool.slug}`, "https://storyincolor.com").toString(),
+        url: new URL(`/readings/${tool.slug}`, "https://storyincolor.com").toString(),
         image: new URL(tool.coverImage, "https://storyincolor.com").toString(),
         offers: {
           "@type": "AggregateOffer",

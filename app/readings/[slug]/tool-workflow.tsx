@@ -227,7 +227,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
         jobId,
       });
 
-      router.push(`/tools/${tool.slug}/result?jobId=${jobId}`);
+      router.push(`/readings/${tool.slug}/result?jobId=${jobId}`);
 
       // FAST-FAIL bounce-back: rate-limit / insufficient credits / unknown
       // toolId / forbidden storage path all reject BEFORE any job doc is
@@ -247,7 +247,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
         ];
         if (fastFailCodes.some((c) => code.endsWith(c))) {
           toast.error(err?.message ?? "Couldn't start generation");
-          router.replace(`/tools/${tool.slug}`);
+          router.replace(`/readings/${tool.slug}`);
           return;
         }
         console.error("generateForTool error:", err);

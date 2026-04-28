@@ -26,8 +26,8 @@ export default function ResultView({ tool }: Props) {
   useEffect(() => {
     if (initialized && !loading && !user) {
       const next = jobId
-        ? `/tools/${tool.slug}/result?jobId=${encodeURIComponent(jobId)}`
-        : `/tools/${tool.slug}`;
+        ? `/readings/${tool.slug}/result?jobId=${encodeURIComponent(jobId)}`
+        : `/readings/${tool.slug}`;
       // No `register=true` — a session expiring mid-job belongs to an existing
       // user, not someone trying to sign up.
       router.replace(`/login?next=${encodeURIComponent(next)}`);
@@ -107,7 +107,7 @@ export default function ResultView({ tool }: Props) {
                   asChild
                   className="bg-orange-500 text-white hover:bg-orange-600"
                 >
-                  <Link href={`/tools/${tool.slug}`}>
+                  <Link href={`/readings/${tool.slug}`}>
                     Back to {tool.name}
                   </Link>
                 </Button>
@@ -136,7 +136,7 @@ export default function ResultView({ tool }: Props) {
                   variant="outline"
                   className="border-red-300 text-red-800 hover:bg-red-100"
                 >
-                  <Link href={`/tools/${tool.slug}`}>
+                  <Link href={`/readings/${tool.slug}`}>
                     Back to {tool.name}
                   </Link>
                 </Button>
@@ -180,7 +180,7 @@ export default function ResultView({ tool }: Props) {
                   asChild
                   className="bg-orange-500 text-white hover:bg-orange-600"
                 >
-                  <Link href={`/tools/${tool.slug}`}>Try again</Link>
+                  <Link href={`/readings/${tool.slug}`}>Try again</Link>
                 </Button>
                 <Button asChild variant="outline">
                   <Link href="/dashboard">Back to dashboard</Link>
@@ -249,7 +249,7 @@ export default function ResultView({ tool }: Props) {
                 Share
               </Button>
               <Button asChild variant="outline">
-                <Link href={`/tools/${tool.slug}`}>Generate another</Link>
+                <Link href={`/readings/${tool.slug}`}>Generate another</Link>
               </Button>
               <Button asChild variant="ghost">
                 <Link href="/dashboard">Back to dashboard</Link>
