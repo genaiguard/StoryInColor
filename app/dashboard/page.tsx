@@ -397,7 +397,7 @@ export default function DashboardPage() {
           {/* Tool grid */}
           <section className="mb-10 md:mb-12">
             <h2 className="text-lg md:text-xl font-semibold mb-4">Choose a tool</h2>
-            <ToolGrid showCategoryChips={false} />
+            <ToolGrid showCategoryChips={false} showCost />
           </section>
 
           {/* Recent generations */}

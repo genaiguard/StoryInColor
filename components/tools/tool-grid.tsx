@@ -7,6 +7,9 @@ import { ToolCard } from "./tool-card";
 export interface ToolGridProps {
   tools?: Tool[];
   showCategoryChips?: boolean;
+  /** Whether each tile shows its per-generation credit cost. OFF on
+   *  public/marketing surfaces (don't lead with price); ON on dashboard. */
+  showCost?: boolean;
 }
 
 const CATEGORIES: Array<{ id: ToolCategory | "all"; label: string }> = [
@@ -16,7 +19,7 @@ const CATEGORIES: Array<{ id: ToolCategory | "all"; label: string }> = [
   { id: "analysis", label: "Analysis" },
 ];
 
-export function ToolGrid({ tools = TOOLS, showCategoryChips = false }: ToolGridProps) {
+export function ToolGrid({ tools = TOOLS, showCategoryChips = false, showCost = false }: ToolGridProps) {
   const [active, setActive] = useState<ToolCategory | "all">("all");
   const filtered = active === "all" ? tools : tools.filter((t) => t.category === active);
 
@@ -45,7 +48,7 @@ export function ToolGrid({ tools = TOOLS, showCategoryChips = false }: ToolGridP
       )}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
         {filtered.map((t) => (
-          <ToolCard key={t.id} tool={t} />
+          <ToolCard key={t.id} tool={t} showCost={showCost} />
         ))}
       </div>
     </div>

@@ -45,7 +45,7 @@ export default function BlogPage() {
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-8 text-center">
           <h3 className="text-2xl font-bold mb-4">Eleven AI photo tools. One upload. Pick yours.</h3>
           <p className="text-gray-700 mb-6 max-w-2xl mx-auto">
-            From print-ready coloring pages to a magazine-style palm reading,
+            From a one-tap coloring book to a magazine-style palm reading,
             StoryInColor turns one photo into a finished, share-ready result in
             roughly 20 to 40 seconds.
           </p>

@@ -7,9 +7,15 @@ export interface ToolCardProps {
   tool: Tool;
   href?: string;
   size?: "sm" | "md" | "lg";
+  /**
+   * Show the per-generation credit cost as a pill on the card.
+   * Default OFF — public marketing surfaces should not lead with price.
+   * Pass true from the dashboard where the signed-in user wants the info.
+   */
+  showCost?: boolean;
 }
 
-export function ToolCard({ tool, href, size = "md" }: ToolCardProps) {
+export function ToolCard({ tool, href, size = "md", showCost = false }: ToolCardProps) {
   const target = href ?? `/tools/${tool.slug}`;
   const aspect =
     size === "sm" ? "aspect-[4/5]" : size === "lg" ? "aspect-[2/3]" : "aspect-[3/4]";
@@ -33,9 +39,11 @@ export function ToolCard({ tool, href, size = "md" }: ToolCardProps) {
           <h3 className="text-lg font-semibold text-gray-900 leading-tight">
             {tool.name}
           </h3>
-          <span className="shrink-0 rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-700">
-            {costLabel}
-          </span>
+          {showCost && (
+            <span className="shrink-0 rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-700">
+              {costLabel}
+            </span>
+          )}
         </div>
         <p className="text-sm text-gray-600 line-clamp-2">{tool.tagline}</p>
       </div>

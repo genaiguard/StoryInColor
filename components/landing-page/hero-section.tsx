@@ -10,119 +10,109 @@ interface HeroSectionProps {
   scrollToSection?: (id: string) => void
 }
 
-export default function HeroSection({ scrollToSection }: HeroSectionProps) {
-  const handleHowItWorks = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (scrollToSection) {
-      e.preventDefault()
-      scrollToSection("how-it-works")
-    }
-  }
-
+export default function HeroSection({ scrollToSection: _scrollToSection }: HeroSectionProps) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-[#fbf8f6] via-[#f7f4f3] to-[#f7f4f3] border-b py-14 md:py-20 lg:py-24">
-      {/* Soft background blobs */}
-      <div className="pointer-events-none absolute -top-[10%] -right-[5%] w-[50%] h-[50%] rounded-full bg-gradient-to-r from-purple-100 to-pink-100 blur-3xl opacity-60" />
-      <div className="pointer-events-none absolute bottom-[10%] -left-[5%] w-[35%] h-[35%] rounded-full bg-gradient-to-r from-orange-100 to-amber-100 blur-3xl opacity-50" />
+    <section className="relative overflow-hidden border-b border-gray-200 bg-white py-20 md:py-28 lg:py-32">
+      {/* Subtle editorial background — no candy gradients. */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(251,146,60,0.08),transparent_50%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(168,85,247,0.06),transparent_50%)]" />
 
-      <div className="container mx-auto max-w-7xl px-6 md:px-8 relative z-10">
-        <div className="grid gap-10 lg:grid-cols-2 lg:gap-12 items-center">
-          {/* Left: text + CTAs */}
-          <div className="flex flex-col justify-center space-y-6">
-            <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-[64px] lg:leading-[1.05]">
-              Upload a photo.
-              <br className="hidden md:block" />{" "}
-              <span className="bg-gradient-to-r from-purple-600 via-red-500 to-orange-500 bg-clip-text text-transparent">
-                Get something incredible
-              </span>{" "}
-              back.
+      <div className="container relative z-10 mx-auto max-w-7xl px-6 md:px-8">
+        <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
+          {/* Left: editorial typography */}
+          <div className="flex flex-col gap-7">
+            {/* Eyebrow */}
+            <div className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+              <span className="h-px w-8 bg-gray-300" aria-hidden="true" />
+              {`${TOOL_COUNT_WORD} AI photo tools`}
+            </div>
+
+            <h1 className="font-bold tracking-[-0.025em] text-gray-900 text-[44px] leading-[1.02] sm:text-[56px] md:text-[68px] lg:text-[76px]">
+              Your photo,
+              <br />
+              <span className="italic text-orange-600">{TOOL_COUNT_WORD.toLowerCase()} ways.</span>
             </h1>
-            <p className="max-w-[600px] text-gray-700 md:text-xl">
-              {TOOL_COUNT_WORD} AI photo tools — palmistry, face reading, style audits, plant care, and more. One upload.
-              One credit click. A finished, magazine-quality result in seconds.
+
+            <p className="max-w-[560px] text-lg text-gray-600 md:text-xl">
+              Palm reading, style audit, plant care, plate analysis, aura, iridology, handwriting, skincare glow, room vibes, face reading, coloring book — every tool starts with a single photo.
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Button
-                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 text-base font-medium rounded-full"
+                className="rounded-full bg-gray-900 px-7 py-6 text-base font-medium text-white hover:bg-gray-800"
                 asChild
               >
                 <Link href="/tools">
-                  Try a tool free <ArrowRight className="ml-1 h-4 w-4" />
+                  Start free <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
               <Button
-                variant="outline"
-                className="px-6 py-3 text-base font-medium rounded-full border-gray-300"
+                variant="ghost"
+                className="rounded-full px-6 py-6 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                 asChild
               >
-                <Link href="#how-it-works" onClick={handleHowItWorks}>
-                  How it works
-                </Link>
+                <Link href="#pricing">See pricing</Link>
               </Button>
             </div>
 
-            {/* Social proof */}
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="flex text-orange-500" aria-hidden>
-                {"★ ★ ★ ★ ★"}
-              </span>
-              <span>Trusted by thousands of creators</span>
-            </div>
+            <p className="text-sm text-gray-500">
+              Free starter credits · No credit card · Results in 20–40 seconds
+            </p>
           </div>
 
-          {/* Right: 2x2 layered editorial collage */}
-          <div className="relative flex items-center justify-center lg:justify-end">
-            <div className="relative w-full max-w-[560px] aspect-square">
-              {/* Top-left card - palm-reading */}
-              <div className="absolute left-0 top-0 w-1/2 h-1/2 p-2 md:p-3">
-                <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5 -rotate-3 bg-white">
-                  <Image
-                    src="/images/tools/palm-reading.webp"
-                    alt="Palm reading sample result"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1023px) 50vw, 280px"
-                    priority
-                  />
+          {/* Right: clean editorial collage — no rotations, no shadows */}
+          <div className="relative">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-gray-100">
+                <Image
+                  src="/images/tools/palm-reading.webp"
+                  alt="Palm reading"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1023px) 50vw, 320px"
+                  priority
+                />
+                <div className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-900 shadow-sm ring-1 ring-black/5">
+                  Palm reading
                 </div>
               </div>
 
-              {/* Top-right card - style-audit */}
-              <div className="absolute right-0 top-0 w-1/2 h-1/2 p-2 md:p-3">
-                <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5 rotate-3 bg-white">
-                  <Image
-                    src="/images/tools/style-audit.webp"
-                    alt="Style audit sample result"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1023px) 50vw, 280px"
-                  />
+              <div className="relative aspect-[3/4] translate-y-8 overflow-hidden rounded-2xl bg-gray-100">
+                <Image
+                  src="/images/tools/style-audit.webp"
+                  alt="Style audit"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1023px) 50vw, 320px"
+                />
+                <div className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-900 shadow-sm ring-1 ring-black/5">
+                  Style audit
                 </div>
               </div>
 
-              {/* Bottom-left card - aura-reading */}
-              <div className="absolute left-0 bottom-0 w-1/2 h-1/2 p-2 md:p-3">
-                <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5 rotate-2 bg-white">
-                  <Image
-                    src="/images/tools/aura-reading.webp"
-                    alt="Aura reading sample result"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1023px) 50vw, 280px"
-                  />
+              <div className="relative aspect-[3/4] -translate-y-2 overflow-hidden rounded-2xl bg-gray-100">
+                <Image
+                  src="/images/tools/aura-reading.webp"
+                  alt="Aura reading"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1023px) 50vw, 320px"
+                />
+                <div className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-900 shadow-sm ring-1 ring-black/5">
+                  Aura
                 </div>
               </div>
 
-              {/* Bottom-right card - coloring-book */}
-              <div className="absolute right-0 bottom-0 w-1/2 h-1/2 p-2 md:p-3">
-                <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5 -rotate-2 bg-white">
-                  <Image
-                    src="/images/tools/coloring-book.webp"
-                    alt="Coloring book sample result"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1023px) 50vw, 280px"
-                  />
+              <div className="relative aspect-[3/4] translate-y-6 overflow-hidden rounded-2xl bg-gray-100">
+                <Image
+                  src="/images/tools/plate-analysis.webp"
+                  alt="Plate analysis"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1023px) 50vw, 320px"
+                />
+                <div className="absolute bottom-3 left-3 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-900 shadow-sm ring-1 ring-black/5">
+                  Plate analysis
                 </div>
               </div>
             </div>

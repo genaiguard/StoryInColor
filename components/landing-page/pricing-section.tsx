@@ -2,272 +2,88 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Check, Gift, Sparkles, Folders, Download } from "lucide-react"
-import { PathImg } from "@/components/ui/pathed-image"
-import { motion, useScroll, useTransform } from "framer-motion"
-import { useRef, useState } from "react"
+import { ArrowRight } from "lucide-react"
 import { trackEvent } from "@/components/tracking/facebook-pixel"
 
+const PACKS = [
+  { credits: 5,  price: "$3.50", per: "$0.70 / credit", note: "Try it" },
+  { credits: 10, price: "$6",    per: "$0.60 / credit", note: "Most popular", highlight: true },
+  { credits: 20, price: "$10",   per: "$0.50 / credit", note: "Save 29%" },
+  { credits: 40, price: "$18",   per: "$0.45 / credit", note: "Save 36%" },
+] as const
+
 export default function PricingSection() {
-  const sectionRef = useRef(null)
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start end", "end start"],
-  })
-
-  const [hoverLeft, setHoverLeft] = useState(false)
-  const [hoverRight, setHoverRight] = useState(false)
-
-  // Scroll-based animations
-  const opacity = useTransform(scrollYProgress, [0, 0.2], [0, 1])
-  const y = useTransform(scrollYProgress, [0, 0.2], [100, 0])
-  const scale = useTransform(scrollYProgress, [0, 0.2], [0.9, 1])
-
-  // Card animation variants
-  const cardVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: 50, 
-      rotateX: 10,
-      transformPerspective: 1000
-    },
-    visible: (custom: number) => ({ 
-      opacity: 1, 
-      y: 0, 
-      rotateX: 0,
-      transition: { 
-        type: "spring", 
-        damping: 20, 
-        stiffness: 100, 
-        delay: 0.1 * custom 
-      } 
-    }),
-    hover: { 
-      y: -20,
-      scale: 1.02,
-      boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 20
-      }
-    }
-  }
-
-  // Title animation
-  const titleVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        damping: 15,
-        stiffness: 50
-      }
-    }
-  }
-
-  // Feature item animations
-  const featureVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: (i: number) => ({
-      opacity: 1,
-      x: 0,
-      transition: {
-        type: "spring",
-        damping: 10,
-        stiffness: 100,
-        delay: 0.05 * i
-      }
-    })
-  }
-
-  const featureList1 = [
-    { icon: <Gift className="h-5 w-5 text-orange-500" />, text: "Free starter credits on sign-up" },
-    { icon: <Sparkles className="h-5 w-5 text-orange-500" />, text: "Coloring book = 1 credit" },
-    { icon: <Folders className="h-5 w-5 text-orange-500" />, text: "All other tools = 10 credits each" },
-    { icon: <Download className="h-5 w-5 text-orange-500" />, text: "Instant download — keep forever" }
-  ]
-
-  const creditPackages = [
-    { credits: 5, price: "$3.50" },
-    { credits: 10, price: "$6" },
-    { credits: 20, price: "$10" },
-    { credits: 40, price: "$18" },
-  ]
-
-  const featureList2 = [
-    { icon: <Check className="h-5 w-5 text-gray-400" />, text: "Professionally printed" },
-    { icon: <Check className="h-5 w-5 text-gray-400" />, text: "Coloring book softcover" },
-    { icon: <Check className="h-5 w-5 text-gray-400" />, text: "Delivered to your door" },
-    { icon: <Check className="h-5 w-5 text-gray-400" />, text: "Perfect for gifts" }
-  ]
-
   return (
-    <section id="pricing" ref={sectionRef} className="py-12 md:py-16 lg:py-20 bg-amber-50 overflow-hidden relative">
-      {/* Background decoration elements */}
-      <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gradient-to-b from-orange-100 to-transparent opacity-70 rounded-bl-full"></div>
-      <div className="absolute bottom-0 left-0 w-1/4 h-1/4 bg-gradient-to-t from-orange-200 to-transparent opacity-50 rounded-tr-full"></div>
-      
-      <motion.div 
-        style={{ opacity, y, scale }}
-        className="container mx-auto max-w-7xl px-4 md:px-6 relative z-10"
-      >
-        <motion.div 
-          variants={titleVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          className="flex flex-col items-center justify-center space-y-4 text-center"
-        >
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Simple, transparent pricing</h2>
-            <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Buy credits, generate any tool. Coloring book = 1 credit. Premium tools = 10 credits each. Save up to 36% in larger packs.
-            </p>
+    <section id="pricing" className="bg-white py-24 md:py-32">
+      <div className="container mx-auto max-w-6xl px-6 md:px-8">
+        {/* Editorial header */}
+        <div className="mb-14 max-w-2xl">
+          <div className="mb-3 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+            <span className="h-px w-8 bg-gray-300" aria-hidden="true" />
+            Pricing
           </div>
-        </motion.div>
-
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 mt-12 justify-center">
-          <motion.div 
-            custom={0}
-            variants={cardVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
-            whileHover="hover"
-            onHoverStart={() => setHoverLeft(true)}
-            onHoverEnd={() => setHoverLeft(false)}
-            className="flex flex-col rounded-xl border-2 border-orange-500 bg-white p-6 shadow-lg order-1 lg:order-none relative overflow-hidden"
-          >
-            {/* Card accent */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-orange-500 to-pink-500"></div>
-            
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold">Print at home</h3>
-            </div>
-            <p className="text-gray-600 text-sm mb-5">
-              Buy credits, generate any tool. Coloring book = 1 credit. All other tools = 10 credits per generation.
-            </p>
-            <div className="grid grid-cols-2 gap-3 mb-5">
-              {creditPackages.map((pkg) => (
-                <div
-                  key={pkg.credits}
-                  className="rounded-lg border border-orange-100 bg-orange-50/60 px-3 py-2.5 text-center"
-                >
-                  <div className="text-lg font-bold text-orange-600">{pkg.price}</div>
-                  <div className="text-xs text-gray-600">{pkg.credits} credits</div>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-orange-600 font-medium text-center mb-2">
-              First 2 credits free on sign-up
-            </p>
-            <ul className="mt-6 space-y-4 flex-1">
-              {featureList1.map((feature, i) => (
-                <motion.li 
-                  key={i}
-                  custom={i}
-                  variants={featureVariants}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  className="flex items-center gap-2"
-                >
-                  <motion.div
-                    whileHover={{ rotate: 15, scale: 1.2 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                  >
-                    {feature.icon}
-                  </motion.div>
-                  <span>{feature.text}</span>
-                </motion.li>
-              ))}
-            </ul>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 400, damping: 15 }}
-              className="mt-6"
-            >
-              <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white" asChild>
-              <Link 
-                href="/login?register=true"
-                onClick={() => {
-                  trackEvent('InitiateCheckout', { 
-                    content_name: 'Pricing CTA - Try For Free',
-                    content_category: 'pricing'
-                  })
-                }}
-              >
-                Try For Free
-              </Link>
-            </Button>
-            </motion.div>
-          </motion.div>
-
-          <motion.div 
-            custom={1}
-            variants={cardVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
-            whileHover="hover"
-            onHoverStart={() => setHoverRight(true)}
-            onHoverEnd={() => setHoverRight(false)}
-            className="flex flex-col rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 shadow-sm order-2 lg:order-none relative overflow-hidden"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-600">Physical books</h3>
-              <div className="rounded-full bg-gray-200 px-2.5 py-0.5 text-sm text-gray-600">Coming soon</div>
-            </div>
-            <p className="text-gray-500 text-sm mb-5">
-              We're working on professionally printed keepsake books. Sign up to be the first to hear when they're ready.
-            </p>
-            <motion.div
-              animate={hoverRight ? { y: -5, scale: 1.05 } : {}}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              className="mb-4 flex justify-center opacity-60"
-            >
-              <PathImg
-                src="/images/product-standard.webp"
-                alt="Physical book — coming soon"
-                width={120}
-                height={120}
-                className="h-auto"
-              />
-            </motion.div>
-            <div className="mt-2 text-center text-gray-400">
-              <span className="text-xl font-semibold inline-block">
-                On the way
-              </span>
-            </div>
-            <ul className="mt-6 space-y-4 flex-1 text-gray-500">
-              {featureList2.map((feature, i) => (
-                <motion.li 
-                  key={i}
-                  custom={i}
-                  variants={featureVariants}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  className="flex items-center gap-2"
-                >
-                  {feature.icon}
-                  <span>{feature.text}</span>
-                </motion.li>
-              ))}
-            </ul>
-            <div className="mt-6">
-              <Button className="w-full bg-gray-300 text-gray-500 cursor-not-allowed" disabled>
-              Coming Soon
-            </Button>
-          </div>
-          </motion.div>
+          <h2 className="text-4xl font-bold tracking-[-0.02em] text-gray-900 md:text-5xl">
+            Pay-as-you-go credits.
+          </h2>
+          <p className="mt-4 text-lg text-gray-600">
+            Buy a pack, spend them on any tool. No subscriptions, no expiry, no surprise charges.
+          </p>
         </div>
-      </motion.div>
+
+        {/* Credit pack grid */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {PACKS.map((pack) => (
+            <div
+              key={pack.credits}
+              className={`relative rounded-2xl border bg-white p-6 transition-shadow ${
+                pack.highlight
+                  ? "border-gray-900 shadow-md"
+                  : "border-gray-200 hover:shadow-sm"
+              }`}
+            >
+              {pack.highlight && (
+                <span className="absolute -top-3 left-6 rounded-full bg-gray-900 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-white">
+                  {pack.note}
+                </span>
+              )}
+              <div className="text-sm text-gray-500">{pack.credits} credits</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-4xl font-bold tracking-tight text-gray-900">{pack.price}</span>
+              </div>
+              <div className="mt-2 text-sm text-gray-500">{pack.per}</div>
+              {!pack.highlight && (
+                <div className="mt-4 text-xs font-medium uppercase tracking-wider text-orange-600">
+                  {pack.note}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Single CTA + clarifier */}
+        <div className="mt-12 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+          <p className="max-w-xl text-sm text-gray-500">
+            Most tools use 10 credits per generation. The classic coloring book uses 1.
+            New accounts get free starter credits — no card required.
+          </p>
+          <Button
+            className="rounded-full bg-gray-900 px-7 py-6 text-base font-medium text-white hover:bg-gray-800"
+            asChild
+          >
+            <Link
+              href="/login?register=true"
+              onClick={() => {
+                trackEvent("InitiateCheckout", {
+                  content_name: "Pricing CTA",
+                  content_category: "pricing",
+                })
+              }}
+            >
+              Start free <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </div>
     </section>
   )
 }
-
