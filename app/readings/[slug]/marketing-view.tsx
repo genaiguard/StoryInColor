@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import Header from "@/components/landing-page/header";
 import Footer from "@/components/landing-page/footer";
 import type { Tool } from "@/lib/tools/types";
-import { TOOLS } from "@/lib/tools/registry";
 
 // Tools that touch wellness-adjacent territory need an inline, visible
 // non-medical disclaimer for legal cover — burying it inside an FAQ accordion
@@ -50,7 +49,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
           <ol className="flex items-center gap-1.5">
             <li>
               <Link href="/readings" className="hover:text-orange-600">
-                Tools
+                Readings
               </Link>
             </li>
             <li aria-hidden="true">/</li>
@@ -81,14 +80,11 @@ export default function MarketingView({ tool }: { tool: Tool }) {
                 href="/readings"
                 className="text-sm font-medium text-gray-700 hover:text-orange-600"
               >
-                See all {TOOLS.length} tools
+                See more readings
               </Link>
             </div>
             <p className="mt-4 text-xs text-gray-500">
-              {tool.creditCost === 1
-                ? "1 credit"
-                : `${tool.creditCost} credits`}{" "}
-              per generation. Free starter credits when you sign up.
+              Free starter credits when you sign up — no card required.
             </p>
           </div>
           <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
