@@ -22,26 +22,28 @@ import {
   Image as ImageIcon
 } from "lucide-react"
 import { useFirebase } from "@/app/firebase/firebase-provider"
-import { 
-  getFirestore, 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  orderBy, 
-  collectionGroup, 
-  doc, 
-  getDoc, 
-  updateDoc, 
-  serverTimestamp 
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  collectionGroup,
+  doc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
+  onSnapshot,
+  limit
 } from "firebase/firestore"
+import { TOOLS, getToolById } from "@/lib/tools/registry"
+import { formatDistanceToNow } from "date-fns"
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
 import { getConfiguredStorage, compressProcessedImage, getSignedDownloadURL } from "@/app/firebase/storage-helpers"
 import { PathImg } from "@/components/ui/pathed-image"
 import { toast } from "sonner"
 import { getFunctions, httpsCallable } from "firebase/functions"
-import { getAuth, onAuthStateChanged } from "firebase/auth"
-import { getApp } from "firebase/app"
 
 // Define types
 
@@ -111,6 +113,16 @@ interface GetUserDataResponse {
 // Admin emails allowed to access this interface
 const ADMIN_EMAILS = ['ipekcioglu@me.com']; // Add any additional admin emails here
 
+// Tool-aware job row used by the new admin job views
+interface AdminJobRow {
+  jobId: string;
+  userId: string;
+  toolId: string;
+  status: string;
+  outputDownloadUrl?: string;
+  createdAt: any;
+}
+
 export default function AdminProjectsPage() {
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,7 +134,12 @@ export default function AdminProjectsPage() {
   const [initialized, setInitialized] = useState(false);
   const [notifiedProjects, setNotifiedProjects] = useState<Record<string, boolean>>({});
   const [isNotifying, setIsNotifying] = useState(false);
-  
+
+  // Tool-aware admin: live jobs across all users + filter chip state
+  const [allJobs, setAllJobs] = useState<AdminJobRow[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [activeToolFilter, setActiveToolFilter] = useState<string>("all");
+
   // Get search params for direct project loading
   const searchParams = useSearchParams();
   const projectId = searchParams.get("id");
@@ -134,37 +151,6 @@ export default function AdminProjectsPage() {
   
   // Check if current user is an admin
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
-  
-  // Debug Firebase initialization
-  useEffect(() => {
-    if (firebaseInitialized) {
-      console.log("Firebase is initialized");
-      try {
-        const app = getApp();
-        console.log("Firebase app config:", app.options);
-        
-        // Test Functions initialization
-        try {
-          const functions = getFunctions();
-          console.log("Firebase Functions initialized successfully");
-          
-          // Test if we can create callables
-          try {
-            const testCallable = httpsCallable(functions, 'sendProcessingCompleteNotification');
-            console.log("Function reference created successfully:", testCallable);
-          } catch (callableError) {
-            console.error("Error creating function reference:", callableError);
-          }
-        } catch (functionsError) {
-          console.error("Error initializing Firebase Functions:", functionsError);
-        }
-      } catch (appError) {
-        console.error("Error getting Firebase app:", appError);
-      }
-    } else {
-      console.log("Firebase is NOT initialized yet");
-    }
-  }, [firebaseInitialized]);
   
   // Load projects from Firestore
   useEffect(() => {
@@ -202,8 +188,6 @@ export default function AdminProjectsPage() {
         const q = query(projectsRef, orderBy('updatedAt', 'desc')); // Order by update time
         const querySnapshot = await getDocs(q);
         
-        console.log(`Found ${querySnapshot.docs.length} projects in collection group`);
-        
         const projectsData: ProjectInfo[] = [];
         
         // Process each project document
@@ -236,21 +220,65 @@ export default function AdminProjectsPage() {
     
     loadProjects();
   }, [firebaseInitialized, user, isAdmin, projectId, userId]);
-  
+
+  // Live subscribe to all jobs across all users for tool-aware admin views
+  useEffect(() => {
+    if (!firebaseInitialized || !user || !isAdmin) {
+      return;
+    }
+
+    const db = getFirestore();
+    const jobsRef = collectionGroup(db, "jobs");
+    let q;
+    try {
+      q = query(jobsRef, orderBy("createdAt", "desc"), limit(200));
+    } catch (e) {
+      q = query(jobsRef);
+    }
+
+    setJobsLoading(true);
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        const rows: AdminJobRow[] = [];
+        snap.forEach((d) => {
+          const data = d.data() as any;
+          // Path: users/{uid}/jobs/{jobId}
+          const pathParts = d.ref.path.split("/");
+          const ownerUid = pathParts.length >= 2 ? pathParts[1] : (data.userId || "");
+          rows.push({
+            jobId: d.id,
+            userId: data.userId || ownerUid,
+            toolId: data.toolId || "",
+            status: data.status || "processing",
+            outputDownloadUrl: data.outputDownloadUrl,
+            createdAt: data.createdAt,
+          });
+        });
+        setAllJobs(rows);
+        setJobsLoading(false);
+      },
+      (err) => {
+        console.error("Error subscribing to jobs collectionGroup:", err);
+        setJobsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [firebaseInitialized, user, isAdmin]);
+
   // Modified function to load a single project with detailed pages
   const loadSingleProject = async (db: any, userId: string, projectId: string): Promise<ProjectInfo | null> => {
     try {
-      console.log(`Loading single project ${projectId} for user ${userId}`);
       const projectRef = doc(db, `users/${userId}/projects/${projectId}`);
       const docSnap = await getDoc(projectRef);
-      
+
       if (!docSnap.exists()) {
         console.error("Project not found in loadSingleProject");
         return null;
       }
-      
+
       const data = docSnap.data();
-      console.log("Raw project data:", data);
 
       // Format timestamps nicely (handle potential nulls)
       const formatDate = (timestamp: any): string => {
@@ -265,7 +293,6 @@ export default function AdminProjectsPage() {
       // Process pages: Fetch necessary display URLs
       let processedPages: Page[] = [];
       if (data.pages && Array.isArray(data.pages)) {
-        console.log(`Processing ${data.pages.length} pages found in project data.`);
         // Sort pages just in case
         const sortedPagesData = data.pages.sort((a: any, b: any) => (a.pageNumber || 0) - (b.pageNumber || 0));
         
@@ -315,7 +342,6 @@ export default function AdminProjectsPage() {
             } as Page; // Assert type after processing
           })
         );
-        console.log("Processed pages with URLs:", processedPages);
       } else {
         console.warn(`Project ${projectId} has no pages array or it's empty.`);
       }
@@ -522,7 +548,52 @@ export default function AdminProjectsPage() {
           ) : (
             /* Show list view for all projects - Tabs removed */
             <div className="w-full">
-              {/* Removed TabsList */}
+              {/* Tool-aware filter chips with live job counts */}
+              <div className="mb-6">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    Live jobs by tool
+                  </h2>
+                  {jobsLoading && (
+                    <span className="text-xs text-gray-500">Loading…</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 overflow-x-auto">
+                  <button
+                    type="button"
+                    onClick={() => setActiveToolFilter("all")}
+                    className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      activeToolFilter === "all"
+                        ? "bg-orange-500 text-white"
+                        : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    All ({allJobs.length})
+                  </button>
+                  {TOOLS.map((t) => {
+                    const count = allJobs.filter(
+                      (j) => j.toolId === t.id
+                    ).length;
+                    if (count === 0 && activeToolFilter !== t.id) return null;
+                    const on = activeToolFilter === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setActiveToolFilter(t.id)}
+                        className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                          on
+                            ? "bg-orange-500 text-white"
+                            : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        {t.name} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* List all projects directly */}
               {loading ? (
                 <div className="flex justify-center items-center p-12">
@@ -568,7 +639,7 @@ export default function AdminProjectsPage() {
                   Story<span className="text-orange-500">InColor</span>
                 </span>
               </Link>
-              <p className="text-xs text-gray-500">© 2023 StoryInColor. All rights reserved.</p>
+              <p className="text-xs text-gray-500">© 2026 StoryInColor. All rights reserved.</p>
             </div>
           </div>
         </div>
@@ -597,7 +668,6 @@ function ProjectCard({
             fill
             className="object-cover"
             onError={() => {
-              console.log(`Image loading error for project ${project.id}`);
               setImageError(true);
             }}
           />

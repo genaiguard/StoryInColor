@@ -9,6 +9,7 @@ import { CreditCard, CheckCircle, AlertTriangle, ArrowLeft, Shield, Sparkles, Cl
 import { toast } from "sonner"
 import { useFirebase } from "@/app/firebase/firebase-provider"
 import { getUserCredits, CREDIT_PACKAGES, formatCreditBalance } from "@/app/firebase/credits-helpers"
+import { getFirestore, collection, query, orderBy, limit, getDocs } from "firebase/firestore"
 import { getFunctions, httpsCallable } from "firebase/functions"
 import { loadStripe } from "@stripe/stripe-js"
 
@@ -23,6 +24,13 @@ export default function CreditsPage() {
   const [firstActivityTimestamp, setFirstActivityTimestamp] = useState<any>(null)
   const [packageIdLoading, setPackageIdLoading] = useState<string | null>(null)
 
+  // Auth gate: send unauthenticated visitors to /login (preserving intent)
+  useEffect(() => {
+    if (firebaseInitialized && !user) {
+      router.replace("/login?next=/credits")
+    }
+  }, [firebaseInitialized, user, router])
+
   // Load user credits and history on mount
   useEffect(() => {
     async function loadUserCredits() {
@@ -34,30 +42,36 @@ export default function CreditsPage() {
       try {
         const userCredits = await getUserCredits(user.uid)
         setCredits(userCredits.balance)
-        
-        // Set usage history
-        const sortedUsageHistory = userCredits.usageHistory || [];
-        sortedUsageHistory.sort((a: any, b: any) => b.date.seconds - a.date.seconds);
-        setUsageHistory(sortedUsageHistory);
-        
-        // Set purchase history
-        const sortedPurchaseHistory = userCredits.purchaseHistory || [];
-        sortedPurchaseHistory.sort((a: any, b: any) => b.purchaseDate.seconds - a.purchaseDate.seconds);
-        setPurchaseHistory(sortedPurchaseHistory);
-        
-        // Find earliest timestamp for first activity (for initial credits display)
-        let earliestTimestamp = null;
-        if (sortedUsageHistory.length > 0 && sortedPurchaseHistory.length > 0) {
-          const lastUsageDate = sortedUsageHistory[sortedUsageHistory.length - 1].date;
-          const lastPurchaseDate = sortedPurchaseHistory[sortedPurchaseHistory.length - 1].purchaseDate;
-          earliestTimestamp = lastUsageDate.seconds < lastPurchaseDate.seconds ? lastUsageDate : lastPurchaseDate;
-        } else if (sortedUsageHistory.length > 0) {
-          earliestTimestamp = sortedUsageHistory[sortedUsageHistory.length - 1].date;
-        } else if (sortedPurchaseHistory.length > 0) {
-          earliestTimestamp = sortedPurchaseHistory[sortedPurchaseHistory.length - 1].purchaseDate;
+
+        // Usage events were migrated from a userCredits.usageHistory array to
+        // a userCredits/{uid}/usageEvents/{deduct|refund-jobId} subcollection
+        // (the array hit the 1MB doc cap on heavy users). Read from the
+        // subcollection here. Limit 100 most-recent for display — full audit
+        // is in the admin tools.
+        const db = getFirestore()
+        const eventsRef = collection(db, "userCredits", user.uid, "usageEvents")
+        const eventsQ = query(eventsRef, orderBy("date", "desc"), limit(100))
+        const eventsSnap = await getDocs(eventsQ)
+        const usageEvents = eventsSnap.docs.map((d) => d.data())
+        setUsageHistory(usageEvents)
+
+        // Set purchase history (still on the parent doc — purchases are low-cardinality)
+        const sortedPurchaseHistory = userCredits.purchaseHistory || []
+        sortedPurchaseHistory.sort((a: any, b: any) => b.purchaseDate.seconds - a.purchaseDate.seconds)
+        setPurchaseHistory(sortedPurchaseHistory)
+
+        // Earliest timestamp across both streams for the "since you joined" footer
+        let earliestTimestamp: any = null
+        const oldestUsage = usageEvents.length > 0 ? usageEvents[usageEvents.length - 1].date : null
+        const oldestPurchase = sortedPurchaseHistory.length > 0
+          ? sortedPurchaseHistory[sortedPurchaseHistory.length - 1].purchaseDate
+          : null
+        if (oldestUsage && oldestPurchase) {
+          earliestTimestamp = oldestUsage.seconds < oldestPurchase.seconds ? oldestUsage : oldestPurchase
+        } else {
+          earliestTimestamp = oldestUsage || oldestPurchase
         }
-        
-        setFirstActivityTimestamp(earliestTimestamp);
+        setFirstActivityTimestamp(earliestTimestamp)
       } catch (error) {
         console.error("Error loading user credits:", error)
         setError("Failed to load your credits. Please try refreshing the page.")
@@ -236,7 +250,7 @@ export default function CreditsPage() {
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Purchase Credits</h1>
             </div>
             <p className="text-gray-500">
-              Credits are used to generate AI coloring pages from your photos.
+              Coloring book = 1 credit per page. Each premium tool (palm reading, face reading, style audit, etc.) = 10 credits per generation.
             </p>
             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
               <div className="flex items-center gap-2">
@@ -258,7 +272,11 @@ export default function CreditsPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+          <div className="mt-8 mb-4 rounded-lg border border-orange-100 bg-orange-50/60 px-4 py-3 text-sm text-orange-800">
+            Coloring book = 1 credit. Premium tools = 10 credits.
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {CREDIT_PACKAGES.map(pkg => (
               <Card key={pkg.id} className="overflow-hidden">
                 <CardHeader className={`bg-gradient-to-r ${
@@ -288,7 +306,15 @@ export default function CreditsPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>Generate {pkg.credits} coloring pages</span>
+                      <span>
+                        {pkg.id === 'small'
+                          ? '≈ 5 coloring pages — premium tools need 10 credits'
+                          : pkg.id === 'medium'
+                          ? '≈ 10 coloring pages OR 1 premium analysis'
+                          : pkg.id === 'large'
+                          ? '≈ 20 coloring pages OR 2 premium analyses'
+                          : '≈ 40 coloring pages OR 4 premium analyses'}
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -297,8 +323,8 @@ export default function CreditsPage() {
                   </ul>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-2 pt-0">
-                  <Button 
-                    className="w-full"
+                  <Button
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white"
                     onClick={() => handlePurchaseCredits(pkg.id)}
                     disabled={packageIdLoading === pkg.id}
                   >
@@ -326,16 +352,13 @@ export default function CreditsPage() {
             </div>
             <div className="space-y-4 text-gray-600">
               <p>
-                Credits are used to generate AI coloring pages from your photos. Each credit allows you to convert one photo into a coloring page.
+                Coloring book = 1 credit per page. Each premium tool (palm reading, face reading, style audit, etc.) = 10 credits per generation.
               </p>
               <p>
-                New users receive 2 free credits to try the service. After using your free credits, you'll need to purchase more to continue generating coloring pages.
+                New users receive 2 free credits to try the service. After using your free credits, you'll need to purchase more to keep creating.
               </p>
               <p>
-                Credits never expire and can be used across multiple projects. 
-              </p>
-              <p>
-                Generate high-quality, unwatermarked PDFs of your creations by purchasing any credit package.
+                Credits never expire and can be used across any tool on the platform.
               </p>
             </div>
           </div>

@@ -191,10 +191,10 @@ export default function SettingsPage() {
       // Step 1: Delete storage files directly
       try {
         // Generic logging without user ID
-        console.log("Attempting to delete user storage files");
+        if (process.env.NODE_ENV !== "production") console.log("Attempting to delete user storage files");
         
         // Security rule message without specifics
-        console.log(
+        if (process.env.NODE_ENV !== "production") console.log(
           "Note: Storage rules must allow delete operations"
         );
         
@@ -237,7 +237,7 @@ export default function SettingsPage() {
         
         // Start the recursive deletion from the user's folder
         await deleteFilesRecursively(storageRef);
-        console.log("Storage files deleted");
+        if (process.env.NODE_ENV !== "production") console.log("Storage files deleted");
       } catch (storageError) {
         console.error("Storage deletion error");
         // Continue with account deletion even if storage deletion fails
@@ -257,10 +257,10 @@ export default function SettingsPage() {
             deletedAt: serverTimestamp(),
             email: user.email // Store the email before account deletion
           });
-          console.log("User document updated");
+          if (process.env.NODE_ENV !== "production") console.log("User document updated");
         } else {
           // No user document exists, so nothing to mark as deleted
-          console.log("No user document found");
+          if (process.env.NODE_ENV !== "production") console.log("No user document found");
         }
         
         // Mark all projects as deleted, only if they exist
@@ -297,9 +297,9 @@ export default function SettingsPage() {
             await batch.commit();
           }
           
-          console.log(`${batchCount} documents updated`);
+          if (process.env.NODE_ENV !== "production") console.log(`${batchCount} documents updated`);
         } else {
-          console.log("No project documents found");
+          if (process.env.NODE_ENV !== "production") console.log("No project documents found");
         }
       } catch (firestoreError) {
         console.error("Database update error");
@@ -315,12 +315,12 @@ export default function SettingsPage() {
          // Handle potential error from the cloud function if needed
          throw new Error((disableResult.data as any)?.message || 'Failed to disable account.');
       }
-      console.log("Authentication account disabled via Cloud Function.");
+      if (process.env.NODE_ENV !== "production") console.log("Authentication account disabled via Cloud Function.");
       
       // Log out the user after disabling
       if(logout) {
         await logout();
-        console.log("User logged out.");
+        if (process.env.NODE_ENV !== "production") console.log("User logged out.");
       } else {
         console.warn("Logout function not available from Firebase context.");
       }

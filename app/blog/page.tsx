@@ -43,16 +43,17 @@ export default function BlogPage() {
 
         {/* Call to Action */}
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-8 text-center">
-          <h3 className="text-2xl font-bold mb-4">Ready to Create Your Own Coloring Pages?</h3>
+          <h3 className="text-2xl font-bold mb-4">Eleven AI photo tools. One upload. Pick yours.</h3>
           <p className="text-gray-700 mb-6 max-w-2xl mx-auto">
-            Transform your photos into beautiful, printable coloring pages with our AI-powered tool.
-            Join thousands of users creating personalized art from their memories.
+            From print-ready coloring pages to a magazine-style palm reading,
+            StoryInColor turns one photo into a finished, share-ready result in
+            roughly 20 to 40 seconds.
           </p>
           <a
-            href="/create"
+            href="/tools"
             className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-medium transition-colors"
           >
-            Start Creating Free
+            Browse all tools
           </a>
         </div>
       </div>

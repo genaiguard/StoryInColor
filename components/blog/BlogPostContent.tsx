@@ -165,14 +165,15 @@ export function BlogPostContent({ post }: BlogPostContentProps) {
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 my-8">
         <h3 className="text-2xl font-bold mb-4">Ready to Create Your Own Coloring Pages?</h3>
         <p className="mb-4 text-gray-700">
-          Transform your photos into beautiful, printable coloring pages with our AI-powered tool.
-          Join thousands of users creating personalized art from their memories.
+          Coloring book is one of eleven AI photo tools on StoryInColor. Browse the
+          full collection — palm reading, style audit, plate analysis, plant care,
+          and more — and pick the one that fits your photo.
         </p>
         <Link
-          href="/create"
+          href="/tools"
           className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
         >
-          Start Creating Free
+          Browse all tools
         </Link>
       </div>
 

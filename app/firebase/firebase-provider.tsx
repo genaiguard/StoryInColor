@@ -128,7 +128,16 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
 
         // Check if all required config values are present
         if (!effectiveFirebaseConfig.apiKey || !effectiveFirebaseConfig.authDomain || !effectiveFirebaseConfig.projectId) {
-          console.warn("Firebase config is incomplete. Authentication features will not work.", effectiveFirebaseConfig);
+          // Log only WHICH keys are missing, never the values. The apiKey is
+          // technically public, but dumping the whole config makes auth-domain
+          // and storage-bucket trivially discoverable in the browser console.
+          const missing = (Object.keys(effectiveFirebaseConfig) as Array<
+            keyof typeof effectiveFirebaseConfig
+          >).filter((k) => !effectiveFirebaseConfig[k]);
+          console.warn(
+            "Firebase config is incomplete. Auth disabled. Missing keys:",
+            missing,
+          );
           setLoading(false);
           setInitialized(false);
           return;

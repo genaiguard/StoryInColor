@@ -1,124 +1,123 @@
-import Head from 'next/head';
+// JSON-LD structured data for the home page. Renders inline
+// <script type="application/ld+json"> elements which crawlers index even
+// when emitted from a client component (App Router supports this).
+//
+// Page-level <title>, <meta description>, OpenGraph, canonical, and
+// Twitter tags are emitted by the root layout's `export const metadata`
+// (see app/layout.tsx). next/head no-ops in App Router and was the reason
+// this file's previous output never reached the static HTML.
+
+import { TOOLS } from "@/lib/tools/registry";
+import { TOOL_COUNT_WORD } from "@/lib/tools/copy";
+
+const SITE_URL = "https://storyincolor.com";
+const DESCRIPTION = `Upload a photo, get something incredible back. ${TOOL_COUNT_WORD} AI photo tools — coloring book, palm reading, face reading, aura, iridology, handwriting, style audit, skincare, plate analysis, plant care, room vibes — in one place.`;
+
+const webAppSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "StoryInColor",
+  url: SITE_URL,
+  applicationCategory: "MultimediaApplication",
+  description: DESCRIPTION,
+  offers: {
+    "@type": "AggregateOffer",
+    priceCurrency: "USD",
+    lowPrice: "0.45",
+    highPrice: "10.00",
+    offerCount: 4,
+    description:
+      "Credit packs starting at $3.50 for 5 credits. Coloring book is 1 credit per generation; premium tools are 10 credits per generation.",
+  },
+  screenshot: `${SITE_URL}/images/SHARING.webp`,
+  featureList: TOOLS.map((t) => t.name).join(", "),
+  operatingSystem: "Any modern web browser",
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "What kind of photos can I upload?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Each tool has its own input — palm photos for the palm reader, an outfit photo for the style audit, a meal photo for plate analysis, etc. JPG, PNG, or WEBP up to 10MB. The clearer and better-lit the photo, the better the result.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How long does a generation take?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Most tools finish in 20 to 40 seconds. You stay on the result page while the tool works and the finished image appears as soon as it's ready.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How does pricing work?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "You buy credits and spend them per generation. The coloring book is 1 credit. Premium tools (palm reading, face reading, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes) are 10 credits each. Credit packs start at $3.50 for 5 credits.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Are the wellness-style readings medical advice?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "No. Iridology, skincare glow, and plate analysis are for entertainment and general wellness reflection only. They are not medical advice, diagnosis, or treatment. Consult a qualified professional for any health concern.",
+      },
+    },
+  ],
+};
+
+const howToSchema = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  name: "How to use a StoryInColor AI photo tool",
+  description: "Three simple steps from upload to a finished result.",
+  step: [
+    {
+      "@type": "HowToStep",
+      name: "Sign in",
+      text: "Create a free StoryInColor account. New accounts come with starter credits.",
+      url: `${SITE_URL}#how-it-works`,
+      image: `${SITE_URL}/images/how-to-upload.webp`,
+    },
+    {
+      "@type": "HowToStep",
+      name: "Pick a tool and upload your photo",
+      text: `Choose from ${TOOLS.length} tools — coloring book, palm reading, face reading, aura, iridology, handwriting, style audit, skincare glow, plate analysis, plant care, or room vibes — and drag in one photo.`,
+      url: `${SITE_URL}/tools`,
+      image: `${SITE_URL}/images/how-to-customize.webp`,
+    },
+    {
+      "@type": "HowToStep",
+      name: "Get your result",
+      text: "Wait 20–40 seconds while the tool processes. Download, share, or generate another.",
+      url: `${SITE_URL}#how-it-works`,
+      image: `${SITE_URL}/images/how-to-download.webp`,
+    },
+  ],
+};
 
 export default function LandingPageSEO() {
-  // Website URL
-  const siteUrl = 'https://storyincolor.com';
-  
-  // Define structured data for rich search results
-  const webAppSchema = {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "StoryInColor",
-    "url": siteUrl,
-    "applicationCategory": "MultimediaApplication",
-    "description": "Turn your photos into beautiful custom coloring pages instantly with StoryInColor. Create personalized coloring books from vacation photos, family pictures, and pet portraits.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0.45",
-      "priceCurrency": "USD",
-      "description": "Pay per coloring page generation with credits"
-    },
-    "screenshot": `${siteUrl}/images/SHARING.webp`,
-    "featureList": "Photo to coloring page conversion, instant PDF download, multiple art styles, easy customization",
-    "operatingSystem": "Any modern web browser"
-  };
-  
-  const faqSchema = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "What kind of photos can I use?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "You can use a wide variety of photos, including vacation pictures, family portraits, pet photos, and even landscape shots. High-quality images with good lighting and clear subjects work best for optimal conversion to coloring pages."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "How long does it take to get my coloring pages?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Your custom coloring pages are generated by StoryInColor almost instantly. After uploading your photos and making any desired adjustments, you can download the PDF immediately."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Can I use these pages for commercial purposes?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "The coloring pages you create are for personal use only. They are a great activity for families, a unique gift, or a relaxing hobby. Commercial use or redistribution is not permitted."
-        }
-      }
-    ]
-  };
-
-  const howToSchema = {
-    "@context": "https://schema.org",
-    "@type": "HowTo",
-    "name": "How to Create Custom Coloring Pages",
-    "description": "Follow these three simple steps to transform your photos into personalized coloring pages.",
-    "step": [
-      {
-        "@type": "HowToStep",
-        "name": "Step 1: Upload Photos",
-        "text": "Upload your vacation photos, family pictures, or any special memories you want to transform.",
-        "url": `${siteUrl}#how-it-works`,
-        "image": `${siteUrl}/images/how-to-upload.webp` 
-      },
-      {
-        "@type": "HowToStep",
-        "name": "Step 2: Preview & Customize",
-        "text": "StoryInColor converts your photos into coloring pages. Preview and make adjustments to get the best results.",
-        "url": `${siteUrl}#how-it-works`,
-        "image": `${siteUrl}/images/how-to-customize.webp`
-      },
-      {
-        "@type": "HowToStep",
-        "name": "Step 3: Download Your Pages",
-        "text": "Download your personalized coloring pages instantly and print them at home for immediate enjoyment.",
-        "url": `${siteUrl}#how-it-works`,
-        "image": `${siteUrl}/images/how-to-download.webp`
-      }
-    ]
-  };
-
   return (
-    <Head>
-      <title>StoryInColor - Turn Photos Into Custom Coloring Pages</title>
-      <meta name="description" content="Instantly convert your photos into beautiful custom coloring pages with StoryInColor. Perfect for family pictures, pet portraits, and vacation memories. Download and print your personalized coloring book today!" />
-      <meta name="keywords" content="custom coloring pages, photo to coloring page, AI coloring pages, personalized coloring book, printable coloring pages, family coloring book, pet coloring pages, create coloring book from photos" />
-      
-      <meta property="og:type" content="website" />
-      <meta property="og:url" content={siteUrl} />
-      <meta property="og:title" content="StoryInColor - Turn Your Photos Into Beautiful Custom Coloring Pages" />
-      <meta property="og:description" content="Create beautiful personalized coloring pages from your favorite photos. StoryInColor makes it easy to turn pictures of family, pets, and vacations into fun, printable coloring sheets." />
-      <meta property="og:image" content={`${siteUrl}/images/SHARING.webp`} />
-      
-      <meta property="twitter:card" content="summary_large_image" />
-      <meta property="twitter:url" content={siteUrl} />
-      <meta property="twitter:title" content="StoryInColor - Custom Coloring Pages" />
-      <meta property="twitter:description" content="Turn your photos into beautiful coloring pages instantly with StoryInColor. Create personalized coloring books from vacation photos, family pictures, and pet portraits." />
-      <meta property="twitter:image" content={`${siteUrl}/images/SHARING.webp`} />
-      
-      <link rel="canonical" href={siteUrl} />
-      
-      <script 
+    <>
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }}
-        key="webapp-schema"
       />
-      <script 
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        key="faq-schema"
       />
-       <script 
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
-        key="howto-schema"
       />
-    </Head>
+    </>
   );
-} 
+}

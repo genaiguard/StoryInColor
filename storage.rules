@@ -1,15 +1,26 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Server-written generation outputs — read-only for the owner. Block
+    // client write so a malicious user can't overwrite their own generation
+    // PNGs after the fact (and tamper with the URL referenced by the job
+    // doc). Server (admin SDK) bypasses these rules.
+    match /users/{userId}/generations/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null &&
+                     request.auth.token.email == 'ipekcioglu@me.com';
+      allow write, delete: if false;
+    }
+
     // Allow users to read, write, and delete their own files
     match /users/{userId}/{allPaths=**} {
       allow read, delete: if request.auth != null && request.auth.uid == userId;
       allow write: if request.auth != null && request.auth.uid == userId
                      && request.resource.size < 10 * 1024 * 1024  // 10MB limit
                      && request.resource.contentType.matches('image/.*');
-      
+
       // Allow admin access to all user files
-      allow read, write: if request.auth != null && 
+      allow read, write: if request.auth != null &&
                          request.auth.token.email == 'ipekcioglu@me.com';
     }
 

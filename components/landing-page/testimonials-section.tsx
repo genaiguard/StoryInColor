@@ -6,9 +6,9 @@ export default function TestimonialsSection() {
       <div className="container mx-auto max-w-7xl px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">What Our Customers Say</h2>
+            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">What our customers say</h2>
             <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Hear from people who have turned their memories into coloring pages
+              Hear from people who have turned their photos into something incredible.
             </p>
           </div>
         </div>
@@ -21,13 +21,13 @@ export default function TestimonialsSection() {
               </div>
               <div>
                 <h3 className="font-semibold">Sarah T.</h3>
-                <p className="text-sm text-gray-500">Family Vacation Pages</p>
+                <p className="text-sm text-gray-500">Family Vacation</p>
               </div>
             </div>
             <div className="mt-4">
               <p className="text-gray-700">
-                "Turned our Hawaii trip photos into printable pages for the kids. They had a blast coloring them! 
-                Such a fun way to relive the memories. The line art came out great."
+                "Turned our Hawaii trip photos into a beautiful creation for the kids. They had a blast!
+                Such a fun way to relive the memories. The result came out great."
               </p>
             </div>
             <div className="mt-4 flex">
@@ -54,13 +54,13 @@ export default function TestimonialsSection() {
               </div>
               <div>
                 <h3 className="font-semibold">Michael R.</h3>
-                <p className="text-sm text-gray-500">Anniversary Pages</p>
+                <p className="text-sm text-gray-500">Anniversary Gift</p>
               </div>
             </div>
             <div className="mt-4">
               <p className="text-gray-700">
-                "Made some custom coloring sheets from our wedding pics for our anniversary. My wife was so surprised 
-                and loved the unique gift! The detail captured in the drawings was seriously impressive."
+                "Made a custom creation from our wedding pics for our anniversary. My wife was so surprised
+                and loved the unique gift! The detail captured was seriously impressive."
               </p>
             </div>
             <div className="mt-4 flex">
@@ -87,13 +87,13 @@ export default function TestimonialsSection() {
               </div>
               <div>
                 <h3 className="font-semibold">Jennifer L.</h3>
-                <p className="text-sm text-gray-500">Pet Portrait Pages</p>
+                <p className="text-sm text-gray-500">Pet Portrait</p>
               </div>
             </div>
             <div className="mt-4">
               <p className="text-gray-700">
-                "Got these downloadable pages made from photos of our golden retriever for my daughter's birthday. 
-                She went crazy for them, loves coloring pictures of her furry buddy! The artwork really captured him perfectly."
+                "Got a creation made from photos of our golden retriever for my daughter's birthday.
+                She went crazy for it, loves having a picture of her furry buddy! The artwork really captured him perfectly."
               </p>
             </div>
             <div className="mt-4 flex">

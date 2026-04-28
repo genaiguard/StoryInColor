@@ -99,7 +99,7 @@ export default function AdminPage() {
     const loadAdminData = async () => {
       setLoading(true);
       setError("");
-      console.log("[Admin Page] Calling getAdminDashboardData function...");
+      if (process.env.NODE_ENV !== "production") console.log("[Admin Page] Calling getAdminDashboardData function...");
       
       try {
         const functions = getFunctions();
@@ -108,7 +108,7 @@ export default function AdminPage() {
         const data = result.data;
 
         if (data.success && data.aggregatedStats && data.users) {
-          console.log("[Admin Page] Received data:", data);
+          if (process.env.NODE_ENV !== "production") console.log("[Admin Page] Received data:", data);
           setStats(data.aggregatedStats);
           setUsers(data.users);
         } else {

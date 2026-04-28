@@ -47,10 +47,6 @@ ui-debug.log
 firebase-export-*
 /functions/.env
 
-# Additional exclusions
-# Server-side code - exclude from public repo
-/functions/
-
 # Documentation - exclude all README files except for the main one
 **/README.md
 !README.md

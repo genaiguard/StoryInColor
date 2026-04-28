@@ -1,429 +1,269 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PlusCircle, Settings, LogOut, FileEdit, ShoppingBag, Eye, AlertTriangle, FileDown, Sparkles, CreditCard, Trash2, MoreVertical } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useMobile } from "@/hooks/use-mobile"
+import { Settings, LogOut, Sparkles, AlertTriangle } from "lucide-react"
 import { useFirebase } from "@/app/firebase/firebase-provider"
-import { getFirestore, collection, query, where, getDocs, orderBy, doc, updateDoc } from "firebase/firestore"
-import { ref, getDownloadURL } from "firebase/storage"
-import { getConfiguredStorage } from "@/app/firebase/storage-helpers"
-import { PathImg } from "@/components/ui/pathed-image"
+import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "firebase/firestore"
 import { getUserCredits, formatCreditBalance } from "@/app/firebase/credits-helpers"
+import { ToolGrid } from "@/components/tools/tool-grid"
+import { getToolById } from "@/lib/tools/registry"
+import type { ToolCategory } from "@/lib/tools/types"
 import { toast } from "sonner"
-import { trackEvent, trackPurchase } from "@/components/tracking/facebook-pixel"
+import { trackEvent } from "@/components/tracking/facebook-pixel"
 
-// Define interfaces for project types
-interface BaseProject {
-  id: string;
-  title: string;
-  productType: string;
-  status: 'draft' | 'completed' | 'processing'; // Add processing status
-  thumbnail: string | null;
-  date: string;
+// Job doc as stored in users/{uid}/jobs/{jobId}. We subscribe to jobs (not
+// generations) so in-progress and failed jobs are visible alongside finished
+// ones — generation docs only exist on success and would hide pending work.
+// Renamed from GenerationDoc since the doc actually represents a Job.
+interface JobDoc {
+  generationId?: string
+  jobId: string
+  toolId: string
+  status?: "processing" | "complete" | "failed"
+  outputStoragePath?: string
+  outputDownloadUrl?: string
+  error?: string
+  refunded?: boolean
+  createdAt?: any
 }
 
-// interface PreviewProject extends BaseProject {}
+// Format a Firestore timestamp into a small relative date like "2h ago"
+const formatRelative = (timestamp: any): string => {
+  if (!timestamp) return ""
+  const ms =
+    typeof timestamp?.seconds === "number"
+      ? timestamp.seconds * 1000
+      : typeof timestamp?.toDate === "function"
+      ? timestamp.toDate().getTime()
+      : typeof timestamp === "number"
+      ? timestamp
+      : NaN
+  if (!Number.isFinite(ms)) return ""
 
-// interface OrderedProject extends BaseProject {
-//   orderNumber: string;
-//   estimatedDelivery: string;
-// }
+  const diffSec = Math.max(0, Math.floor((Date.now() - ms) / 1000))
+  if (diffSec < 60) return `${diffSec}s ago`
+  const diffMin = Math.floor(diffSec / 60)
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  const diffDay = Math.floor(diffHr / 24)
+  if (diffDay < 7) return `${diffDay}d ago`
+  return new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+}
 
-// Combine into a single Project type for simplicity
-type DashboardProject = BaseProject & {
-  orderNumber?: string; // Optional, present for 'completed'
-  pdfUrl?: string; // URL to download the PDF if available
-  processingStatus?: string; // More detailed status for UI display
-  deleted?: boolean; // Add deleted flag
-  isEmpty?: boolean; // Whether the project is effectively empty (default title + no pages)
-};
-
-// Map Firestore statuses to simplified dashboard statuses
-const mapStatusToDashboardView = (status: string): 'draft' | 'completed' | 'processing' => {
-  switch (status) {
-    case 'draft':
-      return 'draft';
-    case 'completed':
-      return 'completed'; // PDF is ready and can be downloaded
-    case 'ordered':
-    case 'payment_pending':
-      return 'processing'; // Payment received, but PDF not yet ready
-    case 'processing_pdf':
-      return 'processing'; // PDF is being generated
-    case 'pdf_failed':
-      return 'processing'; // PDF failed but user can still see order details
-    default:
-      return 'draft'; // Default to draft for any other status
-  }
-};
-
-// Helper function to format the date
-const formatHistoryDate = (timestamp: any) => {
-  if (!timestamp) return 'Unknown date';
-  const date = new Date(timestamp.seconds * 1000);
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-};
+const CATEGORIES: Array<{ id: ToolCategory | "all"; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "creative", label: "Creative" },
+  { id: "mystical", label: "Mystical" },
+  { id: "analysis", label: "Analysis" },
+]
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("draft") // Default to draft
-  const isMobile = useMobile()
-
-  // Initialize Firebase context
   const firebaseContext = useFirebase()
   const { user, initialized, logout } = firebaseContext
 
-  const [isLoading, setIsLoading] = useState(true)
-  // const [previewProjects, setPreviewProjects] = useState<PreviewProject[]>([])
-  // const [orderedProjects, setOrderedProjects] = useState<OrderedProject[]>([])
-  const [projects, setProjects] = useState<DashboardProject[]>([]) // Single state for all projects
-  const [error, setError] = useState("")
-  
-  // Add credit state
+  // Credit balance
   const [credits, setCredits] = useState<number>(0)
   const [isLoadingCredits, setIsLoadingCredits] = useState<boolean>(true)
-  const [creditHistory, setCreditHistory] = useState<any[]>([])
   const [isProcessingCreditPurchase, setIsProcessingCreditPurchase] = useState<boolean>(false)
   const [recentPurchaseDetected, setRecentPurchaseDetected] = useState<boolean>(false)
   const [pollingComplete, setPollingComplete] = useState<boolean>(false)
-  
-  // Get search params to check for credit_purchase=success
+
+  // Generations
+  const [generations, setGenerations] = useState<JobDoc[]>([])
+  const [isLoadingGenerations, setIsLoadingGenerations] = useState<boolean>(true)
+  const [generationsError, setGenerationsError] = useState<string>("")
+  const [activeCategory, setActiveCategory] = useState<ToolCategory | "all">("all")
+
+  // Stripe redirect detection
   const searchParams = useSearchParams()
-  const creditPurchaseSuccess = searchParams.get('credit_purchase') === 'success'
+  const creditPurchaseSuccess = searchParams.get("credit_purchase") === "success"
 
-  // Flag to track if we've already handled this specific redirect
-  // Moved inside useEffect where needed
-  // const acknowledgedSessionKey = 'creditPurchaseAcknowledged' 
-
-  // Set initial processing state based on URL param and session storage
+  // Show processing banner immediately on Stripe redirect
   useEffect(() => {
-    const acknowledgedSessionKey = 'creditPurchaseAcknowledged' // Define here
-    console.log("[Debug] Initial effect running. creditPurchaseSuccess:", creditPurchaseSuccess);
+    const acknowledgedSessionKey = "creditPurchaseAcknowledged"
     if (creditPurchaseSuccess) {
-      const alreadyAcknowledged = sessionStorage.getItem(acknowledgedSessionKey) === 'true';
-      console.log("[Debug] Already acknowledged in session storage:", alreadyAcknowledged);
+      const alreadyAcknowledged = sessionStorage.getItem(acknowledgedSessionKey) === "true"
       if (!alreadyAcknowledged) {
-        console.log("[Debug] Setting isProcessingCreditPurchase to true initially.");
-        setIsProcessingCreditPurchase(true);
+        setIsProcessingCreditPurchase(true)
         toast.info("Purchase detected! Checking for credits...", {
           duration: 10000,
-          position: "top-center"
-        });
+          position: "top-center",
+        })
       } else {
-        // If already acknowledged, ensure processing state is false
-        setIsProcessingCreditPurchase(false);
+        setIsProcessingCreditPurchase(false)
       }
     }
-  }, [creditPurchaseSuccess]);
+  }, [creditPurchaseSuccess])
 
-  // Load user credits and handle polling
+  // Load credits + poll for Stripe purchase completion
   useEffect(() => {
-    const acknowledgedSessionKey = 'creditPurchaseAcknowledged' // Define here
-    const alreadyAcknowledged = sessionStorage.getItem(acknowledgedSessionKey) === 'true';
-    console.log("[Debug] Credit loading/polling effect running. Params:", { user, initialized, creditPurchaseSuccess, recentPurchaseDetected, pollingComplete, alreadyAcknowledged });
+    const acknowledgedSessionKey = "creditPurchaseAcknowledged"
+
     const loadUserCredits = async () => {
-      console.log("[Debug] loadUserCredits called. Params:", { user, initialized });
-      if (!user || !initialized) {
-        console.log("[Debug] loadUserCredits returning early (user/initialized not ready).");
-        return;
-      }
-      
+      if (!user || !initialized) return
+
       try {
-        setIsLoadingCredits(true);
-        const userCredits = await getUserCredits(user.uid);
-        
-        setCredits(userCredits.balance);
-        
-        // If we were redirected from a successful purchase, check if there's a purchase from today
-        if (creditPurchaseSuccess && !recentPurchaseDetected && userCredits.purchaseHistory?.length > 0) {
-          // Sort purchases by date descending to get the most recent first
-          const sortedPurchases = [...userCredits.purchaseHistory].sort((a, b) => 
-            new Date(b.purchaseDate.seconds * 1000).getTime() - new Date(a.purchaseDate.seconds * 1000).getTime()
-          );
-          
-          const mostRecentPurchase = sortedPurchases[0];
-          
-          // Check if the most recent purchase is from today AND is a paid purchase
+        setIsLoadingCredits(true)
+        const userCredits = await getUserCredits(user.uid)
+        setCredits(userCredits.balance)
+
+        if (
+          creditPurchaseSuccess &&
+          !recentPurchaseDetected &&
+          userCredits.purchaseHistory?.length > 0
+        ) {
+          const sortedPurchases = [...userCredits.purchaseHistory].sort(
+            (a, b) =>
+              new Date(b.purchaseDate.seconds * 1000).getTime() -
+              new Date(a.purchaseDate.seconds * 1000).getTime()
+          )
+          const mostRecentPurchase = sortedPurchases[0]
           if (mostRecentPurchase) {
-            const purchaseDate = new Date(mostRecentPurchase.purchaseDate.seconds * 1000);
-            const today = new Date();
-            const isToday = purchaseDate.getDate() === today.getDate() && 
-                            purchaseDate.getMonth() === today.getMonth() && 
-                            purchaseDate.getFullYear() === today.getFullYear();
-            
-            const isPaidPurchase = mostRecentPurchase.pricePaid > 0; // Added check for paid purchase
-            
-            console.log("[Debug] Most recent purchase check:", { isToday, isPaidPurchase, purchaseDetails: mostRecentPurchase });
+            const purchaseDate = new Date(mostRecentPurchase.purchaseDate.seconds * 1000)
+            const today = new Date()
+            const isToday =
+              purchaseDate.getDate() === today.getDate() &&
+              purchaseDate.getMonth() === today.getMonth() &&
+              purchaseDate.getFullYear() === today.getFullYear()
+            const isPaidPurchase = mostRecentPurchase.pricePaid > 0
 
-            if (isToday && isPaidPurchase) { // Modify condition to include isPaidPurchase
-              console.log("[Debug] Recent PAID purchase detected today!");
-              setRecentPurchaseDetected(true);
-              setIsProcessingCreditPurchase(false);
-              sessionStorage.setItem(acknowledgedSessionKey, 'true'); // Acknowledge
-              
-              // Track Facebook Pixel purchase event with detailed parameters
-              trackEvent('Purchase', {
-                content_name: 'Credit Purchase',
-                content_category: 'credits',
+            if (isToday && isPaidPurchase) {
+              setRecentPurchaseDetected(true)
+              setIsProcessingCreditPurchase(false)
+              sessionStorage.setItem(acknowledgedSessionKey, "true")
+
+              trackEvent("Purchase", {
+                content_name: "Credit Purchase",
+                content_category: "credits",
                 value: mostRecentPurchase.pricePaid / 100,
-                currency: 'USD',
-                num_items: mostRecentPurchase.creditAmount
+                currency: "USD",
+                num_items: mostRecentPurchase.creditAmount,
               })
-              
-              toast.success("Credits added successfully!");
+
+              toast.success("Credits added successfully!")
             }
           }
         }
-        
-        // Get the last 3 usage history items
-        const recentUsage = userCredits.usageHistory
-          .sort((a, b) => b.date.seconds - a.date.seconds)
-          .slice(0, 3);
-        setCreditHistory(recentUsage);
       } catch (error) {
-        console.error("Error loading credits:", error);
-        // Don't show an error toast here since we already show project loading errors
+        console.error("Error loading credits")
       } finally {
-        setIsLoadingCredits(false);
+        setIsLoadingCredits(false)
       }
-    };
-    
-    loadUserCredits();
-    
-    // Set up polling if we're waiting for a credit purchase to complete
-    let intervalId: NodeJS.Timeout | null = null;
-    
-    if (creditPurchaseSuccess && !recentPurchaseDetected && !pollingComplete) {
-      console.log("[Debug] Starting polling interval.");
-      // Always show processing message when redirected from successful purchase (redundant due to initial effect, but safe)
-      setIsProcessingCreditPurchase(true);
-      
-      // Poll every 2 seconds for credit purchase detection
-      intervalId = setInterval(() => {
-        console.log("[Debug] Polling: calling loadUserCredits.");
-        loadUserCredits();
-      }, 2000);
-      
-      // Set a maximum wait time (30 seconds)
-      const timeoutId = setTimeout(() => {
-        console.log("[Debug] Polling timeout reached.");
-        if (intervalId) {
-          console.log("[Debug] Clearing polling interval.");
-          clearInterval(intervalId);
-          
-          // If we still haven't detected a purchase after polling
-          if (!recentPurchaseDetected) {
-            console.log("[Debug] Polling complete, no purchase detected. Showing info message.");
-            setPollingComplete(true);
-            setIsProcessingCreditPurchase(false);
-            sessionStorage.setItem(acknowledgedSessionKey, 'true'); // Acknowledge timeout
-            toast.info("Your purchase is being processed. Credits will appear in your account shortly.");
-          }
-        }
-      }, 30000);
-      
-      // Clean up interval and timeout on unmount or when purchase detected/polling complete
-      return () => {
-        console.log("[Debug] Cleaning up polling effect.");
-        if (intervalId) {
-          clearInterval(intervalId);
-        }
-        clearTimeout(timeoutId);
-      };
     }
-  }, [user, initialized, creditPurchaseSuccess, recentPurchaseDetected, pollingComplete, isProcessingCreditPurchase]);
 
-  // Load user projects from Firebase
-  useEffect(() => {
-    // Skip Firebase calls during SSR
-    if (typeof window === "undefined") return
+    loadUserCredits()
 
-    const loadProjects = async () => {
-      if (!user || !initialized) {
-        setIsLoading(false)
-        return
-      }
-
-      setIsLoading(true)
-      setError("")
-
-      try {
-        // Initialize Firebase services
-        const db = getFirestore()
-        const storage = getConfiguredStorage()
-
-        // Get all projects for the current user, ordered by last update
-        const projectsRef = collection(db, "users", user.uid, "projects")
-        const q = query(projectsRef, orderBy("updatedAt", "desc"))
-        const querySnapshot = await getDocs(q)
-
-        const projectPromises = querySnapshot.docs.map(async (doc) => {
-          const data = doc.data();
-          const status = mapStatusToDashboardView(data.status || 'draft');
-          
-          let thumbnailUrl = null;
-          // Try to get thumbnail if available (using the first page's processed image?)
-          // Logic might need refinement based on how thumbnails are actually stored/selected
-          const firstPage = data.pages && data.pages.length > 0 ? data.pages.find((p: any) => p.pageNumber === 1) || data.pages[0] : null;
-          const imagePath = firstPage?.versions?.[firstPage.selectedVersionId]?.watermarkedStoragePath || firstPage?.originalImage?.storagePath;
-          
-          if (imagePath) {
-            try {
-              thumbnailUrl = await getDownloadURL(ref(storage, imagePath));
-            } catch (error) {
-              console.warn(`Failed to get thumbnail URL for project ${doc.id} from path ${imagePath}:`, error);
-            }
+    let intervalId: NodeJS.Timeout | null = null
+    if (creditPurchaseSuccess && !recentPurchaseDetected && !pollingComplete) {
+      setIsProcessingCreditPurchase(true)
+      intervalId = setInterval(() => {
+        loadUserCredits()
+      }, 2000)
+      const timeoutId = setTimeout(() => {
+        if (intervalId) {
+          clearInterval(intervalId)
+          if (!recentPurchaseDetected) {
+            setPollingComplete(true)
+            setIsProcessingCreditPurchase(false)
+            sessionStorage.setItem(acknowledgedSessionKey, "true")
+            toast.info(
+              "Your purchase is being processed. Credits will appear in your account shortly."
+            )
           }
-          
-          return {
-            id: doc.id,
-            title: data.title || "Untitled Project",
-            productType: data.productType || "Standard",
-            status: status,
-            thumbnail: thumbnailUrl,
-            date: data.updatedAt ? new Date(data.updatedAt.toDate()).toLocaleDateString() : "Unknown date",
-            orderNumber: doc.id.substring(0, 8).toUpperCase(),
-            pdfUrl: data.pdfUrl,
-            processingStatus: data.processingStatus,
-            deleted: data.deleted === true,
-            isEmpty: (data.title === "My Coloring Pages" || !data.title) && (!data.pages || data.pages.length === 0)
-          } as DashboardProject;
-        });
-
-        // Resolve all promises
-        const allDocs = await Promise.all(projectPromises);
-
-        // Filter out deleted projects and empty drafts
-        const filteredDocs = allDocs.filter(doc => 
-          !doc.deleted && 
-          !(doc.status === 'draft' && doc.isEmpty)
-        );
-
-        // Set the single state
-        setProjects(filteredDocs);
-        setIsLoading(false);
-      } catch (error: any) {
-        console.error("Error loading projects");
-        
-        // Set generic error to avoid exposing authentication details
-        setError("Failed to load projects. Please try again.");
-        
-        setIsLoading(false);
+        }
+      }, 30000)
+      return () => {
+        if (intervalId) clearInterval(intervalId)
+        clearTimeout(timeoutId)
       }
-    };
+    }
+  }, [user, initialized, creditPurchaseSuccess, recentPurchaseDetected, pollingComplete])
 
-    loadProjects();
-  }, [user, initialized]);
+  // Subscribe to recent generations
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (!user || !initialized) return
+
+    setIsLoadingGenerations(true)
+    setGenerationsError("")
+
+    let unsubscribe: (() => void) | undefined
+    try {
+      const db = getFirestore()
+      // Subscribe to /jobs (not /generations) so users see processing /
+      // failed states alongside completed work.
+      const jobsRef = collection(db, "users", user.uid, "jobs")
+      const q = query(jobsRef, orderBy("createdAt", "desc"), limit(24))
+      unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const items: JobDoc[] = snapshot.docs.map((d) => {
+            const data = d.data() as Partial<JobDoc>
+            return {
+              generationId: data.generationId,
+              jobId: data.jobId || d.id,
+              toolId: data.toolId || "",
+              status: data.status,
+              outputStoragePath: data.outputStoragePath,
+              outputDownloadUrl: data.outputDownloadUrl,
+              error: data.error,
+              refunded: data.refunded,
+              createdAt: data.createdAt,
+            }
+          })
+          setGenerations(items)
+          setIsLoadingGenerations(false)
+        },
+        (err) => {
+          console.error("Error subscribing to generations:", err)
+          setGenerationsError("Failed to load recent generations.")
+          setIsLoadingGenerations(false)
+        }
+      )
+    } catch (err) {
+      console.error("Error setting up generations listener:", err)
+      setGenerationsError("Failed to load recent generations.")
+      setIsLoadingGenerations(false)
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe()
+    }
+  }, [user, initialized])
 
   const handleLogout = useCallback(() => {
     logout()
-    // Redirect to landing page after logout
     window.location.href = "/"
   }, [logout])
 
-  // Filter projects based on status for tabs
-  const draftProjects = projects.filter(p => p.status === 'draft');
-  const processingProjects = projects.filter(p => p.status === 'processing');
-  const completedProjects = projects.filter(p => p.status === 'completed');
-
-  console.log("[Debug] Rendering Dashboard. State:", { creditPurchaseSuccess, isProcessingCreditPurchase, pollingComplete, recentPurchaseDetected });
-
-  // In the DashboardPage component, add these states for delete confirmation dialog
-  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
-  const [isDeletingProject, setIsDeletingProject] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  // Add a function to handle project deletion
-  const handleDeleteProject = async (projectId: string) => {
-    if (!user || !initialized) return;
-    
-    try {
-      setIsDeletingProject(true);
-      
-      const db = getFirestore();
-      const projectRef = doc(db, "users", user.uid, "projects", projectId);
-      
-      // Update the project with a "deleted" flag instead of actually deleting it
-      // This is a soft-delete approach that allows for potential recovery
-      await updateDoc(projectRef, {
-        deleted: true,
-        updatedAt: new Date() // Update timestamp
-      });
-      
-      // Update local state to remove the deleted project
-      setProjects(prevProjects => prevProjects.filter(p => p.id !== projectId));
-      
-      toast.success("Project deleted successfully");
-      setDeleteDialogOpen(false);
-    } catch (error) {
-      console.error("Error deleting project:", error);
-      toast.error("Failed to delete project. Please try again.");
-    } finally {
-      setIsDeletingProject(false);
-      setProjectToDelete(null);
+  // Resolve display name
+  const firstName = useMemo(() => {
+    if (!user) return ""
+    const displayName: string | undefined = user.displayName
+    if (displayName && displayName.trim().length > 0) {
+      return displayName.split(" ")[0]
     }
-  };
+    const email: string | undefined = user.email
+    if (email && email.includes("@")) {
+      return email.split("@")[0]
+    }
+    return "there"
+  }, [user])
 
-  // Delete confirmation dialog component
-  const DeleteConfirmationDialog = () => (
-    <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Delete Project</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to delete this project? This action cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex gap-2 mt-4">
-          <Button
-            variant="outline"
-            onClick={() => setDeleteDialogOpen(false)}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => projectToDelete && handleDeleteProject(projectToDelete)}
-            disabled={isDeletingProject}
-            className="flex-1"
-          >
-            {isDeletingProject ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                Deleting...
-              </>
-            ) : (
-              "Delete Project"
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  // Filter generations by active category
+  const filteredGenerations = useMemo(() => {
+    if (activeCategory === "all") return generations
+    return generations.filter((g) => {
+      const tool = getToolById(g.toolId)
+      return tool?.category === activeCategory
+    })
+  }, [generations, activeCategory])
 
-  if (!initialized || isLoading) {
+  if (!initialized) {
     return (
       <div className="flex min-h-screen flex-col bg-gray-50">
         <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
@@ -435,12 +275,11 @@ export default function DashboardPage() {
             </Link>
           </div>
         </header>
-
         <main className="flex-1 py-6 md:py-8 px-4">
           <div className="container mx-auto max-w-7xl">
             <div className="flex flex-col items-center justify-center h-[60vh]">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
-              <p className="text-gray-500">Loading your projects...</p>
+              <p className="text-gray-500">Loading your dashboard...</p>
             </div>
           </div>
         </main>
@@ -460,7 +299,6 @@ export default function DashboardPage() {
             </Link>
           </div>
         </header>
-
         <main className="flex-1 py-6 md:py-8 px-4">
           <div className="container mx-auto max-w-7xl">
             <div className="flex flex-col items-center justify-center h-[60vh]">
@@ -490,13 +328,13 @@ export default function DashboardPage() {
           </Link>
           <nav className="flex items-center gap-3 md:gap-6">
             {!isLoadingCredits && (
-              <div 
+              <Link
+                href="/credits"
                 className="flex items-center gap-1 mr-2 bg-blue-50 px-3 py-1.5 rounded-full text-sm cursor-pointer hover:bg-blue-100 transition-colors"
-                onClick={() => window.location.href = '/credits'}
               >
                 <Sparkles className="h-4 w-4 text-blue-500" />
                 <span>{formatCreditBalance(credits)}</span>
-              </div>
+              </Link>
             )}
             <Button variant="outline" size="icon" className="rounded-full" asChild>
               <Link href="/dashboard/settings">
@@ -513,33 +351,8 @@ export default function DashboardPage() {
       </header>
 
       <main className="flex-1 py-6 md:py-8 px-4">
-        <div className="container mx-auto max-w-7xl">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Your Projects</h1>
-              <p className="text-gray-500">All your coloring page projects in one place</p>
-            </div>
-            <Button className="bg-orange-500 hover:bg-orange-600 w-full md:w-auto" asChild>
-              <Link href="/create">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                New Coloring Project
-              </Link>
-            </Button>
-          </div>
-
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-red-700">
-                  <p className="font-medium mb-1">Error</p>
-                  <p>{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Credit purchase processing notification - Make it more prominent */}
+        <div className="container mx-auto max-w-7xl px-0 md:px-0">
+          {/* Stripe purchase processing banner */}
           {isProcessingCreditPurchase && (
             <div className="mb-6 bg-blue-500 text-white border border-blue-600 rounded-lg p-6 shadow-lg">
               <div className="flex items-start gap-3">
@@ -549,13 +362,11 @@ export default function DashboardPage() {
                 <div>
                   <p className="font-bold mb-1 text-lg">Processing Credit Purchase</p>
                   <p>Your credit purchase is being processed. This may take a moment.</p>
-                  <p className="mt-2 text-sm text-blue-100">URL parameter detected: credit_purchase=success</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Show a message after polling is complete and no purchase was detected */}
           {pollingComplete && !recentPurchaseDetected && creditPurchaseSuccess && (
             <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
@@ -564,203 +375,147 @@ export default function DashboardPage() {
                 </div>
                 <div className="text-sm text-amber-700">
                   <p className="font-medium mb-1">Purchase Processing</p>
-                  <p>Your purchase is being processed in the background. Credits will appear in your account shortly.</p>
+                  <p>
+                    Your purchase is being processed in the background. Credits will appear in your
+                    account shortly.
+                  </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Add a dedicated credit information section for new users */}
-          {credits === 0 && (
-            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <h3 className="font-medium text-amber-800 mb-1">You need credits to create coloring pages</h3>
-                  <p className="text-sm text-amber-700 mb-2">
-                    Each AI-generated coloring page requires 1 credit. Purchase credits to continue creating beautiful coloring pages.
-                  </p>
-                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700" asChild>
-                    <Link href="/credits">
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Purchase Credits
-                    </Link>
+          {/* Welcome */}
+          <div className="mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+              Welcome back, {firstName}.
+            </h1>
+            <p className="text-gray-500 mt-1">
+              Pick a tool to get started, or revisit a recent creation below.
+            </p>
+          </div>
+
+          {/* Tool grid */}
+          <section className="mb-10 md:mb-12">
+            <h2 className="text-lg md:text-xl font-semibold mb-4">Choose a tool</h2>
+            <ToolGrid showCategoryChips={false} />
+          </section>
+
+          {/* Recent generations */}
+          <section className="mb-8">
+            <h2 className="text-lg md:text-xl font-semibold mb-4">Recent generations</h2>
+
+            {/* Filter chips */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {CATEGORIES.map((c) => {
+                const on = activeCategory === c.id
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setActiveCategory(c.id)}
+                    className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                      on
+                        ? "bg-orange-500 text-white"
+                        : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {isLoadingGenerations ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg bg-gray-200 animate-pulse aspect-square"
+                  ></div>
+                ))}
+              </div>
+            ) : generationsError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-red-700">
+                    <p className="font-medium mb-1">Error</p>
+                    <p>{generationsError}</p>
+                  </div>
+                </div>
+              </div>
+            ) : filteredGenerations.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Your generations will appear here
+                </h3>
+                <p className="mt-2 text-sm text-gray-600">
+                  {generations.length === 0
+                    ? "Pick a tool above and run your first photo to see it here."
+                    : "Nothing yet in this category — try another filter or a new tool."}
+                </p>
+                <div className="mt-5">
+                  <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white">
+                    <Link href="/tools">Browse all tools</Link>
                   </Button>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Add the delete confirmation dialog */}
-          <DeleteConfirmationDialog />
-
-          {/* Unified Projects View - Update card to include delete option */}
-          {projects.length > 0 ? (
-            <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {projects.map((project) => (
-                <Card key={project.id} className="overflow-hidden hover:shadow-md transition-all">
-                  <div className="relative aspect-video">
-                    <PathImg
-                      src={project.thumbnail || "/placeholder.svg?height=300&width=400"}
-                      alt={project.title}
-                      fill
-                      className="object-cover"
-                      onError={(e) => {
-                        // If image fails to load, fall back to placeholder
-                        e.currentTarget.src = "/StoryInColor/placeholder.svg?height=300&width=400";
-                      }}
-                    />
-                    {/* Add Actions Dropdown */}
-                    <div className="absolute top-2 right-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/40 text-white hover:bg-black/60 rounded-full">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild>
-                            <Link href={`/create?id=${project.id}`} className="cursor-pointer">
-                              <FileEdit className="h-4 w-4 mr-2" />
-                              Edit Project
-                            </Link>
-                          </DropdownMenuItem>
-                          {project.pdfUrl && (
-                            <DropdownMenuItem asChild>
-                              <a href={project.pdfUrl} target="_blank" rel="noopener noreferrer" download className="cursor-pointer">
-                                <FileDown className="h-4 w-4 mr-2" />
-                                Download PDF
-                              </a>
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600 cursor-pointer"
-                            onClick={() => {
-                              setProjectToDelete(project.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Project
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-lg">{project.title}</CardTitle>
-                    <CardDescription>Last modified: {project.date}</CardDescription>
-                  </CardHeader>
-                  <CardFooter className="p-4">
-                    <div className="flex gap-2 w-full">
-                      <Button
-                        size="lg"
-                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg shadow-sm transition-all hover:shadow-md"
-                        asChild
-                      >
-                        <Link href={`/create?id=${project.id}`}>Edit Project</Link>
-                      </Button>
-                      {project.pdfUrl && (
-                        <Button
-                          size="lg"
-                          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg shadow-sm transition-all hover:shadow-md"
-                          asChild
-                        >
-                          <a href={project.pdfUrl} target="_blank" rel="noopener noreferrer" download>
-                            <FileDown className="mr-2 h-4 w-4" />
-                            Download
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-4 md:p-6">
-              <div className="flex flex-col items-center justify-center py-8 md:py-12">
-                <div className="rounded-full bg-blue-100 p-4 md:p-6 mb-4">
-                  <FileEdit className="h-8 w-8 md:h-10 md:w-10 text-blue-500" />
-                </div>
-                <h3 className="text-lg md:text-xl font-medium mb-2">No Projects Yet</h3>
-                <p className="text-gray-500 text-center max-w-md mb-6">
-                  Start a new coloring pages project to see it here.
-                </p>
-                <Button className="bg-orange-500 hover:bg-orange-600" asChild>
-                  <Link href="/create">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create Your First Project
-                  </Link>
-                </Button>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {filteredGenerations.map((gen) => {
+                  const tool = getToolById(gen.toolId)
+                  const href = tool
+                    ? `/tools/${tool.slug}/result?jobId=${encodeURIComponent(gen.jobId)}`
+                    : "#"
+                  const isProcessing = gen.status === "processing"
+                  const isFailed = gen.status === "failed"
+                  return (
+                    <Link
+                      key={gen.jobId}
+                      href={href}
+                      className="block rounded-lg overflow-hidden bg-white border border-gray-200 hover:shadow-md transition-shadow"
+                    >
+                      <div className="relative aspect-square bg-gray-100">
+                        {gen.outputDownloadUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={gen.outputDownloadUrl}
+                            alt={tool?.name || "Generation"}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : isProcessing ? (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-orange-600 gap-2">
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+                            <span className="text-xs font-medium">Generating…</span>
+                          </div>
+                        ) : isFailed ? (
+                          <div className="w-full h-full flex items-center justify-center text-amber-700 text-xs px-2 text-center">
+                            Failed{gen.refunded ? " — refunded" : ""}
+                          </div>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                            No preview
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <div className="text-sm font-medium text-gray-800 truncate">
+                          {tool?.name || "Unknown tool"}
+                        </div>
+                        <div className="text-xs text-gray-500">{formatRelative(gen.createdAt)}</div>
+                      </div>
+                    </Link>
+                  )
+                })}
               </div>
-            </div>
-          )}
+            )}
+          </section>
         </div>
       </main>
-
-      {/* Credit Information Section - Moved to bottom */}
-      <div className="container mx-auto max-w-7xl px-4 mb-8">
-        <div className="bg-purple-50 border border-purple-100 rounded-lg p-6 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-            <h3 className="text-xl font-semibold flex items-center gap-2 text-purple-800">
-              <Sparkles className="h-5 w-5 text-purple-500" />
-              Your Credit Balance
-            </h3>
-            <Button className="mt-3 md:mt-0 bg-purple-600 hover:bg-purple-700" asChild>
-              <Link href="/credits">
-                <CreditCard className="mr-2 h-4 w-4" />
-                Get More Credits
-              </Link>
-            </Button>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-6">
-            {/* Credit Balance */}
-            <div className="md:col-span-1">
-              <div className="text-3xl md:text-4xl font-bold text-purple-700 mb-2">
-                {isLoadingCredits ? "..." : formatCreditBalance(credits)}
-              </div>
-              
-              {creditHistory.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-purple-200">
-                  <h4 className="text-sm font-medium text-purple-700 mb-2">Recent Usage</h4>
-                  <div className="space-y-2">
-                    {creditHistory.map((usage, i) => (
-                      <div key={i} className="flex justify-between items-center text-sm">
-                        <span className="text-purple-700">Used 1 credit</span>
-                        <span className="text-purple-600">{formatHistoryDate(usage.date)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* How Credits Work */}
-            <div className="md:col-span-3">
-              <h4 className="text-lg font-medium text-purple-800 mb-3">How Credits Work</h4>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="bg-white/50 rounded-lg p-4">
-                  <h5 className="font-semibold mb-2 text-purple-700">Free Credits</h5>
-                  <p className="text-purple-900">New users receive 2 free credits to get started with creating coloring pages.</p>
-                </div>
-                <div className="bg-white/50 rounded-lg p-4">
-                  <h5 className="font-semibold mb-2 text-purple-700">Usage</h5>
-                  <p className="text-purple-900">Each AI-generated coloring page costs 1 credit. You can create multiple projects.</p>
-                </div>
-                <div className="bg-white/50 rounded-lg p-4">
-                  <h5 className="font-semibold mb-2 text-purple-700">Purchase</h5>
-                  <p className="text-purple-900">Purchase credits for as low as $0.45 per credit.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <footer className="border-t bg-white mt-8">
         <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
@@ -771,7 +526,7 @@ export default function DashboardPage() {
                   Story<span className="text-orange-500">InColor</span>
                 </span>
               </Link>
-              <p className="text-xs text-gray-500">© 2023 StoryInColor. All rights reserved.</p>
+              <p className="text-xs text-gray-500">© 2026 StoryInColor. All rights reserved.</p>
             </div>
             <nav className="flex gap-4 md:gap-6">
               <Link href="/terms" className="text-xs hover:underline underline-offset-4">
@@ -790,4 +545,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-

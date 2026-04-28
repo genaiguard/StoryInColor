@@ -169,7 +169,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       // Store the minimal structure
       sessionStorage.setItem("uploadPages", JSON.stringify(storablePages));
       // Simple confirmation log without data details
-      console.log(`State persisted. Total pages: ${pages.length}`);
+      if (process.env.NODE_ENV !== "production") console.log(`State persisted. Total pages: ${pages.length}`);
     } catch (error) {
       console.error("Error persisting state");
       
@@ -184,7 +184,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         
         // Store the minimal structure
         sessionStorage.setItem("minimalPages", JSON.stringify(minimalPages));
-        console.log("Minimal state persisted as fallback");
+        if (process.env.NODE_ENV !== "production") console.log("Minimal state persisted as fallback");
       } catch (fallbackError) {
         console.error("Even minimal state persistence failed");
       }
@@ -215,13 +215,13 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
         if (savedPagesJson) {
           const parsedPages = JSON.parse(savedPagesJson)
-          console.log(`Loading ${parsedPages.length} pages from storage`);
+          if (process.env.NODE_ENV !== "production") console.log(`Loading ${parsedPages.length} pages from storage`);
           setPages(parsedPages)
         } else {
           // Try to load minimal state as fallback
           const minimalPagesJson = sessionStorage.getItem("minimalPages")
           if (minimalPagesJson) {
-            console.log("Loading minimal state as fallback");
+            if (process.env.NODE_ENV !== "production") console.log("Loading minimal state as fallback");
             // In a real app, we would fetch the actual previews from Firebase here
             // based on the uploadId references
             setPages(JSON.parse(minimalPagesJson))
@@ -236,7 +236,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   // Debug function to log current state
   const debugState = useCallback(() => {
     // Simplified debug output without actual data content
-    console.log({
+    if (process.env.NODE_ENV !== "production") console.log({
       productType,
       artStyle,
       pagesCount: pages.length,

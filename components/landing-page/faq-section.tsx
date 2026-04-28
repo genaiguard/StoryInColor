@@ -1,75 +1,94 @@
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
 
+interface FAQ {
+  value: string
+  question: string
+  answer: string
+}
+
+const FAQS: FAQ[] = [
+  {
+    value: "credits",
+    question: "What are credits?",
+    answer:
+      "Credits are how you pay for generations on StoryInColor. Each tool consumes a small number of credits per result, and new accounts start with 2 free credits.",
+  },
+  {
+    value: "cost",
+    question: "How much does each tool cost?",
+    answer:
+      "The Coloring Book is 1 credit per generation. All ten premium tools (palm reading, face reading, style audit, plant care, and more) are 10 credits each.",
+  },
+  {
+    value: "privacy",
+    question: "Are my photos private?",
+    answer:
+      "Yes. Your photos are only used to generate your result. We never sell your data and never share your uploads with anyone outside our processing pipeline.",
+  },
+  {
+    value: "speed",
+    question: "How long does generation take?",
+    answer:
+      "Most generations finish in under a minute. Larger or more detailed tools can take a little longer, but you'll see progress in real time.",
+  },
+  {
+    value: "commercial",
+    question: "Can I use the result commercially?",
+    answer:
+      "Personal use is always covered. For commercial use, please review our Terms — most outputs are fine for small-scale commercial projects, but some content types have restrictions.",
+  },
+  {
+    value: "refund",
+    question: "What if I don't like the result?",
+    answer:
+      "If a generation fails for technical reasons, your credits are refunded automatically. If you're unhappy with a successful result, contact us — we'll always try to make it right.",
+  },
+  {
+    value: "storage",
+    question: "Do you store my photo after generation?",
+    answer:
+      "We retain uploads as part of your generation history so you can re-download results from your dashboard. Photos are sent to our AI processing provider (OpenAI) for the generation step only and are not used for training. You can delete your account and all associated uploads at any time from your account settings.",
+  },
+  {
+    value: "medical",
+    question: "Is this medical or diagnostic?",
+    answer:
+      "No. StoryInColor's tools — including iridology, skincare, and the reading tools — are intended for entertainment and gentle wellness reflection only. They are not a substitute for medical, psychological, or professional advice.",
+  },
+]
+
 export default function FAQSection() {
   return (
-    <section id="faq" className="py-12 md:py-16 lg:py-20">
+    <section id="faq" className="py-12 md:py-16 lg:py-20 bg-white">
       <div className="container mx-auto max-w-7xl px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Frequently Asked Questions</h2>
-            <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Everything you need to know about our custom coloring pages
-            </p>
-          </div>
+        <div className="flex flex-col items-center justify-center space-y-3 text-center">
+          <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+            Frequently asked questions
+          </h2>
+          <p className="max-w-[720px] text-gray-600 md:text-lg">
+            Everything you need to know about StoryInColor's AI photo tools.
+          </p>
         </div>
 
-        <div className="mx-auto max-w-3xl mt-12">
-          <Accordion type="single" collapsible className="space-y-4">
-            <AccordionItem value="generation" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-semibold text-left">How long does it take to generate my coloring pages?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-              Your custom coloring pages are generated almost instantly. You can download them right away and print them at home 
-              or compile multiple pages into a complete coloring book.
-            </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="photos" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-semibold text-left">What type of photos work best?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-              Clear photos with good lighting work best. Photos with distinct subjects and minimal background clutter
-              convert most effectively into coloring pages. We recommend uploading high-resolution images for the best
-              results.
-            </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="expiry" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-semibold text-left">Do credits expire?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-              Your credits remain available in your account for an extended period. We design our system so you can use them 
-              when it's convenient for you.
-            </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="pets" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-semibold text-left">Can I create coloring books of my pets?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-              Pet portraits make wonderful coloring pages. Our AI technology works great with dogs, cats, and other
-              pets. Just upload clear photos of your furry friends, and we'll transform them into delightful coloring
-              pages.
-            </p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="preview" className="rounded-lg border bg-white px-6">
-              <AccordionTrigger className="text-lg font-semibold text-left">Can I preview my coloring pages before finalizing?</AccordionTrigger>
-              <AccordionContent>
-                <p className="text-gray-700">
-              Yes! You can see a preview of how your photos will look as coloring pages before finalizing your creation. 
-              This lets you make adjustments or try different photos to get the result you want.
-            </p>
-              </AccordionContent>
-            </AccordionItem>
+        <div className="mx-auto max-w-3xl mt-10">
+          <Accordion type="single" collapsible className="space-y-3">
+            {FAQS.map((faq) => (
+              <AccordionItem
+                key={faq.value}
+                value={faq.value}
+                className="rounded-lg border bg-white px-6"
+              >
+                <AccordionTrigger className="text-base md:text-lg font-semibold text-left">
+                  {faq.question}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-gray-700">{faq.answer}</p>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
           </Accordion>
         </div>
       </div>
     </section>
   )
 }
-
