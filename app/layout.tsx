@@ -9,7 +9,7 @@ import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
 export const metadata: Metadata = {
   metadataBase: new URL('https://storyincolor.com'),
   title: 'StoryInColor — Editorial AI Photo Readings',
-  description: 'What does your photo know about you? Editorial AI readings of your palm, face, handwriting, plate, plant, room, and more. Written like an editor, not an algorithm.',
+  description: 'What does your photo know about you? Editorial readings of your palm, your face, your handwriting, your plate, your room, and more. Designed to be saved.',
   manifest: '/site.webmanifest',
   icons: [
     { rel: 'icon', url: '/favicon.ico', type: 'image/x-icon' },

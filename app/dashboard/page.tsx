@@ -450,16 +450,16 @@ export default function DashboardPage() {
                   <Sparkles className="h-6 w-6" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Your generations will appear here
+                  Your readings will appear here
                 </h3>
                 <p className="mt-2 text-sm text-gray-600">
                   {generations.length === 0
-                    ? "Pick a tool above and run your first photo to see it here."
-                    : "Nothing yet in this category — try another filter or a new tool."}
+                    ? "Pick a reading above and bring a photo to see it here."
+                    : "Nothing yet in this category — try another filter or a new reading."}
                 </p>
                 <div className="mt-5">
                   <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white">
-                    <Link href="/tools">Browse all tools</Link>
+                    <Link href="/readings">Browse the reading room</Link>
                   </Button>
                 </div>
               </div>
@@ -504,7 +504,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="p-2">
                         <div className="text-sm font-medium text-gray-800 truncate">
-                          {tool?.name || "Unknown tool"}
+                          {tool?.name || "Unknown reading"}
                         </div>
                         <div className="text-xs text-gray-500">{formatRelative(gen.createdAt)}</div>
                       </div>

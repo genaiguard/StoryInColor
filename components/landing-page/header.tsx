@@ -19,7 +19,6 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: "tools", label: "Tools", href: "/tools" },
   { id: "pricing", label: "Pricing", href: "/#pricing" },
   { id: "faq", label: "FAQ", href: "/#faq" },
 ]
@@ -112,24 +111,13 @@ export default function Header({ activeSection, scrollToSection }: HeaderProps) 
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
             <Link
-              href="/tools"
+              href="/readings"
               className="text-sm font-medium transition-colors hover:text-orange-500"
             >
               Readings
             </Link>
           </motion.div>
           {NAV_ITEMS.map(renderDesktopNavItem)}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
-          >
-            <Link
-              href="/blog"
-              className="text-sm font-medium transition-colors hover:text-orange-500"
-            >
-              Blog
-            </Link>
-          </motion.div>
           <motion.div
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -183,20 +171,13 @@ export default function Header({ activeSection, scrollToSection }: HeaderProps) 
           >
             <div className="container mx-auto py-4 flex flex-col space-y-2 px-2">
               <Link
-                href="/tools"
+                href="/readings"
                 onClick={closeMobile}
                 className="text-sm font-medium px-4 py-2 hover:bg-gray-100 rounded-md text-left"
               >
                 Readings
               </Link>
               {NAV_ITEMS.map(renderMobileNavItem)}
-              <Link
-                href="/blog"
-                onClick={closeMobile}
-                className="text-sm font-medium px-4 py-2 hover:bg-gray-100 rounded-md text-left"
-              >
-                Blog
-              </Link>
               <div className="px-2 pt-2">
                 {!initialized ? (
                   <div className="h-10 w-full rounded-full bg-orange-100 animate-pulse" aria-hidden="true" />

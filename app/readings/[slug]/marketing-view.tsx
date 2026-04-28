@@ -30,7 +30,7 @@ const WELLNESS_DISCLAIMER: Record<string, string> = {
  * signed-in visitor's authenticated workflow mounts (see tool-workflow.tsx).
  */
 export default function MarketingView({ tool }: { tool: Tool }) {
-  const ctaHref = `/login?register=true&next=/tools/${tool.slug}`;
+  const ctaHref = `/login?register=true&next=/readings/${tool.slug}`;
   const sample = tool.seo.sampleImage || tool.coverImage;
   // When sampleImage is left identical to coverImage in the registry it means
   // a real sample output hasn't been shipped yet. Render the section anyway
@@ -49,7 +49,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
         <nav className="mb-4 text-xs text-gray-500" aria-label="Breadcrumb">
           <ol className="flex items-center gap-1.5">
             <li>
-              <Link href="/tools" className="hover:text-orange-600">
+              <Link href="/readings" className="hover:text-orange-600">
                 Tools
               </Link>
             </li>
@@ -78,7 +78,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
                 <Link href={ctaHref}>Try free — sign in</Link>
               </Button>
               <Link
-                href="/tools"
+                href="/readings"
                 className="text-sm font-medium text-gray-700 hover:text-orange-600"
               >
                 See all {TOOLS.length} tools

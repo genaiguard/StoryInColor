@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import dynamic from 'next/dynamic'
 import Header from "@/components/landing-page/header"
 import HeroSection from "@/components/landing-page/hero-section"
+const EditorialQuoteSection = dynamic(() => import('@/components/landing-page/editorial-quote-section'))
 const ExamplesSection = dynamic(() => import('@/components/landing-page/examples-section'))
 const PricingSection = dynamic(() => import('@/components/landing-page/pricing-section'))
 const TestimonialsSection = dynamic(() => import('@/components/landing-page/testimonials-section'))
@@ -68,9 +69,10 @@ export default function Home() {
       <Header activeSection={activeSection} scrollToSection={scrollToSection} />
       <main className="flex-1 overflow-x-hidden">
         <HeroSection scrollToSection={scrollToSection} />
+        <EditorialQuoteSection />
         <ExamplesSection />
-        <PricingSection />
         <TestimonialsSection />
+        <PricingSection />
         <FAQSection />
       </main>
       <Footer />

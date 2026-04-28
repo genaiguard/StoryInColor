@@ -1,61 +1,65 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import Link from "next/link";
 import { TOOLS, getToolBySlug } from "@/lib/tools/registry";
-import { ToolJsonLd } from "@/components/seo/tool-jsonld";
-import MarketingView from "./marketing-view";
-import ToolWorkflow from "./tool-workflow";
 
-interface PageProps {
-  params: Promise<{ slug: string }>;
-}
-
+// Per-slug static redirects from old /tools/<slug> URLs to /readings/<slug>.
+// Keeps old backlinks alive and lets Google pass authority to the new path.
 export function generateStaticParams() {
   return TOOLS.map((t) => ({ slug: t.slug }));
 }
 
 export async function generateMetadata({
   params,
-}: PageProps): Promise<Metadata> {
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
   const { slug } = await params;
   const tool = getToolBySlug(slug);
-  if (!tool) return { title: "Tool not found" };
+  const target = `/readings/${slug}`;
   return {
-    title: tool.seo.metaTitle,
-    description: tool.seo.metaDescription,
-    openGraph: {
-      title: tool.seo.metaTitle,
-      description: tool.seo.metaDescription,
-      images: [
-        { url: tool.coverImage, width: 600, height: 800, alt: tool.name },
-      ],
-      type: "website",
-      url: `https://storyincolor.com/tools/${tool.slug}`,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: tool.seo.metaTitle,
-      description: tool.seo.metaDescription,
-      images: [tool.coverImage],
-    },
-    alternates: { canonical: `https://storyincolor.com/tools/${tool.slug}` },
+    title: "Moved — StoryInColor",
+    description: `Moved to ${target}`,
+    alternates: { canonical: `https://storyincolor.com${target}` },
+    robots: { index: false, follow: true },
+    other: { refresh: `0; url=${target}` },
+    openGraph: tool
+      ? { title: tool.name, description: tool.tagline, url: `https://storyincolor.com${target}` }
+      : undefined,
   };
 }
 
-export default async function Page({ params }: PageProps) {
+export default async function ToolSlugRedirect({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
-  const tool = getToolBySlug(slug);
-  if (!tool) notFound();
+  const target = `/readings/${slug}`;
+  // Three-way redirect: canonical (for crawlers — already in metadata),
+  // inline `<script>` (for JS-enabled humans), and a manual link (for
+  // no-JS / older crawlers). Next's metadata.other emits a meta tag with
+  // `name="refresh"` which browsers ignore, so we don't rely on that.
   return (
     <>
-      <ToolJsonLd tool={tool} />
-      {/*
-        Both surfaces are shipped to the static HTML for SEO. CSS in
-        app/globals.css hides the marketing view once the client workflow
-        sets data-tool-auth="signed-in", and hides the workflow shell while
-        the visitor is signed-out.
-      */}
-      <MarketingView tool={tool} />
-      <ToolWorkflow tool={tool} />
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `window.location.replace(${JSON.stringify(target)})`,
+        }}
+      />
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
+        <div className="max-w-md text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+          <p className="text-sm text-gray-600">Redirecting…</p>
+          <p className="mt-3 text-sm">
+            <Link
+              href={target}
+              className="text-orange-600 underline hover:text-orange-700"
+            >
+              Click here if you're not redirected automatically.
+            </Link>
+          </p>
+        </div>
+      </div>
     </>
   );
 }

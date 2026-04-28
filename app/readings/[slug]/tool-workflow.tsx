@@ -306,7 +306,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
           {/* Back link + breadcrumb */}
           <div className="mb-4 flex flex-col gap-1">
             <Link
-              href="/tools"
+              href="/readings"
               className="text-sm font-medium text-gray-600 hover:text-orange-600"
             >
               ← All tools
@@ -314,7 +314,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
             <nav className="text-xs text-gray-500" aria-label="Breadcrumb">
               <ol className="flex items-center gap-1.5">
                 <li>
-                  <Link href="/tools" className="hover:text-orange-600">
+                  <Link href="/readings" className="hover:text-orange-600">
                     Tools
                   </Link>
                 </li>

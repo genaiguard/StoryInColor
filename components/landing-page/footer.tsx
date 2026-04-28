@@ -14,7 +14,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-sm text-gray-600 max-w-xs">
-              Editorial AI readings — written like an editor, not an algorithm.
+              Editorial readings of the things you photograph.
             </p>
             <div className="flex gap-3 pt-1">
               <Link
@@ -58,14 +58,6 @@ export default function Footer() {
                   className="text-sm text-gray-600 hover:text-orange-500 transition-colors"
                 >
                   About
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/blog"
-                  className="text-sm text-gray-600 hover:text-orange-500 transition-colors"
-                >
-                  Blog
                 </Link>
               </li>
               <li>

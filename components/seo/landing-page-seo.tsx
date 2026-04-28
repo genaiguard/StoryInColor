@@ -11,7 +11,7 @@ import { TOOLS } from "@/lib/tools/registry";
 
 const SITE_URL = "https://storyincolor.com";
 const DESCRIPTION =
-  "What does your photo know about you? Editorial AI readings of your palm, face, handwriting, plate, plant, room, and more. Written like an editor, not an algorithm.";
+  "What does your photo know about you? Editorial readings of your palm, your face, your handwriting, your plate, your room, and more. Designed to be saved.";
 
 const webAppSchema = {
   "@context": "https://schema.org",
