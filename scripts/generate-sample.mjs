@@ -1,26 +1,26 @@
 #!/usr/bin/env node
 /**
- * One-shot sample-image generator for the landing page hero.
+ * Sample-image generator for the landing-page hero + reading room covers.
  *
- * Generates a base editorial portrait via OpenAI's gpt-image-1 (text-only),
- * saves it to /tmp/woman-portrait.png, then runs a chosen reading prompt
- * on top of it via the /v1/images/edits endpoint and writes the final
- * output (as WebP) into public/images/tools/<slug>.webp — replacing the
- * placeholder cover.
+ * For each reading, this script:
+ *   1. Generates an appropriate INPUT photo via /v1/images/generations
+ *      (the input matches what a real user would upload — a palm photo for
+ *       palm reading, a plate photo for plate analysis, etc.).
+ *   2. Caches inputs by `inputType` so face-based readings share a portrait
+ *      and we don't pay for duplicate input generations.
+ *   3. Feeds the input through the production reading prompt via
+ *      /v1/images/edits with the same parameters used in production
+ *      (input_fidelity=high, moderation=low, etc.).
+ *   4. Converts the PNG output to WebP via sharp and writes it to
+ *      public/images/tools/<slug>.webp — replacing the placeholder cover.
  *
  * Usage:
- *   OPENAI_API_KEY=sk-... node scripts/generate-sample.mjs
+ *   OPENAI_API_KEY=sk-... node scripts/generate-sample.mjs            # all 11
+ *   OPENAI_API_KEY=sk-... node scripts/generate-sample.mjs face-reading
  *   OPENAI_API_KEY=sk-... node scripts/generate-sample.mjs face-reading aura-reading
  *
- * Requirements:
- *   - Node 20+ (uses built-in fetch + FormData).
- *   - Sharp from the functions tree (we import it directly because the
- *     root package.json doesn't ship sharp). Run `cd functions && npm i`
- *     once if functions/node_modules doesn't exist yet.
- *
- * No-arg run defaults to face-reading. The base portrait is reused across
- * any face-based readings, so passing multiple slugs in one run only
- * generates one portrait and amortises the cost.
+ * Cost: roughly $0.40-$0.50 per reading (one input + one output at high
+ * quality). All 11 ≈ $5. Re-run after registry changes.
  */
 
 import fs from "node:fs/promises";
@@ -30,19 +30,25 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 const OUT_DIR = path.join(REPO_ROOT, "public", "images", "tools");
-const PORTRAIT_PATH = "/tmp/woman-portrait.png";
+const TMP_DIR = "/tmp";
 
 const apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) {
-  console.error("\nError: OPENAI_API_KEY env var is missing.\n");
+  console.error("\nOPENAI_API_KEY env var is missing.");
   console.error("Run: OPENAI_API_KEY=sk-... node scripts/generate-sample.mjs\n");
   process.exit(1);
 }
 
-// Sharp lives in the functions package. Try to import from there.
 let sharp;
 try {
-  const sharpUrl = path.join(REPO_ROOT, "functions", "node_modules", "sharp", "lib", "index.js");
+  const sharpUrl = path.join(
+    REPO_ROOT,
+    "functions",
+    "node_modules",
+    "sharp",
+    "lib",
+    "index.js",
+  );
   sharp = (await import(sharpUrl)).default;
 } catch (err) {
   console.error("Could not load sharp from functions/node_modules.");
@@ -51,38 +57,122 @@ try {
   process.exit(1);
 }
 
-const PORTRAIT_PROMPT =
-  "Editorial fashion-magazine portrait of a mid-40s woman, natural makeup, " +
-  "soft directional daylight, neutral cream paper backdrop, looking three-" +
-  "quarters away from camera, calm and approachable expression, sharp focus, " +
-  "shallow depth of field, high resolution, subtle film grain, no text or " +
-  "logos in frame.";
+// --- Inputs (the photos a real user would upload) ---------------------------
 
-// Reading prompts mirrored from functions/src/tool-prompts.ts. Edit there
-// first when you change wording — these are samples ONLY, not production.
+const INPUT_PROMPTS = {
+  portrait:
+    "Editorial fashion-magazine portrait of a mid-40s woman, natural makeup, soft directional daylight, neutral cream paper backdrop, looking three-quarters away from the camera, calm and approachable expression, sharp focus on the face, shallow depth of field, high resolution, no text or logos in frame.",
+  palm:
+    "Photograph of an open right palm of an adult, fingers slightly spread, palm facing the camera, taken straight-on under soft natural light against a neutral cream backdrop, sharp focus on the palm lines, all major lines (heart, head, life, fate) clearly visible, fashion-magazine quality, no jewelry, no text or logos in frame.",
+  iris:
+    "Extreme close-up macro photograph of a single human eye, iris and pupil filling the frame, hazel-green iris with clearly visible texture, fibers and crypts, soft natural light, eyelashes softly out of focus, no makeup, magazine-quality detail, no text or logos in frame.",
+  handwriting:
+    "Top-down photograph of a handwritten paragraph in elegant cursive on cream paper, fountain pen with dark ink, slight slant, varied line pressure, soft natural daylight from the side, magazine-quality, no text legible enough to read meaning, just the visual of the handwriting.",
+  outfit:
+    "Editorial full-body fashion photograph of a mid-30s woman, standing relaxed against a neutral cream studio backdrop, wearing a cream cashmere turtleneck sweater, tailored chocolate-brown wool trousers, leather loafers, gold hoop earrings, soft daylight from the side, magazine-quality, no text or logos in frame.",
+  plate:
+    "Top-down photograph of a beautifully plated lunch on a stoneware plate set on a light wood table — grilled salmon fillet, roasted heirloom carrots, herb-flecked quinoa, half a lemon, microgreens — soft natural daylight, fashion-food-magazine quality, no text or logos in frame.",
+  plant:
+    "Editorial photograph of a single thriving monstera deliciosa houseplant in a hand-thrown terracotta pot, set on a light wood floor against a neutral cream wall, soft daylight from a window on the left, magazine lifestyle quality, no text or logos in frame.",
+  room:
+    "Editorial wide-shot photograph of a stylish living room corner — mid-century modern walnut credenza, a single art print on the wall, a low ceramic vase with eucalyptus, a curated stack of large hardcover books, soft natural light pouring in from the right, neutral and warm palette, shelter-magazine quality, no text or logos in frame.",
+};
+
+// --- Readings (the production prompts, mirrored from tool-prompts.ts) -------
+
 const READINGS = {
+  "coloring-book": {
+    inputType: "portrait",
+    prompt:
+      "Convert this photo into a clean black-and-white line illustration suitable for a coloring book. If there are faces or figures, maintain the original features and essence, but subtly enhance them to appear sweeter, softer, and more charming—like a gently idealized animated style. Use thin, elegant lines with no shading or poche-style hatching. Simplify background details if needed, but preserve the overall mood and composition. The final image should feel graceful, warm, and beautiful, with a soft and uplifting tone.",
+    size: "1024x1536",
+    quality: "medium",
+  },
+  "palm-reading": {
+    inputType: "palm",
+    prompt:
+      "Based on my hand, perform a complete palmistry reading covering the heart line, head line, life line, and fate line, plus the major mounts (Venus, Jupiter, Saturn, Apollo, Mercury, Luna, Mars) and overall hand shape (earth, air, fire, water). Lay it out as a clean, minimal editorial guide with thin hairlines, generous whitespace, and rounded cards labeling each line and mount, in a premium black-on-cream palette that feels expensive and magazine-like. Embed a small black-on-white contour line-art tracing the palm's main lines as a decorative artwork beside the cards. Frame the reading as a playful entertainment guide, not a literal prediction. Do your best.",
+    size: "1024x1536",
+    quality: "high",
+  },
   "face-reading": {
+    inputType: "portrait",
     prompt:
       "Based on my face, perform a Mian Xiang (Chinese physiognomy) reading using the Five Officers and the Twelve Palaces — life, wealth, siblings, marriage, children, health, travel, friends, career, property, fortune, and parents — mapped across the forehead, brows, eyes, nose, cheeks, mouth, and chin zones. Compose it as a clean, minimal editorial chart with thin lines, soft rounded cards per palace, refined serif-and-sans typography, and an expensive, gallery-quality feel. Include a small black-on-white contour line-art portrait of the face with the twelve palace zones gently outlined as a decorative element. Frame everything as a cultural-entertainment reflection, not a personality verdict or destiny claim. Do your best.",
     size: "1024x1536",
+    quality: "high",
   },
   "aura-reading": {
-    // Aura uses /v1/images/generations in production (text-only) but for the
-    // landing-page sample we run /v1/images/edits so the rendered face
-    // matches the same person across hero tiles.
+    inputType: "portrait",
     prompt:
       "Intuit an aura reading for the subject in this photo, describing the dominant aura colors (red, orange, yellow, green, blue, indigo, violet), the seven auric layers, and the seven main chakras. Render it as a clean, minimal editorial spread with thin concentric rings, generous whitespace, rounded cards explaining each color and layer, a soft watercolor halo overlaid behind a stylized portrait of the subject, refined serif-and-sans typography, and an expensive ethereal magazine feel. Add a small black-on-white contour line-art silhouette of the head and shoulders as a decorative anchor. This is a reflective entertainment piece, not a spiritual diagnosis. Do your best.",
     size: "1024x1536",
+    quality: "high",
+  },
+  iridology: {
+    inputType: "iris",
+    prompt:
+      "Based on my eye, create an iridology-style wellness reflection mapping the iris zones — pupillary zone, collarette (autonomic nerve wreath), ciliary zone, and outer rim — and noting visible markings such as lacunae, crypts, and radii, organized around a classic iris chart. Lay it out as a clean, minimal editorial infographic with thin lines, rounded cards for each zone, a refined neutral palette, and a premium clinical-but-elegant feel. Include a small black-on-white contour line-art of the iris and pupillary frill as a decorative emblem. This is a wellness reflection for entertainment only, not a medical diagnosis or health claim — keep all language gentle, suggestive, and lifestyle-oriented. Do your best.",
+    size: "1024x1536",
+    quality: "high",
+  },
+  handwriting: {
+    inputType: "handwriting",
+    prompt:
+      "Based on my handwriting sample, perform a graphology-style personality sketch analyzing slant (left, vertical, right), baseline trend (rising, straight, falling, wavy), pressure (light, medium, heavy), letter size, spacing, connectivity, zones (upper, middle, lower), and signature character. Present it as a clean, minimal editorial card set with thin lines, rounded panels per trait, elegant typography, and an expensive stationery-magazine feel. Add a small black-on-white contour line-art of a fountain-pen stroke or a traced signature flourish as a decorative element. Frame the result as a playful personality reflection for entertainment, not a clinical or deterministic verdict. Do your best.",
+    size: "1024x1536",
+    quality: "high",
+  },
+  "style-audit": {
+    inputType: "outfit",
+    prompt:
+      "Based on my outfit photo, perform an editorial style audit in a Vogue/GQ tone covering silhouette, proportion, fit, layering, color palette, fabric and texture, accessories, and the closest style archetype (classic, minimalist, romantic, dramatic, bohemian, edgy, or eclectic) with a suggested dress-code register. Lay it out as a clean, minimal fashion-magazine spread with thin lines, rounded cards per category, swatch chips for the palette, and a refined, expensive editorial feel. Include a small black-on-white contour line-art croquis of the outfit silhouette as a decorative figure. Frame everything as a style suggestion only, never a judgment of the person. Do your best.",
+    size: "1024x1536",
+    quality: "high",
   },
   "skincare-glow": {
+    inputType: "portrait",
     prompt:
       "Based on my selfie, give a cosmetic skincare-glow reflection mapping the T-zone, cheeks, under-eye, and jawline, with gentle observations on apparent texture, tone, hydration, and luminosity, plus a suggested AM and PM routine framework (cleanse, treat, moisturize, SPF in AM; cleanse, treat, hydrate, occlusive in PM). Compose it as a clean, minimal editorial beauty card with thin lines, rounded panels per zone and routine step, soft neutral tones, and a luxe glossy-magazine feel. Add a small black-on-white contour line-art of the face with the skincare zones lightly outlined as a decorative element. This is cosmetic guidance for entertainment only — no medical claims, no diagnosis, no treatment promises. Do your best.",
     size: "1024x1536",
+    quality: "high",
+  },
+  "plate-analysis": {
+    inputType: "plate",
+    prompt:
+      "Based on my plate photo, give a dietitian-style infographic breakdown estimating the macro split (protein, carbohydrate, fat), portion balance, fiber and produce coverage, plating composition, and color theory of the food. Lay it out as a clean, minimal editorial nutrition card with thin lines, rounded panels per macro and observation, a small donut chart for the macro ratio, and a refined cookbook-magazine feel that looks expensive. Include a small black-on-white contour line-art of the plate from above as a decorative emblem. Frame it as general wellness reflection and balanced-eating inspiration, not medical or prescriptive nutrition advice. Do your best.",
+    size: "1024x1024",
+    quality: "high",
+  },
+  "plant-care": {
+    inputType: "plant",
+    prompt:
+      "Based on my plant photo, give a plant-ID-style care card identifying likely species cues from leaf shape, venation, and color, then advising on light needs (low, bright indirect, full sun), watering cadence, humidity, soil and drainage, fertilizing rhythm, and common pests (spider mites, mealybugs, fungus gnats, scale). Lay it out as a clean, minimal editorial care card with thin lines, rounded panels per topic, small icons, a botanical-journal palette, and an expensive nursery-boutique feel. Add a small black-on-white contour line-art of the plant's silhouette as a decorative botanical illustration. Frame it as friendly care guidance, not a guaranteed diagnosis of the specimen. Do your best.",
+    size: "1024x1536",
+    quality: "medium",
+  },
+  "room-vibes": {
+    inputType: "room",
+    prompt:
+      'Based on my room photo, give an interior-styling read covering palette, materials and textures, lighting, furniture silhouettes, era cues, and the closest design archetype (mid-century modern, Scandinavian, Japandi, minimalist, maximalist, industrial, coastal, or eclectic), plus a "shelf-as-personality" note on objects on display. Lay it out as a clean, minimal editorial interiors spread in landscape orientation with thin lines, rounded cards per category, swatch chips for the palette, refined serif-and-sans typography, and an expensive shelter-magazine feel. Include a small black-on-white contour line-art of the room\'s key silhouette as a decorative vignette. Frame everything as styling inspiration, not a verdict on taste. Do your best.',
+    size: "1536x1024",
+    quality: "high",
   },
 };
 
-async function generatePortrait() {
-  console.log("→ Generating base portrait (text-only) ...");
+async function generateInput(inputType) {
+  const cachedPath = path.join(TMP_DIR, `sic-input-${inputType}.png`);
+  try {
+    const cached = await fs.readFile(cachedPath);
+    console.log(`  [reusing cached input: ${cachedPath}]`);
+    return cached;
+  } catch {
+    /* fall through */
+  }
+  const prompt = INPUT_PROMPTS[inputType];
+  if (!prompt) throw new Error(`No INPUT_PROMPT for inputType=${inputType}`);
+
+  console.log(`  generating input photo (${inputType})...`);
   const resp = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: {
@@ -91,7 +181,7 @@ async function generatePortrait() {
     },
     body: JSON.stringify({
       model: "gpt-image-1",
-      prompt: PORTRAIT_PROMPT,
+      prompt,
       n: 1,
       size: "1024x1024",
       quality: "high",
@@ -100,32 +190,31 @@ async function generatePortrait() {
     }),
   });
   if (!resp.ok) {
-    throw new Error(`generations failed: ${resp.status} ${await resp.text()}`);
+    throw new Error(`input generation failed: ${resp.status} ${await resp.text()}`);
   }
   const json = await resp.json();
   const b64 = json?.data?.[0]?.b64_json;
-  if (!b64) throw new Error("generations returned no b64_json");
+  if (!b64) throw new Error("input generation returned no b64_json");
   const buf = Buffer.from(b64, "base64");
-  await fs.writeFile(PORTRAIT_PATH, buf);
-  console.log(`  saved ${PORTRAIT_PATH}`);
+  await fs.writeFile(cachedPath, buf);
   return buf;
 }
 
-async function runReading(slug, config, portraitBuf) {
-  console.log(`→ Running ${slug} ...`);
+async function runReading(slug, config, inputBuf) {
+  console.log(`→ ${slug}: running reading prompt...`);
   const form = new FormData();
   form.append("model", "gpt-image-1");
   form.append("prompt", config.prompt);
   form.append("n", "1");
   form.append("size", config.size);
-  form.append("quality", "high");
+  form.append("quality", config.quality);
   form.append("input_fidelity", "high");
   form.append("output_format", "png");
   form.append("moderation", "low");
   form.append(
     "image",
-    new Blob([portraitBuf], { type: "image/png" }),
-    "portrait.png",
+    new Blob([inputBuf], { type: "image/png" }),
+    "input.png",
   );
 
   const resp = await fetch("https://api.openai.com/v1/images/edits", {
@@ -141,8 +230,6 @@ async function runReading(slug, config, portraitBuf) {
   if (!b64) throw new Error(`edits returned no b64_json for ${slug}`);
   const pngBuf = Buffer.from(b64, "base64");
 
-  // Convert PNG → WebP via sharp so the asset matches the .webp filename
-  // the registry's coverImage already references.
   const webpBuf = await sharp(pngBuf).webp({ quality: 88 }).toBuffer();
   const outPath = path.join(OUT_DIR, `${slug}.webp`);
   await fs.writeFile(outPath, webpBuf);
@@ -151,7 +238,7 @@ async function runReading(slug, config, portraitBuf) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const slugs = args.length > 0 ? args : ["face-reading"];
+  const slugs = args.length > 0 ? args : Object.keys(READINGS);
   for (const slug of slugs) {
     if (!READINGS[slug]) {
       console.error(`Unknown reading slug: ${slug}`);
@@ -160,9 +247,10 @@ async function main() {
     }
   }
 
-  const portrait = await generatePortrait();
   for (const slug of slugs) {
-    await runReading(slug, READINGS[slug], portrait);
+    const config = READINGS[slug];
+    const inputBuf = await generateInput(config.inputType);
+    await runReading(slug, config, inputBuf);
   }
 
   console.log("\nDone. Commit the new .webp files in public/images/tools/.");
