@@ -3,6 +3,7 @@ import Header from "@/components/landing-page/header";
 import Footer from "@/components/landing-page/footer";
 import { ToolGrid } from "@/components/tools/tool-grid";
 import { TOOLS } from "@/lib/tools/registry";
+import { CinematicSection } from "@/components/cinematic/cinematic-section";
 
 const SHORT_DESCRIPTION =
   "Editorial AI photo readings — palm reading, face reading, style audit, plant care, plate analysis, and more. Each one designed to be saved.";
@@ -52,26 +53,25 @@ function CatalogJsonLd() {
 
 export default function ToolsCatalogPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col bg-black">
       <CatalogJsonLd />
       <Header />
-      <main className="flex-1">
-        <section className="container mx-auto max-w-7xl px-4 md:px-6 py-12 md:py-16">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 md:text-5xl">
-              The reading room.
-            </h1>
-            <p className="mt-4 text-lg text-gray-600">
-              Every reading we publish, in one place. Bring whatever you have a
-              photo of — your palm, your handwriting, your plate, your plant,
-              your room — and we'll write you back.
-            </p>
-          </div>
-
-          <div className="mt-10">
-            <ToolGrid showCategoryChips />
-          </div>
-        </section>
+      <main className="flex-1 pt-24 md:pt-28">
+        <CinematicSection
+          eyebrow="The reading room"
+          headingLevel="h1"
+          title={
+            <>
+              Every reading,{" "}
+              <span className="italic font-light text-gray-400">
+                in one place.
+              </span>
+            </>
+          }
+          description="Bring whatever you have a photo of — your palm, your handwriting, your plate, your plant, your room — and we'll write you back."
+        >
+          <ToolGrid showCategoryChips />
+        </CinematicSection>
       </main>
       <Footer />
     </div>

@@ -1,9 +1,15 @@
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion"
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import { CinematicSection } from "@/components/cinematic/cinematic-section";
 
 interface FAQ {
-  value: string
-  question: string
-  answer: string
+  value: string;
+  question: string;
+  answer: string;
 }
 
 const FAQS: FAQ[] = [
@@ -55,40 +61,40 @@ const FAQS: FAQ[] = [
     answer:
       "No. StoryInColor's readings — including iridology, skincare, and plate analysis — are intended for entertainment and gentle wellness reflection only. They are not a substitute for medical, psychological, or professional advice.",
   },
-]
+];
 
 export default function FAQSection() {
   return (
-    <section id="faq" className="bg-white py-24 md:py-32">
-      <div className="container mx-auto max-w-7xl px-6 md:px-8">
-        <div className="mb-12 max-w-2xl">
-          <h2 className="text-4xl font-bold tracking-[-0.02em] text-gray-900 md:text-5xl">
-            Frequently asked.
-          </h2>
-          <p className="mt-4 text-lg text-gray-600">
-            The honest answers, before you sign up.
-          </p>
-        </div>
-
-        <div className="mx-auto max-w-3xl">
-          <Accordion type="single" collapsible className="space-y-3">
-            {FAQS.map((faq) => (
-              <AccordionItem
-                key={faq.value}
-                value={faq.value}
-                className="rounded-2xl border border-gray-200 bg-white px-6"
-              >
-                <AccordionTrigger className="text-base md:text-lg font-semibold text-left">
-                  {faq.question}
-                </AccordionTrigger>
-                <AccordionContent>
-                  <p className="text-gray-700">{faq.answer}</p>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
+    <CinematicSection
+      id="faq"
+      eyebrow="FAQ"
+      title={
+        <>
+          Frequently{" "}
+          <span className="italic font-light text-gray-400">asked.</span>
+        </>
+      }
+      description="The honest answers, before you sign up."
+      topBorder
+    >
+      <div className="mx-auto max-w-3xl">
+        <Accordion type="single" collapsible className="space-y-3">
+          {FAQS.map((faq) => (
+            <AccordionItem
+              key={faq.value}
+              value={faq.value}
+              className="liquid-glass overflow-hidden rounded-2xl px-6 [&[data-state=open]]:bg-white/[0.04]"
+            >
+              <AccordionTrigger className="text-left text-base font-medium text-white hover:no-underline md:text-lg">
+                {faq.question}
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="text-gray-300">{faq.answer}</p>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </div>
-    </section>
-  )
+    </CinematicSection>
+  );
 }

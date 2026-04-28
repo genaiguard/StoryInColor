@@ -1,10 +1,18 @@
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import { FirebaseProvider } from './firebase/firebase-provider'
 import Script from 'next/script'
 import StructuredData from '@/components/seo/structured-data'
 import FacebookPixel from '@/components/tracking/facebook-pixel'
 import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-inter',
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://storyincolor.com'),
@@ -36,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="">
+    <html lang="en" className={`dark bg-black ${inter.variable}`}>
       <head>
         <Script id="clarity-tracking" strategy="afterInteractive">
           {`
@@ -80,7 +88,7 @@ export default function RootLayout({
           <FacebookPixel pixelId={FACEBOOK_PIXEL_CONFIG.PIXEL_ID} />
         )}
       </head>
-      <body className="">
+      <body className="bg-black text-white antialiased">
         <FirebaseProvider>
           {children}
         </FirebaseProvider>

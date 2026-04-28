@@ -68,7 +68,7 @@ export default function Home() {
       <StructuredData />
       <Header activeSection={activeSection} scrollToSection={scrollToSection} />
       <main className="flex-1 overflow-x-hidden">
-        <HeroSection scrollToSection={scrollToSection} />
+        <HeroSection />
         <EditorialQuoteSection />
         <ExamplesSection />
         <TestimonialsSection />

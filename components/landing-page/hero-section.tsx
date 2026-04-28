@@ -1,53 +1,64 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { useEffect, useState } from "react";
+import { TOOLS } from "@/lib/tools/registry";
+import { CinematicHero } from "@/components/cinematic/cinematic-hero";
 
-interface HeroSectionProps {
-  scrollToSection?: (id: string) => void
-}
+const FEATURED_IDS = [
+  "palm-reading",
+  "face-reading",
+  "aura-reading",
+  "handwriting",
+  "style-audit",
+  "room-vibes",
+] as const;
 
-export default function HeroSection({ scrollToSection: _scrollToSection }: HeroSectionProps) {
+const FEATURED = FEATURED_IDS.map((id) => {
+  const tool = TOOLS.find((t) => t.id === id);
+  if (!tool) {
+    throw new Error(`Hero featured tool not found: ${id}`);
+  }
+  return tool;
+});
+
+const ROTATE_MS = 5500;
+
+export default function HeroSection() {
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const featured = FEATURED[idx];
+
+  // Auto-rotate the featured reading. Pauses while the cursor is on the hero
+  // so visitors can finish reading what they hovered over.
+  useEffect(() => {
+    if (paused) return;
+    const t = window.setInterval(() => {
+      setIdx((i) => (i + 1) % FEATURED.length);
+    }, ROTATE_MS);
+    return () => window.clearInterval(t);
+  }, [paused]);
+
   return (
-    <section className="relative overflow-hidden border-b border-gray-200 bg-white py-20 md:py-28 lg:py-32">
-      <div className="container relative z-10 mx-auto max-w-7xl px-6 md:px-8">
-        <div className="max-w-4xl">
-          <div className="flex flex-col gap-7">
-            <h1 className="font-bold tracking-[-0.025em] text-gray-900 text-[44px] leading-[1.02] sm:text-[56px] md:text-[68px] lg:text-[76px]">
-              What does your photo
-              <br />
-              <span className="italic text-orange-600">know about you?</span>
-            </h1>
-
-            <p className="max-w-[560px] text-lg text-gray-600 md:text-xl">
-              A reading from your palm, your handwriting, your plate, your room — wherever your life leaves a trace. Saved like a magazine. Just for you.
-            </p>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Button
-                className="rounded-full bg-gray-900 px-7 py-6 text-base font-medium text-white hover:bg-gray-800"
-                asChild
-              >
-                <Link href="/readings">
-                  Start free <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                variant="ghost"
-                className="rounded-full px-6 py-6 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                asChild
-              >
-                <Link href="/readings">See the reading room</Link>
-              </Button>
-            </div>
-
-            <p className="text-sm text-gray-500">
-              New here? Start with free credits — no card required.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
+    <div
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <CinematicHero
+        video={{ src: "/videos/hero.mp4" }}
+        contentKey={idx}
+        title={featured.name}
+        italicTagline={`${featured.tagline}.`}
+        description={featured.heroCopy}
+        primaryCta={{
+          label: "Start free",
+          href: `/readings/${featured.slug}`,
+        }}
+        secondaryCta={{
+          label: "See readings",
+          href: "/readings",
+          hideIcon: true,
+        }}
+      />
+    </div>
+  );
 }

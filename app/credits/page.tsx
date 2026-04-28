@@ -1,94 +1,131 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { CreditCard, CheckCircle, AlertTriangle, ArrowLeft, Shield, Sparkles, Clock, Plus, Minus } from "lucide-react"
-import { toast } from "sonner"
-import { useFirebase } from "@/app/firebase/firebase-provider"
-import { getUserCredits, CREDIT_PACKAGES, formatCreditBalance } from "@/app/firebase/credits-helpers"
-import { getFirestore, collection, query, orderBy, limit, getDocs } from "firebase/firestore"
-import { getFunctions, httpsCallable } from "firebase/functions"
-import { loadStripe } from "@stripe/stripe-js"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  CreditCard,
+  CheckCircle,
+  AlertTriangle,
+  ArrowLeft,
+  Shield,
+  Sparkles,
+  Clock,
+  Plus,
+  Minus,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useFirebase } from "@/app/firebase/firebase-provider";
+import {
+  getUserCredits,
+  CREDIT_PACKAGES,
+  formatCreditBalance,
+} from "@/app/firebase/credits-helpers";
+import {
+  getFirestore,
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+} from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { loadStripe } from "@stripe/stripe-js";
+
+function PageHeader() {
+  return (
+    <header className="sticky top-0 z-40 border-b border-white/5 bg-black/60 backdrop-blur-md">
+      <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-8">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="liquid-glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Dashboard
+          </Link>
+        </div>
+        <Link
+          href="/"
+          className="text-base font-semibold tracking-[-0.02em] text-white sm:text-lg"
+        >
+          <span className="font-light">Story</span>
+          <span className="font-semibold">In</span>
+          <span className="font-light">Color</span>
+        </Link>
+      </div>
+    </header>
+  );
+}
+
+const PACK_HEADLINES: Record<string, string> = {
+  small: "Try it",
+  medium: "Most popular",
+  large: "Save 29%",
+  xlarge: "Save 36%",
+};
 
 export default function CreditsPage() {
-  const router = useRouter()
-  const { user, initialized: firebaseInitialized } = useFirebase()
-  const [isLoading, setIsLoading] = useState(true)
-  const [credits, setCredits] = useState(0)
-  const [purchaseHistory, setPurchaseHistory] = useState<any[]>([])
-  const [usageHistory, setUsageHistory] = useState<any[]>([])
-  const [error, setError] = useState("")
-  const [firstActivityTimestamp, setFirstActivityTimestamp] = useState<any>(null)
-  const [packageIdLoading, setPackageIdLoading] = useState<string | null>(null)
+  const router = useRouter();
+  const { user, initialized: firebaseInitialized } = useFirebase();
+  const [isLoading, setIsLoading] = useState(true);
+  const [credits, setCredits] = useState(0);
+  const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
+  const [usageHistory, setUsageHistory] = useState<any[]>([]);
+  const [error, setError] = useState("");
+  const [packageIdLoading, setPackageIdLoading] = useState<string | null>(
+    null,
+  );
 
-  // Auth gate: send unauthenticated visitors to /login (preserving intent)
   useEffect(() => {
     if (firebaseInitialized && !user) {
-      router.replace("/login?next=/credits")
+      router.replace("/login?next=/credits");
     }
-  }, [firebaseInitialized, user, router])
+  }, [firebaseInitialized, user, router]);
 
-  // Load user credits and history on mount
   useEffect(() => {
     async function loadUserCredits() {
       if (!user || !firebaseInitialized) {
-        setIsLoading(false)
-        return
+        setIsLoading(false);
+        return;
       }
 
       try {
-        const userCredits = await getUserCredits(user.uid)
-        setCredits(userCredits.balance)
+        const userCredits = await getUserCredits(user.uid);
+        setCredits(userCredits.balance);
 
-        // Usage events were migrated from a userCredits.usageHistory array to
-        // a userCredits/{uid}/usageEvents/{deduct|refund-jobId} subcollection
-        // (the array hit the 1MB doc cap on heavy users). Read from the
-        // subcollection here. Limit 100 most-recent for display — full audit
-        // is in the admin tools.
-        const db = getFirestore()
-        const eventsRef = collection(db, "userCredits", user.uid, "usageEvents")
-        const eventsQ = query(eventsRef, orderBy("date", "desc"), limit(100))
-        const eventsSnap = await getDocs(eventsQ)
-        const usageEvents = eventsSnap.docs.map((d) => d.data())
-        setUsageHistory(usageEvents)
+        const db = getFirestore();
+        const eventsRef = collection(
+          db,
+          "userCredits",
+          user.uid,
+          "usageEvents",
+        );
+        const eventsQ = query(eventsRef, orderBy("date", "desc"), limit(100));
+        const eventsSnap = await getDocs(eventsQ);
+        const usageEvents = eventsSnap.docs.map((d) => d.data());
+        setUsageHistory(usageEvents);
 
-        // Set purchase history (still on the parent doc — purchases are low-cardinality)
-        const sortedPurchaseHistory = userCredits.purchaseHistory || []
-        sortedPurchaseHistory.sort((a: any, b: any) => b.purchaseDate.seconds - a.purchaseDate.seconds)
-        setPurchaseHistory(sortedPurchaseHistory)
-
-        // Earliest timestamp across both streams for the "since you joined" footer
-        let earliestTimestamp: any = null
-        const oldestUsage = usageEvents.length > 0 ? usageEvents[usageEvents.length - 1].date : null
-        const oldestPurchase = sortedPurchaseHistory.length > 0
-          ? sortedPurchaseHistory[sortedPurchaseHistory.length - 1].purchaseDate
-          : null
-        if (oldestUsage && oldestPurchase) {
-          earliestTimestamp = oldestUsage.seconds < oldestPurchase.seconds ? oldestUsage : oldestPurchase
-        } else {
-          earliestTimestamp = oldestUsage || oldestPurchase
-        }
-        setFirstActivityTimestamp(earliestTimestamp)
-      } catch (error) {
-        console.error("Error loading user credits:", error)
-        setError("Failed to load your credits. Please try refreshing the page.")
+        const sortedPurchaseHistory = userCredits.purchaseHistory || [];
+        sortedPurchaseHistory.sort(
+          (a: any, b: any) => b.purchaseDate.seconds - a.purchaseDate.seconds,
+        );
+        setPurchaseHistory(sortedPurchaseHistory);
+      } catch (err) {
+        console.error("Error loading user credits:", err);
+        setError("Failed to load your credits. Please try refreshing.");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 
-    loadUserCredits()
-  }, [user, firebaseInitialized])
+    loadUserCredits();
+  }, [user, firebaseInitialized]);
 
-  // Helper function to format the date
   const formatHistoryDate = (timestamp: any) => {
-    if (!timestamp) return 'Unknown date';
-    
-    // Handle both timestamp objects with seconds and plain Date objects
-    let date;
+    if (!timestamp) return "Unknown date";
+    let date: Date;
     if (timestamp.seconds) {
       date = new Date(timestamp.seconds * 1000);
     } else if (timestamp instanceof Date) {
@@ -96,365 +133,400 @@ export default function CreditsPage() {
     } else {
       date = new Date();
     }
-    
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' +
-           date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    return (
+      date.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }) +
+      " " +
+      date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+    );
   };
 
   const handlePurchaseCredits = async (packageId: string) => {
     if (!user) {
-      toast.error("You must be signed in to purchase credits")
-      return
+      toast.error("You must be signed in to purchase credits");
+      return;
     }
 
-    const creditPackage = CREDIT_PACKAGES.find(pkg => pkg.id === packageId)
+    const creditPackage = CREDIT_PACKAGES.find((pkg) => pkg.id === packageId);
     if (!creditPackage) {
-      toast.error("Invalid credit package selected")
-      return
+      toast.error("Invalid credit package selected");
+      return;
     }
 
-    setPackageIdLoading(packageId)
-    setError("")
+    setPackageIdLoading(packageId);
+    setError("");
 
     try {
-      const functions = getFunctions()
-      const createCreditCheckout = httpsCallable(functions, 'createCreditCheckout')
+      const functions = getFunctions();
+      const createCreditCheckout = httpsCallable(
+        functions,
+        "createCreditCheckout",
+      );
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : null;
 
-      // Send packageId and current origin
-      const origin = typeof window !== 'undefined' ? window.location.origin : null
-      
       const result = await createCreditCheckout({
         packageId: creditPackage.id,
-        origin
-      })
+        origin,
+      });
 
-      const data = result.data as any
-      
+      const data = result.data as any;
       if (!data || !data.sessionId) {
-        throw new Error("Checkout session ID not received from server")
+        throw new Error("Checkout session ID not received from server");
       }
 
-      // Redirect to Stripe checkout
-      const sessionId = data.sessionId
-      const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-      
+      const sessionId = data.sessionId;
+      const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
       if (!stripePublicKey) {
-        throw new Error("Stripe public key is not configured")
+        throw new Error("Stripe public key is not configured");
       }
-      
-      const stripe = await loadStripe(stripePublicKey)
-      
+
+      const stripe = await loadStripe(stripePublicKey);
       if (!stripe) {
-        throw new Error('Failed to load Stripe library')
+        throw new Error("Failed to load Stripe library");
       }
 
       toast.info(
         "You will be redirected to our payment processor to complete your purchase securely",
-        { duration: 5000 }
-      )
-      
-      const { error: stripeError } = await stripe.redirectToCheckout({ sessionId })
+        { duration: 5000 },
+      );
+
+      const { error: stripeError } = await stripe.redirectToCheckout({
+        sessionId,
+      });
 
       if (stripeError) {
-        console.error("Stripe redirect error:", stripeError)
-        throw new Error(`Payment Error: ${stripeError.message || 'Could not process payment'}`)
+        console.error("Stripe redirect error:", stripeError);
+        throw new Error(
+          `Payment Error: ${stripeError.message || "Could not process payment"}`,
+        );
       }
-    } catch (error: any) {
-      console.error("Credit purchase failed:", error)
-      const message = error?.message || "Failed to process payment. Please try again."
-      setError(message)
-      toast.error(message)
+    } catch (err: any) {
+      console.error("Credit purchase failed:", err);
+      const message =
+        err?.message || "Failed to process payment. Please try again.";
+      setError(message);
+      toast.error(message);
     } finally {
-      setPackageIdLoading(null)
+      setPackageIdLoading(null);
     }
-  }
+  };
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-gray-50">
-        <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
-          <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 md:px-6">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold">
-                Story<span className="text-orange-500">InColor</span>
-              </span>
-            </Link>
-          </div>
-        </header>
-
-        <main className="flex-1 py-6 md:py-8 px-4">
-          <div className="container mx-auto max-w-7xl">
-            <div className="flex flex-col items-center justify-center h-[60vh]">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
-              <p className="text-gray-500">Loading your credits...</p>
-            </div>
+      <div className="flex min-h-screen flex-col bg-black text-white">
+        <PageHeader />
+        <main className="flex flex-1 items-center justify-center px-4 py-10">
+          <div className="flex flex-col items-center gap-3 text-gray-400">
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+            <p className="text-sm">Loading your credits...</p>
           </div>
         </main>
       </div>
-    )
+    );
   }
 
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col bg-gray-50">
-        <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
-          <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 md:px-6">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold">
-                Story<span className="text-orange-500">InColor</span>
-              </span>
+      <div className="flex min-h-screen flex-col bg-black text-white">
+        <PageHeader />
+        <main className="flex flex-1 items-center justify-center px-4 py-10">
+          <div className="liquid-glass mx-auto max-w-md rounded-2xl p-8 text-center">
+            <span className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/15 text-amber-300">
+              <AlertTriangle className="h-6 w-6" />
+            </span>
+            <h2 className="text-2xl font-normal tracking-[-0.02em]">
+              Not signed in
+            </h2>
+            <p className="mt-2 text-sm text-gray-400">
+              Please sign in to purchase credits.
+            </p>
+            <Link
+              href="/login"
+              className="mt-6 inline-flex items-center justify-center rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-colors hover:bg-gray-200"
+            >
+              Sign in
             </Link>
-          </div>
-        </header>
-
-        <main className="flex-1 py-6 md:py-8 px-4">
-          <div className="container mx-auto max-w-7xl">
-            <div className="flex flex-col items-center justify-center h-[60vh]">
-              <div className="rounded-full bg-amber-100 p-4 mb-4">
-                <AlertTriangle className="h-8 w-8 text-amber-500" />
-              </div>
-              <h2 className="text-xl font-bold mb-2">Not Signed In</h2>
-              <p className="text-gray-500 mb-4">Please sign in to purchase credits.</p>
-              <Button asChild>
-                <Link href="/login">Sign In</Link>
-              </Button>
-            </div>
           </div>
         </main>
       </div>
-    )
+    );
   }
 
-  return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
-        <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 md:px-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.back()}>
-              <ArrowLeft className="h-5 w-5" />
-              <span className="sr-only">Back</span>
-            </Button>
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold">
-                Story<span className="text-orange-500">InColor</span>
-              </span>
-            </Link>
-          </div>
-        </div>
-      </header>
+  const combinedHistory = [
+    ...purchaseHistory.map((purchase) => ({
+      type: "purchase" as const,
+      date: purchase.purchaseDate,
+      amount: purchase.creditAmount,
+      details: purchase.isInitialCredits
+        ? "Free initial credits"
+        : `Purchased ${purchase.creditAmount} credits`,
+      isInitialCredits: !!purchase.isInitialCredits,
+    })),
+    ...usageHistory.map((usage: any) => ({
+      type: "usage" as const,
+      date: usage.date,
+      amount: usage.type === "refund" ? usage.cost : -(usage.cost ?? 1),
+      details:
+        usage.type === "refund"
+          ? `Refund (${usage.toolId || "reading"})`
+          : `${usage.toolId || "reading"}`,
+      isInitialCredits: false,
+    })),
+  ].sort((a, b) => b.date.seconds - a.date.seconds);
 
-      <main className="flex-1 py-6 md:py-8 px-4">
+  return (
+    <div className="flex min-h-screen flex-col bg-black text-white">
+      <PageHeader />
+
+      <main className="flex-1 px-4 py-10 md:px-8 md:py-14">
         <div className="container mx-auto max-w-7xl">
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Purchase Credits</h1>
+          <div className="mb-10 max-w-2xl">
+            <div className="mb-4 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+              <span className="h-px w-8 bg-white/20" aria-hidden="true" />
+              Credits
             </div>
-            <p className="text-gray-500">
-              Coloring page = 1 credit. Each reading (palm reading, face reading, style audit, etc.) = 10 credits per generation.
+            <h1
+              className="text-3xl font-normal tracking-[-0.04em] sm:text-4xl md:text-5xl"
+            >
+              Top up your{" "}
+              <span className="italic font-light text-gray-400">balance.</span>
+            </h1>
+            <p className="mt-3 text-base text-gray-400 md:text-lg">
+              Coloring page uses 1 credit. Readings use 10 credits each. No
+              subscriptions, no expiry.
             </p>
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-500" />
-                <span className="font-medium">Your current balance: {formatCreditBalance(credits)}</span>
-              </div>
+            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm">
+              <Sparkles className="h-4 w-4 text-white" />
+              <span className="text-gray-300">Current balance:</span>
+              <span className="font-medium text-white">
+                {formatCreditBalance(credits)}
+              </span>
             </div>
           </div>
 
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-red-700">
-                  <p className="font-medium mb-1">Error</p>
-                  <p>{error}</p>
-                </div>
+            <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-4 text-sm text-red-200">
+              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-300" />
+              <div>
+                <p className="font-medium">Error</p>
+                <p className="mt-1">{error}</p>
               </div>
             </div>
           )}
 
-          <div className="mt-8 mb-4 rounded-lg border border-orange-100 bg-orange-50/60 px-4 py-3 text-sm text-orange-800">
-            Coloring page = 1 credit. Readings = 10 credits.
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {CREDIT_PACKAGES.map(pkg => (
-              <Card key={pkg.id} className="overflow-hidden">
-                <CardHeader className={`bg-gradient-to-r ${
-                  pkg.id === 'small' ? 'from-blue-50 to-blue-100' :
-                  pkg.id === 'medium' ? 'from-green-50 to-green-100' :
-                  pkg.id === 'large' ? 'from-purple-50 to-purple-100' :
-                  'from-amber-50 to-amber-100'
-                }`}>
-                  <CardTitle>{formatCreditBalance(pkg.credits)}</CardTitle>
-                  <CardDescription>
-                    {pkg.discountPercentage > 0 ? (
-                      <span className="flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3" />
-                        Save {pkg.discountPercentage}%
-                      </span>
-                    ) : "Basic package"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="mb-4">
-                    <span className="text-3xl font-bold">${(pkg.price / 100).toFixed(2)}</span>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {CREDIT_PACKAGES.map((pkg) => {
+              const isHighlight = pkg.id === "medium";
+              const headline = PACK_HEADLINES[pkg.id] ?? "";
+              const isLoading = packageIdLoading === pkg.id;
+              return (
+                <div
+                  key={pkg.id}
+                  className={`relative flex flex-col rounded-2xl p-6 transition-all duration-300 ${
+                    isHighlight
+                      ? "bg-white text-black"
+                      : "liquid-glass text-white"
+                  }`}
+                >
+                  {isHighlight && (
+                    <span className="absolute -top-3 left-6 rounded-full bg-black px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-white">
+                      {headline}
+                    </span>
+                  )}
+                  <div
+                    className={`text-sm ${
+                      isHighlight ? "text-gray-600" : "text-gray-400"
+                    }`}
+                  >
+                    {pkg.credits} credits
                   </div>
-                  <ul className="space-y-2 text-sm">
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span
+                      className="text-4xl font-normal"
+                      style={{ letterSpacing: "-0.03em" }}
+                    >
+                      ${(pkg.price / 100).toFixed(2)}
+                    </span>
+                  </div>
+                  <div
+                    className={`mt-1 text-sm ${
+                      isHighlight ? "text-gray-600" : "text-gray-400"
+                    }`}
+                  >
+                    ${(pkg.pricePerCredit / 100).toFixed(2)} / credit
+                  </div>
+                  {!isHighlight && headline && (
+                    <div className="mt-3 text-xs font-medium uppercase tracking-wider text-gray-300">
+                      {headline}
+                    </div>
+                  )}
+
+                  <ul
+                    className={`mt-5 flex-1 space-y-2 text-sm ${
+                      isHighlight ? "text-gray-700" : "text-gray-300"
+                    }`}
+                  >
                     <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span>${(pkg.pricePerCredit / 100).toFixed(2)} per credit</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <CheckCircle
+                        className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
+                          isHighlight ? "text-black" : "text-white"
+                        }`}
+                      />
                       <span>
-                        {pkg.id === 'small'
-                          ? '≈ 5 coloring pages — readings need 10 credits'
-                          : pkg.id === 'medium'
-                          ? '≈ 10 coloring pages OR 1 reading'
-                          : pkg.id === 'large'
-                          ? '≈ 20 coloring pages OR 2 readings'
-                          : '≈ 40 coloring pages OR 4 readings'}
+                        {pkg.id === "small"
+                          ? "≈ 5 coloring pages — readings need 10 credits"
+                          : pkg.id === "medium"
+                          ? "≈ 10 coloring pages or 1 reading"
+                          : pkg.id === "large"
+                          ? "≈ 20 coloring pages or 2 readings"
+                          : "≈ 40 coloring pages or 4 readings"}
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <CheckCircle
+                        className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
+                          isHighlight ? "text-black" : "text-white"
+                        }`}
+                      />
                       <span>Credits never expire</span>
                     </li>
                   </ul>
-                </CardContent>
-                <CardFooter className="flex flex-col space-y-2 pt-0">
-                  <Button
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+
+                  <button
+                    type="button"
                     onClick={() => handlePurchaseCredits(pkg.id)}
-                    disabled={packageIdLoading === pkg.id}
+                    disabled={isLoading}
+                    className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium transition-colors disabled:opacity-60 ${
+                      isHighlight
+                        ? "bg-black text-white hover:bg-gray-900"
+                        : "bg-white text-black hover:bg-gray-200"
+                    }`}
                   >
-                    {packageIdLoading === pkg.id ? (
+                    {isLoading ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         Processing...
                       </>
                     ) : (
                       <>
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        Buy Now
+                        <CreditCard className="h-4 w-4" />
+                        Buy now
                       </>
                     )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
-          <div className="mt-12 bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-start gap-3 mb-4">
-              <Shield className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
-              <h3 className="font-medium text-lg">About Credits</h3>
+          <div className="liquid-glass mt-12 rounded-2xl p-6 md:p-8">
+            <div className="mb-4 flex items-center gap-3">
+              <Shield className="h-5 w-5 text-white" />
+              <h3 className="text-lg font-medium text-white">About credits</h3>
             </div>
-            <div className="space-y-4 text-gray-600">
+            <div className="space-y-3 text-sm text-gray-300 md:text-base">
               <p>
-                Coloring page = 1 credit. Each reading (palm reading, face reading, style audit, etc.) = 10 credits per generation.
+                The coloring page uses 1 credit. Readings — palm, face, aura,
+                iridology, handwriting, style audit, skincare, plate, plant
+                care, room vibes — use 10 credits each.
               </p>
               <p>
-                New users receive 2 free credits to try the service. After using your free credits, you'll need to purchase more to keep creating.
+                New users receive 2 free credits to try the service. After
+                using your free credits, you'll need to purchase more to keep
+                creating.
               </p>
-              <p>
-                Credits never expire and can be used across any tool on the platform.
+              <p className="text-gray-400">
+                Credits never expire and can be used across any reading on the
+                platform.
               </p>
             </div>
           </div>
-          
-          {/* Credit History Section */}
+
           <div className="mt-12">
-            <h2 className="text-xl md:text-2xl font-bold mb-6">Your Credit History</h2>
-            
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <div className="border-b">
-                <div className="flex bg-gray-50 p-4">
-                  <div className="flex gap-2 items-center">
-                    <Clock className="h-5 w-5 text-gray-500" />
-                    <h3 className="font-medium">Transaction History</h3>
-                  </div>
-                </div>
+            <div className="mb-5 flex items-center gap-3">
+              <Clock className="h-5 w-5 text-white" />
+              <h2 className="text-xl font-medium text-white">
+                Transaction history
+              </h2>
+            </div>
+
+            {combinedHistory.length === 0 ? (
+              <div className="liquid-glass rounded-2xl p-10 text-center text-sm text-gray-400">
+                No credit history yet. Once you use or purchase credits, your
+                transactions will appear here.
               </div>
-              
-              {usageHistory.length === 0 && purchaseHistory.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  <p>No credit history yet. Once you use or purchase credits, your transactions will appear here.</p>
-                </div>
-              ) : (
+            ) : (
+              <div className="liquid-glass overflow-hidden rounded-2xl">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b bg-gray-50">
-                        <th className="text-left p-4 text-sm font-medium text-gray-500">Date</th>
-                        <th className="text-left p-4 text-sm font-medium text-gray-500">Transaction</th>
-                        <th className="text-right p-4 text-sm font-medium text-gray-500">Credits</th>
+                      <tr className="border-b border-white/10 bg-white/[0.02]">
+                        <th className="p-4 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                          Date
+                        </th>
+                        <th className="p-4 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                          Transaction
+                        </th>
+                        <th className="p-4 text-right text-xs font-medium uppercase tracking-wider text-gray-400">
+                          Credits
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {/* Combine and sort history */}
-                      {[
-                        ...purchaseHistory.map(purchase => ({
-                          type: 'purchase',
-                          date: purchase.purchaseDate,
-                          amount: purchase.creditAmount,
-                          details: purchase.isInitialCredits 
-                            ? `Free initial credits` 
-                            : `Purchased ${purchase.creditAmount} credits`,
-                          packageId: purchase.packageId,
-                          isInitialCredits: purchase.isInitialCredits
-                        })),
-                        ...usageHistory.map(usage => ({
-                          type: 'usage',
-                          date: usage.date,
-                          amount: -1,
-                          details: usage.projectId ? `Used for generation ${usage.projectId.slice(0, 8)}...` : 'Used for image generation',
-                          isInitialCredits: false
-                        }))
-                      ]
-                        .sort((a, b) => b.date.seconds - a.date.seconds)
-                        .map((item, index) => (
-                          <tr key={`${item.type}-${index}`} className={`border-b hover:bg-gray-50 ${item.isInitialCredits ? 'bg-blue-50' : ''}`}>
-                            <td className="p-4 text-sm text-gray-700">{formatHistoryDate(item.date)}</td>
-                            <td className="p-4 text-sm text-gray-700">
-                              {item.isInitialCredits ? (
-                                <span className="flex items-center gap-1 text-blue-700">
-                                  <Sparkles className="h-3 w-3" />
-                                  {item.details}
-                                </span>
-                              ) : (
-                                item.details
-                              )}
-                            </td>
-                            <td className="p-4 text-sm text-right">
-                              <span className={`flex items-center justify-end gap-1 ${
-                                item.isInitialCredits ? 'text-blue-600' : 
-                                item.amount > 0 ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                {item.amount > 0 ? (
-                                  <>
-                                    <Plus className="h-3 w-3" />
-                                    {item.amount}
-                                  </>
-                                ) : (
-                                  <>
-                                    <Minus className="h-3 w-3" />
-                                    {Math.abs(item.amount)}
-                                  </>
-                                )}
+                      {combinedHistory.map((item, index) => (
+                        <tr
+                          key={`${item.type}-${index}`}
+                          className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
+                        >
+                          <td className="p-4 text-sm text-gray-300">
+                            {formatHistoryDate(item.date)}
+                          </td>
+                          <td className="p-4 text-sm text-gray-300">
+                            {item.isInitialCredits ? (
+                              <span className="inline-flex items-center gap-1.5 text-white">
+                                <Sparkles className="h-3.5 w-3.5" />
+                                {item.details}
                               </span>
-                            </td>
-                          </tr>
-                        ))
-                      }
+                            ) : (
+                              item.details
+                            )}
+                          </td>
+                          <td className="p-4 text-right text-sm">
+                            <span
+                              className={`inline-flex items-center justify-end gap-1 ${
+                                item.amount > 0
+                                  ? "text-emerald-300"
+                                  : "text-rose-300"
+                              }`}
+                            >
+                              {item.amount > 0 ? (
+                                <>
+                                  <Plus className="h-3 w-3" />
+                                  {item.amount}
+                                </>
+                              ) : (
+                                <>
+                                  <Minus className="h-3 w-3" />
+                                  {Math.abs(item.amount)}
+                                </>
+                              )}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
     </div>
-  )
-} 
+  );
+}

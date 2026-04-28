@@ -459,6 +459,17 @@ export const TOOLS: Tool[] = [
   },
 ];
 
+/**
+ * Canonical display order for the "reading room" — coloring-book last so the
+ * editorial readings lead the catalog. This is the single source of truth
+ * for any user-facing tool list (landing examples section, /readings page,
+ * dashboard tool grid). When the order needs to change, change it here.
+ */
+export const ORDERED_TOOLS: Tool[] = [
+  ...TOOLS.filter((tool) => tool.id !== "coloring-book"),
+  ...TOOLS.filter((tool) => tool.id === "coloring-book"),
+];
+
 export function getToolBySlug(slug: string): Tool | undefined {
   return TOOLS.find((tool) => tool.slug === slug);
 }

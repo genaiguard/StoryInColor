@@ -6,9 +6,14 @@ import { useRouter } from "next/navigation";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
+import {
+  Sparkles,
+  ArrowLeft,
+  Upload as UploadIcon,
+  Play,
+  Loader2,
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +29,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useFirebase } from "@/app/firebase/firebase-provider";
-import { getUserCredits, formatCreditBalance } from "@/app/firebase/credits-helpers";
+import {
+  getUserCredits,
+  formatCreditBalance,
+} from "@/app/firebase/credits-helpers";
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers";
 import type { Tool } from "@/lib/tools/types";
 
@@ -40,20 +48,16 @@ const MAX_BYTES = 10 * 1024 * 1024;
 
 /**
  * Client-side authenticated workflow for a tool. Sits alongside the static
- * MarketingView in /tools/[slug]/page.tsx; on hydration we set
- * `data-auth="signed-in" | "signed-out"` on <html>, and CSS in globals hides
- * the SEO marketing view for signed-in visitors and hides this workflow for
- * signed-out visitors.
+ * MarketingView in /readings/[slug]/page.tsx; on hydration we set
+ * `data-tool-auth="signed-in" | "signed-out"` on <html>, and CSS in
+ * globals.css hides the SEO marketing view for signed-in visitors and hides
+ * this workflow for signed-out visitors.
  */
 export default function ToolWorkflow({ tool }: Props) {
   const { user, loading, initialized } = useFirebase();
 
-  // Drive page-level visibility: marketing view shows for signed-out, this
-  // workflow shows for signed-in. We deliberately do NOT remove the attribute
-  // on unmount — when the user clicks Generate the workflow unmounts as we
-  // navigate to /result, and a cleanup-driven removal would briefly flash the
-  // marketing surface mid-navigation. The attribute persists across pages and
-  // gets re-set on the next workflow mount.
+  // Drive page-level visibility — see comment in globals.css for the
+  // signed-in/out CSS toggle and the no-cleanup rationale.
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
@@ -61,19 +65,14 @@ export default function ToolWorkflow({ tool }: Props) {
       root.setAttribute("data-tool-auth", "loading");
       return;
     }
-    root.setAttribute(
-      "data-tool-auth",
-      user ? "signed-in" : "signed-out"
-    );
+    root.setAttribute("data-tool-auth", user ? "signed-in" : "signed-out");
   }, [user, loading, initialized]);
 
   if (loading || !initialized) {
-    // Don't render anything; the static marketing view is visible underneath.
     return null;
   }
 
   if (!user) {
-    // Marketing view (server-rendered, sibling) handles the unauth UI.
     return null;
   }
 
@@ -96,7 +95,6 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
   const [error, setError] = useState<string | null>(null);
   const [creditDialogOpen, setCreditDialogOpen] = useState<boolean>(false);
 
-  // Load user credit balance
   useEffect(() => {
     let cancelled = false;
     if (!user?.uid) return;
@@ -114,7 +112,6 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
     };
   }, [user?.uid]);
 
-  // Manage object URL for preview
   useEffect(() => {
     if (!file) {
       setPreviewUrl(null);
@@ -146,16 +143,13 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
     disabled: isSubmitting,
   });
 
-  const insufficientCredits =
-    credits !== null && credits < tool.creditCost;
-
+  const insufficientCredits = credits !== null && credits < tool.creditCost;
   const generateDisabled =
     !file ||
     isSubmitting ||
     credits === null ||
     insufficientCredits ||
     !user?.uid;
-
   const creditsShort =
     credits !== null && credits < tool.creditCost
       ? tool.creditCost - credits
@@ -198,7 +192,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
             setUploadProgress(pct);
           },
           (uploadErr) => reject(uploadErr),
-          () => resolve()
+          () => resolve(),
         );
       });
 
@@ -206,21 +200,19 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
 
       const functions = getFunctions();
       // 5 minutes — matches the server-side timeoutSeconds: 300 on the
-      // callable. The default httpsCallable timeout is 70s which would surface
-      // as "Generation failed" on slow OpenAI runs even though the server
-      // is still working.
-      const generate = httpsCallable(functions, "generateForTool", { timeout: 5 * 60 * 1000 });
+      // callable. The default httpsCallable timeout is 70s which would
+      // surface as "Generation failed" on slow OpenAI runs even though the
+      // server is still working.
+      const generate = httpsCallable(functions, "generateForTool", {
+        timeout: 5 * 60 * 1000,
+      });
 
       // Pre-generate jobId so the client knows where to poll. The server
       // accepts this jobId and uses it for the job/generation docs, which
       // means we can navigate to /result immediately and let the result
-      // page subscribe to the job — the user no longer stares at the
-      // upload card for 30s.
+      // page subscribe to the job.
       const jobId = uuidv4();
 
-      // Fire-and-forget: the Cloud Function continues running on the server
-      // even if the client disconnects, and it writes the final state to
-      // users/{uid}/jobs/{jobId} which the result page is subscribed to.
       const generatePromise = generate({
         toolId: tool.id,
         photoStoragePath: storagePath,
@@ -229,13 +221,9 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
 
       router.push(`/readings/${tool.slug}/result?jobId=${jobId}`);
 
-      // FAST-FAIL bounce-back: rate-limit / insufficient credits / unknown
-      // toolId / forbidden storage path all reject BEFORE any job doc is
-      // written. Without this handler the result page would spin forever
-      // waiting for a job that never exists. On those error codes, route the
-      // user back to the workflow with a toast. After the deduction
-      // transaction succeeds, the catch path is irrelevant (the job doc
-      // exists and the result page subscribes to it).
+      // Fast-fail bounce-back for client-detectable rejections (quota,
+      // insufficient credits, etc.) — see comment in original implementation
+      // for the rationale.
       generatePromise.catch((err: any) => {
         const code = String(err?.code ?? "");
         const fastFailCodes = [
@@ -264,37 +252,54 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
     }
   }
 
+  const creditLabel =
+    tool.creditCost === 1 ? "1 credit" : `${tool.creditCost} credits`;
+
   return (
     <TooltipProvider delayDuration={200}>
-      <div data-tool-workflow className="min-h-screen bg-gray-50">
+      <div
+        data-tool-workflow
+        className="flex min-h-screen flex-col bg-black text-white"
+      >
         {/* Sticky top bar */}
-        <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
-              Story<span className="text-orange-500">{`{InColor}`}</span>
+        <header className="sticky top-0 z-40 border-b border-white/5 bg-black/60 backdrop-blur-md">
+          <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-8">
+            <Link
+              href="/dashboard"
+              className="liquid-glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Dashboard
             </Link>
-            <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="hidden text-base font-semibold tracking-[-0.02em] sm:block sm:text-lg"
+            >
+              <span className="font-light">Story</span>
+              <span className="font-semibold">In</span>
+              <span className="font-light">Color</span>
+            </Link>
+            <div className="flex items-center gap-2 sm:gap-3">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    aria-label="Credit balance — tooltip explains generation cost"
-                    className="cursor-help rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-sm font-medium text-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                    aria-label="Credit balance"
+                    className="liquid-glass inline-flex cursor-help items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"
                   >
+                    <Sparkles className="h-4 w-4" />
                     {credits === null
-                      ? "Loading credits…"
+                      ? "…"
                       : formatCreditBalance(credits)}
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {tool.creditCost === 1
-                    ? "1 credit will be deducted on generate"
-                    : `${tool.creditCost} credits will be deducted on generate`}
+                  {`${creditLabel} will be deducted on generate`}
                 </TooltipContent>
               </Tooltip>
               <Link
                 href="/credits"
-                className="text-sm font-medium text-gray-700 hover:text-orange-600"
+                className="hidden text-sm font-medium text-gray-300 transition-colors hover:text-white sm:inline-block"
               >
                 Buy credits
               </Link>
@@ -302,45 +307,57 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
           </div>
         </header>
 
-        <main className="mx-auto max-w-6xl px-4 py-6 md:py-10">
-          {/* Back link + breadcrumb */}
-          <div className="mb-4 flex flex-col gap-1">
-            <Link
-              href="/readings"
-              className="text-sm font-medium text-gray-600 hover:text-orange-600"
+        <main className="flex-1 px-4 py-10 md:px-8 md:py-14">
+          <div className="container mx-auto max-w-6xl">
+            <nav
+              className="mb-8 text-xs text-gray-500"
+              aria-label="Breadcrumb"
             >
-              ← All tools
-            </Link>
-            <nav className="text-xs text-gray-500" aria-label="Breadcrumb">
               <ol className="flex items-center gap-1.5">
                 <li>
-                  <Link href="/readings" className="hover:text-orange-600">
-                    Tools
+                  <Link
+                    href="/readings"
+                    className="transition-colors hover:text-white"
+                  >
+                    Readings
                   </Link>
                 </li>
-                <li aria-hidden="true">/</li>
-                <li className="text-gray-800">{tool.name}</li>
+                <li aria-hidden="true" className="text-white/20">
+                  /
+                </li>
+                <li className="text-gray-300">{tool.name}</li>
               </ol>
             </nav>
-          </div>
 
-          <div className="grid gap-8 md:grid-cols-2">
-            {/* Left: form */}
-            <section>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
-                {tool.name}
-              </h1>
-              <p className="mt-2 text-lg text-gray-700">{tool.tagline}</p>
-              <p className="mt-4 text-sm text-gray-600">{tool.heroCopy}</p>
+            <div className="grid gap-10 md:grid-cols-2 md:gap-12">
+              {/* Left: title + form */}
+              <section>
+                <div className="mb-4 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+                  <span
+                    className="h-px w-8 bg-white/20"
+                    aria-hidden="true"
+                  />
+                  {tool.category} reading
+                </div>
+                <h1
+                  className="text-3xl font-normal tracking-[-0.04em] sm:text-4xl md:text-5xl"
+                >
+                  {tool.name}
+                </h1>
+                <p className="mt-3 text-lg italic font-light text-gray-300 md:text-xl">
+                  {tool.tagline}.
+                </p>
+                <p className="mt-4 text-sm text-gray-400 md:text-base">
+                  {tool.heroCopy}
+                </p>
 
-              <Card className="mt-6">
-                <CardContent className="p-6">
+                <div className="liquid-glass mt-8 rounded-2xl p-6">
                   <div
                     {...getRootProps()}
-                    className={`flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors ${
+                    className={`flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors ${
                       isDragActive
-                        ? "border-orange-400 bg-orange-50"
-                        : "border-gray-300 bg-white hover:border-orange-300 hover:bg-orange-50/40"
+                        ? "border-white/40 bg-white/[0.06]"
+                        : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
                     } ${isSubmitting ? "pointer-events-none opacity-60" : ""}`}
                   >
                     <input {...getInputProps()} />
@@ -350,9 +367,9 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                         <img
                           src={previewUrl}
                           alt="Selected preview"
-                          className="max-h-40 rounded-md border border-gray-200 object-contain"
+                          className="max-h-44 rounded-lg border border-white/10 object-contain"
                         />
-                        <p className="text-sm text-gray-700">
+                        <p className="text-sm text-gray-200">
                           {file?.name}{" "}
                           <span className="text-gray-500">
                             ({Math.round((file?.size ?? 0) / 1024)} KB)
@@ -364,7 +381,8 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                       </div>
                     ) : (
                       <>
-                        <p className="text-base font-medium text-gray-900">
+                        <UploadIcon className="mb-3 h-7 w-7 text-gray-400" />
+                        <p className="text-base font-medium text-white">
                           {isDragActive
                             ? "Drop your photo here"
                             : "Drag & drop a photo, or click to choose"}
@@ -376,122 +394,141 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                     )}
                   </div>
 
-                  <p className="mt-3 text-xs text-gray-500">{tool.inputHint}</p>
+                  <p className="mt-3 text-xs text-gray-500">
+                    {tool.inputHint}
+                  </p>
 
-                  {/* Upload + generate progress bar */}
                   {isSubmitting && (
                     <div className="mt-4">
                       <div
-                        className="h-2 w-full overflow-hidden rounded-full bg-gray-200"
+                        className="h-1.5 w-full overflow-hidden rounded-full bg-white/10"
                         role="progressbar"
                         aria-valuemin={0}
                         aria-valuemax={100}
                         aria-valuenow={Math.round(uploadProgress)}
                       >
                         <div
-                          className="h-full bg-orange-500 transition-all duration-200 ease-out"
+                          className="h-full bg-white transition-all duration-200 ease-out"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
-                      <p className="mt-2 text-xs text-gray-700">
+                      <p className="mt-2 text-xs text-gray-300">
                         {uploadProgress < 100
                           ? `Uploading… ${Math.round(uploadProgress)}%`
-                          : `Working on your ${tool.name}… this usually takes 20-40 seconds`}
+                          : `Reading your ${tool.name.toLowerCase()}…`}
                       </p>
                     </div>
                   )}
 
                   {error && (
-                    <p className="mt-3 text-sm text-red-600" role="alert">
+                    <p
+                      className="mt-3 text-sm text-rose-300"
+                      role="alert"
+                    >
                       {error}
                     </p>
                   )}
 
                   <div className="mt-6 flex items-center justify-between gap-4">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <p className="cursor-help text-sm text-gray-600">
-                          Cost:{" "}
-                          <span className="font-medium text-gray-900">
-                            {tool.creditCost}{" "}
-                            {tool.creditCost === 1 ? "credit" : "credits"}
-                          </span>
-                        </p>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {tool.creditCost === 1
-                          ? "1 credit will be deducted on generate"
-                          : `${tool.creditCost} credits will be deducted on generate`}
-                      </TooltipContent>
-                    </Tooltip>
-                    <Button
+                    <p className="text-sm text-gray-400">
+                      Cost:{" "}
+                      <span className="font-medium text-white">
+                        {creditLabel}
+                      </span>
+                    </p>
+                    <button
+                      type="button"
                       onClick={handleGenerate}
                       disabled={generateDisabled}
-                      className="bg-orange-500 text-white hover:bg-orange-600"
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {isSubmitting ? "Working…" : "Generate"}
-                    </Button>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Reading…
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 fill-black" />
+                          Read my photo
+                        </>
+                      )}
+                    </button>
                   </div>
 
                   {insufficientCredits && (
-                    <p className="mt-3 text-xs text-amber-700">
-                      You need {tool.creditCost} credits to use {tool.name}. You
-                      have {credits ?? 0}.{" "}
+                    <p className="mt-3 text-xs text-amber-300">
+                      You need {creditLabel} to use {tool.name}. You have{" "}
+                      {credits ?? 0}.{" "}
                       <Link
                         href="/credits"
-                        className="font-medium text-orange-600 underline"
+                        className="font-medium underline hover:text-amber-200"
                       >
                         Buy more credits
                       </Link>
                       .
                     </p>
                   )}
-                </CardContent>
-              </Card>
-            </section>
+                </div>
+              </section>
 
-            {/* Right: cover + hint */}
-            <aside>
-              <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={tool.coverImage}
-                  alt={`${tool.name} cover`}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <p className="mt-4 text-sm text-gray-600">{tool.inputHint}</p>
-            </aside>
+              {/* Right: preview + hint. Use object-contain so the cover
+                  image (2:3 portrait spread) is fully visible without
+                  cropping. The dark surrounding box becomes letterboxing
+                  for any cover whose aspect doesn't match exactly. */}
+              <aside>
+                <div className="liquid-glass overflow-hidden rounded-2xl">
+                  <div className="flex aspect-[2/3] w-full items-center justify-center overflow-hidden bg-black">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={tool.coverImage}
+                      alt={`${tool.name} sample`}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  <div className="p-5">
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
+                      How to bring a photo
+                    </p>
+                    <p className="mt-2 text-sm text-gray-300">
+                      {tool.inputHint}
+                    </p>
+                  </div>
+                </div>
+              </aside>
+            </div>
           </div>
         </main>
 
-        {/* Insufficient credits dialog */}
-        <Dialog open={creditDialogOpen} onOpenChange={setCreditDialogOpen}>
-          <DialogContent>
+        <Dialog
+          open={creditDialogOpen}
+          onOpenChange={setCreditDialogOpen}
+        >
+          <DialogContent className="border-white/10 bg-black text-white">
             <DialogHeader>
-              <DialogTitle>Not enough credits</DialogTitle>
-              <DialogDescription>
-                You need {tool.creditCost}{" "}
-                {tool.creditCost === 1 ? "credit" : "credits"} to use {tool.name}.
-                Your current balance is {credits ?? 0}.
+              <DialogTitle className="text-white">
+                Not enough credits
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                You need {creditLabel} to use {tool.name}. Your current balance
+                is {credits ?? 0}.
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
+            <DialogFooter className="gap-2 sm:gap-3">
+              <button
+                type="button"
                 onClick={() => setCreditDialogOpen(false)}
+                className="liquid-glass inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-medium"
               >
                 Cancel
-              </Button>
-              <Button
-                asChild
-                className="bg-orange-500 text-white hover:bg-orange-600"
+              </button>
+              <Link
+                href="/credits"
+                className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-sm font-medium text-black transition-colors hover:bg-gray-200"
               >
-                <Link href="/credits">
-                  Buy {creditsShort > 0 ? creditsShort : tool.creditCost} more
-                  credits → /credits
-                </Link>
-              </Button>
+                Buy {creditsShort > 0 ? creditsShort : tool.creditCost} more
+                credits
+              </Link>
             </DialogFooter>
           </DialogContent>
         </Dialog>
