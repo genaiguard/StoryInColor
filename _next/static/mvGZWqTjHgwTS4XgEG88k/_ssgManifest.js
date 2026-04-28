@@ -1,1 +1,0 @@
-self.__SSG_MANIFEST=new Set(["\u002Freadings\u002F[slug]","\u002Freadings\u002F[slug]\u002Fresult","\u002Ftools\u002F[slug]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()
