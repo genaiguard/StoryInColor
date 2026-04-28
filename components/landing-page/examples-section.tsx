@@ -1,5 +1,11 @@
 "use client";
 import { ToolGrid } from "@/components/tools/tool-grid";
+import { TOOLS } from "@/lib/tools/registry";
+
+const LANDING_TOOLS = [
+  ...TOOLS.filter((tool) => tool.id !== "coloring-book"),
+  ...TOOLS.filter((tool) => tool.id === "coloring-book"),
+];
 
 export default function ExamplesSection() {
   return (
@@ -7,13 +13,13 @@ export default function ExamplesSection() {
       <div className="container mx-auto max-w-7xl px-6 md:px-8">
         <div className="mb-12 max-w-2xl">
           <h2 className="text-4xl font-bold tracking-[-0.02em] text-gray-900 md:text-5xl">
-            The reading room.
+            Readings and keepsakes.
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            Every reading we publish, in one place. Bring whatever you have a photo of.
+            Most are editorial readings. One is a simple coloring-page keepsake. Bring whatever you have a photo of.
           </p>
         </div>
-        <ToolGrid showCategoryChips />
+        <ToolGrid tools={LANDING_TOOLS} showCategoryChips />
       </div>
     </section>
   );

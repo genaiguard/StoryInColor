@@ -35,8 +35,8 @@ export default function PrivacyPage() {
                 <div className="mb-10 pb-8 border-b border-gray-200">
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4">1. Information We Collect</h2>
                   <p className="text-gray-700 mb-4">
-                    We collect information you provide directly to us, such as your name, email address, shipping address,
-                    and the photos you upload to create your coloring book. We may also collect information about your usage of our service, including your interactions with our website and any communications you have with us.
+                    We collect information you provide directly to us, such as your name, email address,
+                    and the photos you upload to create your selected AI-generated output. We may also collect information about your usage of our service, including your interactions with our website and any communications you have with us.
                   </p>
                   <p className="text-gray-700">
                     Automatically collected information may include your IP address, browser type, operating system, referring URLs, device information, pages viewed, links clicked, user interactions, timestamps, and similar data. This information helps us understand how users interact with our service and improve our offerings.
@@ -51,7 +51,7 @@ export default function PrivacyPage() {
                   <ul className="list-disc pl-5 mb-4 text-gray-700">
                     <li className="mb-2">Provide, maintain, and improve our services</li>
                     <li className="mb-2">Process transactions and send related information including confirmations, receipts, and customer experience surveys</li>
-                    <li className="mb-2">Create and process your custom coloring book products</li>
+                    <li className="mb-2">Create and process your selected AI-generated outputs</li>
                     <li className="mb-2">Send technical notices, updates, security alerts, and administrative messages</li>
                     <li className="mb-2">Respond to your comments, questions, and customer service requests</li>
                     <li className="mb-2">Monitor and analyze trends, usage, and activities in connection with our service</li>
@@ -63,13 +63,13 @@ export default function PrivacyPage() {
                 <div className="mb-10 pb-8 border-b border-gray-200">
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4">3. Photo Processing and AI Technology</h2>
                   <p className="text-gray-700 mb-4">
-                    When you upload photos to our service, we use advanced artificial intelligence technology to transform them into coloring book pages. This process involves:
+                    When you upload photos to our service, we use advanced artificial intelligence technology to transform them into personalized readings and keepsakes. This process involves:
                   </p>
                   <ul className="list-disc pl-5 mb-4 text-gray-700">
                     <li className="mb-2">Temporary storage of your original photos</li>
                     <li className="mb-2">Processing through our AI transformation systems</li>
-                    <li className="mb-2">Generation of line-art versions of your photos</li>
-                    <li className="mb-2">Creation of your final coloring book product</li>
+                    <li className="mb-2">Generation of the result for the tool you selected</li>
+                    <li className="mb-2">Creation of your final output file</li>
                   </ul>
                   <p className="text-gray-700">
                     We take measures to ensure your photos are handled securely throughout this process. Your original photos and the resulting transformations are associated with your account and are not shared with other users. We use industry-standard security technologies and procedures to protect your photos during processing.
@@ -208,4 +208,3 @@ export default function PrivacyPage() {
     </div>
   )
 }
-

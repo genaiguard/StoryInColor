@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import Image from "next/image"
 import { ArrowRight } from "lucide-react"
 
 interface HeroSectionProps {
@@ -13,8 +12,7 @@ export default function HeroSection({ scrollToSection: _scrollToSection }: HeroS
   return (
     <section className="relative overflow-hidden border-b border-gray-200 bg-white py-20 md:py-28 lg:py-32">
       <div className="container relative z-10 mx-auto max-w-7xl px-6 md:px-8">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
-          {/* Left: editorial typography */}
+        <div className="max-w-4xl">
           <div className="flex flex-col gap-7">
             <h1 className="font-bold tracking-[-0.025em] text-gray-900 text-[44px] leading-[1.02] sm:text-[56px] md:text-[68px] lg:text-[76px]">
               What does your photo
@@ -47,52 +45,6 @@ export default function HeroSection({ scrollToSection: _scrollToSection }: HeroS
             <p className="text-sm text-gray-500">
               New here? Start with free credits — no card required.
             </p>
-          </div>
-
-          {/* Right: clean editorial collage */}
-          <div className="relative">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-gray-100">
-                <Image
-                  src="/images/tools/palm-reading.webp"
-                  alt="Palm reading"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1023px) 50vw, 320px"
-                  priority
-                />
-              </div>
-
-              <div className="relative aspect-[3/4] translate-y-8 overflow-hidden rounded-2xl bg-gray-100">
-                <Image
-                  src="/images/tools/style-audit.webp"
-                  alt="Style audit"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1023px) 50vw, 320px"
-                />
-              </div>
-
-              <div className="relative aspect-[3/4] -translate-y-2 overflow-hidden rounded-2xl bg-gray-100">
-                <Image
-                  src="/images/tools/aura-reading.webp"
-                  alt="Aura reading"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1023px) 50vw, 320px"
-                />
-              </div>
-
-              <div className="relative aspect-[3/4] translate-y-6 overflow-hidden rounded-2xl bg-gray-100">
-                <Image
-                  src="/images/tools/plate-analysis.webp"
-                  alt="Plate reading"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1023px) 50vw, 320px"
-                />
-              </div>
-            </div>
           </div>
         </div>
       </div>

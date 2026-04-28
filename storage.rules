@@ -24,12 +24,6 @@ service firebase.storage {
                          request.auth.token.email == 'ipekcioglu@me.com';
     }
 
-    // Special rule for completed PDF files - allow the owner to access them 
-    // even without being signed in (using the download URL)
-    match /users/{userId}/projects/{projectId}/downloads/{fileName} {
-      allow read: if resource.metadata.isCompletedPdf == 'true';
-    }
-    
     // Public files can be read by anyone but only written by authenticated users
     match /public/{allPaths=**} {
       allow read: if true;

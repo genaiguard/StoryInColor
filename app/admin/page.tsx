@@ -18,7 +18,6 @@ import {
   CreditCard, 
   Image as ImageIcon, 
   Wand2,
-  FileText,
   ArrowUp,
   ArrowDown
 } from "lucide-react"
@@ -32,14 +31,15 @@ interface AggregatedStats {
   totalRevenue: number; // In dollars
   payingCustomers: number;
   totalUploads: number;
-  totalGenerations: number;
-  totalPdfGenerations: number;
+  completedGenerations: number;
+  failedGenerations: number;
 }
 
-interface UserProjectSummary {
+interface UserGenerationSummary {
   id: string;
-  title: string;
-  pageCount: number;
+  toolId: string;
+  status: string;
+  createdAt: string | null;
 }
 
 interface EnrichedUser {
@@ -51,10 +51,10 @@ interface EnrichedUser {
   deleted: boolean; // Added
   creditBalance: number;
   totalSpent: number; // In dollars
-  projectCount: number;
-  pdfGeneratedCount: number;
-  latestProjectCreatedAt: string | null;
-  projects: UserProjectSummary[]; // Contains {id, title, pageCount}
+  generationCount: number;
+  failedGenerationCount: number;
+  latestGenerationCreatedAt: string | null;
+  generations: UserGenerationSummary[];
 }
 
 interface AdminDashboardData {
@@ -68,7 +68,7 @@ interface AdminDashboardData {
 // Admin emails allowed to access this interface .
 const ADMIN_EMAILS = ['ipekcioglu@me.com'];
 
-type SortKey = 'userCreatedAt' | 'lastProjectCreatedAt' | 'email' | 'totalSpent';
+type SortKey = 'userCreatedAt' | 'lastGenerationCreatedAt' | 'email' | 'totalSpent';
 type SortDirection = 'asc' | 'desc';
 
 export default function AdminPage() {
@@ -78,7 +78,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [showOnlyUsersWithProjects, setShowOnlyUsersWithProjects] = useState(false);
+  const [showOnlyUsersWithGenerations, setShowOnlyUsersWithGenerations] = useState(false);
   const [showOnlyPaidUsers, setShowOnlyPaidUsers] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>('userCreatedAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -131,8 +131,8 @@ export default function AdminPage() {
     let processed = users;
 
     // Apply Filters
-    if (showOnlyUsersWithProjects) {
-      processed = processed.filter(userData => userData.projectCount > 0);
+    if (showOnlyUsersWithGenerations) {
+      processed = processed.filter(userData => userData.generationCount > 0);
     }
     if (showOnlyPaidUsers) {
       processed = processed.filter(userData => userData.totalSpent > 0);
@@ -144,7 +144,11 @@ export default function AdminPage() {
         processed = processed.filter(userData => 
             (userData.email && userData.email.toLowerCase().includes(lowerSearchTerm)) ||
             (userData.displayName && userData.displayName.toLowerCase().includes(lowerSearchTerm)) ||
-            userData.projects.some(project => project.title.toLowerCase().includes(lowerSearchTerm)) ||
+            userData.generations.some(generation => 
+              generation.id.toLowerCase().includes(lowerSearchTerm) ||
+              generation.toolId.toLowerCase().includes(lowerSearchTerm) ||
+              generation.status.toLowerCase().includes(lowerSearchTerm)
+            ) ||
             userData.id.toLowerCase().includes(lowerSearchTerm)
         );
     }
@@ -156,9 +160,9 @@ export default function AdminPage() {
         case 'userCreatedAt':
           comparison = (new Date(a.createdAt)).getTime() - (new Date(b.createdAt)).getTime();
           break;
-        case 'lastProjectCreatedAt':
-          const dateA = a.latestProjectCreatedAt ? new Date(a.latestProjectCreatedAt).getTime() : 0;
-          const dateB = b.latestProjectCreatedAt ? new Date(b.latestProjectCreatedAt).getTime() : 0;
+        case 'lastGenerationCreatedAt':
+          const dateA = a.latestGenerationCreatedAt ? new Date(a.latestGenerationCreatedAt).getTime() : 0;
+          const dateB = b.latestGenerationCreatedAt ? new Date(b.latestGenerationCreatedAt).getTime() : 0;
           comparison = dateA - dateB;
           break;
         case 'email':
@@ -172,7 +176,7 @@ export default function AdminPage() {
     });
 
     return processed;
-  }, [users, showOnlyUsersWithProjects, showOnlyPaidUsers, searchTerm, sortBy, sortDirection]);
+  }, [users, showOnlyUsersWithGenerations, showOnlyPaidUsers, searchTerm, sortBy, sortDirection]);
   
   // --- Render Logic ---
 
@@ -221,14 +225,14 @@ export default function AdminPage() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-              <p className="text-gray-500">Overview of users, projects, and revenue</p>
+              <p className="text-gray-500">Overview of users, generations, and revenue</p>
             </div>
             <div className="flex gap-2 w-full md:w-auto">
               <div className="relative flex-1 md:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                 <Input
                   type="search"
-                  placeholder="Search users or projects..."
+                  placeholder="Search users or generations..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
@@ -257,15 +261,15 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Aggregated Stats Section - Add PDF Count */}
+          {/* Aggregated Stats Section */}
           {stats && (
             <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               <StatCard title="Total Users" value={stats.totalUsers.toLocaleString()} icon={Users} />
               <StatCard title="Paying Customers" value={stats.payingCustomers.toLocaleString()} icon={CreditCard} />
               <StatCard title="Total Revenue" value={`$${stats.totalRevenue.toFixed(2)}`} icon={DollarSign} />
               <StatCard title="Images Uploaded" value={stats.totalUploads.toLocaleString()} icon={ImageIcon} />
-              <StatCard title="Images Generated" value={stats.totalGenerations.toLocaleString()} icon={Wand2} />
-              <StatCard title="PDFs Generated" value={stats.totalPdfGenerations.toLocaleString()} icon={FileText} />
+              <StatCard title="Completed Generations" value={stats.completedGenerations.toLocaleString()} icon={Wand2} />
+              <StatCard title="Failed Generations" value={stats.failedGenerations.toLocaleString()} icon={AlertCircle} />
             </div>
           )}
           
@@ -280,11 +284,11 @@ export default function AdminPage() {
                   <Label className="font-medium">Filters</Label>
                   <div className="flex items-center space-x-2">
                       <Checkbox 
-                          id="filter-projects" 
-                          checked={showOnlyUsersWithProjects} 
-                          onCheckedChange={(checked) => setShowOnlyUsersWithProjects(Boolean(checked))}
+                          id="filter-generations" 
+                          checked={showOnlyUsersWithGenerations} 
+                          onCheckedChange={(checked) => setShowOnlyUsersWithGenerations(Boolean(checked))}
                       />
-                      <Label htmlFor="filter-projects" className="text-sm font-normal cursor-pointer">Has Projects</Label>
+                      <Label htmlFor="filter-generations" className="text-sm font-normal cursor-pointer">Has Generations</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                       <Checkbox 
@@ -305,7 +309,7 @@ export default function AdminPage() {
                           </SelectTrigger>
                           <SelectContent>
                               <SelectItem value="userCreatedAt">User Created Date</SelectItem>
-                              <SelectItem value="lastProjectCreatedAt">Last Project Date</SelectItem>
+                              <SelectItem value="lastGenerationCreatedAt">Last Generation Date</SelectItem>
                               <SelectItem value="email">Email</SelectItem>
                               <SelectItem value="totalSpent">Total Spent</SelectItem>
                           </SelectContent>
@@ -467,11 +471,11 @@ const UserDetailCard = ({ userData }: { userData: EnrichedUser }) => (
                   <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded border border-yellow-300">Account Disabled</span>
             )}
             {/* Other stats */}
-            <div className="bg-blue-100 px-3 py-1 rounded-full text-center" title={`${userData.projectCount} projects created`}>
-                <p className="text-xs text-blue-800 font-medium">{userData.projectCount} Project{userData.projectCount !== 1 ? 's' : ''}</p>
+            <div className="bg-blue-100 px-3 py-1 rounded-full text-center" title={`${userData.generationCount} generation jobs`}>
+                <p className="text-xs text-blue-800 font-medium">{userData.generationCount} Generation{userData.generationCount !== 1 ? 's' : ''}</p>
             </div>
-             <div className="bg-purple-100 px-3 py-1 rounded-full text-center" title={`${userData.pdfGeneratedCount} PDFs generated`}>
-                <p className="text-xs text-purple-800 font-medium">{userData.pdfGeneratedCount} PDF{userData.pdfGeneratedCount !== 1 ? 's' : ''}</p>
+             <div className="bg-purple-100 px-3 py-1 rounded-full text-center" title={`${userData.failedGenerationCount} failed generation jobs`}>
+                <p className="text-xs text-purple-800 font-medium">{userData.failedGenerationCount} Failed</p>
             </div>
              <div className="bg-green-100 px-3 py-1 rounded-full text-center" title={`$${userData.totalSpent.toFixed(2)} spent`}>
                 <p className="text-xs text-green-800 font-medium">${userData.totalSpent.toFixed(2)} Spent</p>
@@ -483,27 +487,26 @@ const UserDetailCard = ({ userData }: { userData: EnrichedUser }) => (
       </div>
     </div>
     
-    {/* Projects List */}
+    {/* Generations List */}
     <div className="p-4">
-      <h4 className="text-sm font-medium mb-3">Recent Projects ({userData.projects.length > 0 ? `showing up to ${userData.projects.length}` : '0'})</h4>
-      {userData.projects.length > 0 ? (
+      <h4 className="text-sm font-medium mb-3">Recent Generations ({userData.generations.length > 0 ? `showing up to ${userData.generations.length}` : '0'})</h4>
+      {userData.generations.length > 0 ? (
         <div className="space-y-3">
-          {userData.projects.map(project => (
-            <div key={project.id} className="flex items-center justify-between border p-3 rounded-md bg-white">
+          {userData.generations.map(generation => (
+            <div key={generation.id} className="flex items-center justify-between border p-3 rounded-md bg-white">
               <div>
-                <Link href={`/admin/projects?id=${project.id}&userId=${userData.id}`} className="text-sm font-medium text-blue-600 hover:underline hover:text-blue-800">
-                  {project.title}
-                </Link>
-                 <p className="text-xs text-gray-500">Pages: {project.pageCount} • ID: <span className="font-mono">{project.id}</span></p>
+                <p className="text-sm font-medium text-gray-900">{generation.toolId}</p>
+                <p className="text-xs text-gray-500">
+                  Status: {generation.status}
+                  {generation.createdAt ? ` • ${new Date(generation.createdAt).toLocaleString()}` : ""}
+                  {" • "}ID: <span className="font-mono">{generation.id}</span>
+                </p>
               </div>
-               <Link href={`/admin/projects?id=${project.id}&userId=${userData.id}`} className="ml-4">
-                  <Button size="sm" variant="outline">Manage</Button>
-               </Link>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-gray-500 text-sm italic">No projects found for this user.</p>
+        <p className="text-gray-500 text-sm italic">No generations found for this user.</p>
       )}
     </div>
   </div>

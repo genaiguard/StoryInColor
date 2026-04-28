@@ -25,13 +25,8 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Other user-owned subcollections (projects, uploads, etc.) — owner has
-    // full read/write. We enumerate `projects` and `uploads` explicitly so
-    // jobs/generations rules above are NOT shadowed by a permissive wildcard.
-    match /users/{userId}/projects/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read, write: if isAdmin();
-    }
+    // Upload metadata remains user-owned. jobs/generations rules above are
+    // intentionally stricter because those records are written by Functions.
     match /users/{userId}/uploads/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       allow read, write: if isAdmin();

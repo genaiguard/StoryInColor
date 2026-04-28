@@ -11,6 +11,7 @@ export interface ToolSEO {
   metaDescription: string;
   whatYouGet: string[]; // 3-5 bullets
   faq: ToolFAQ[]; // 4-6 entries per tool
+  inputImage?: string; // path to generated example input
   sampleImage?: string; // path to sample output preview (placeholder for now)
 }
 

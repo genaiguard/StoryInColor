@@ -27,7 +27,7 @@ const webAppSchema = {
     highPrice: "10.00",
     offerCount: 4,
     description:
-      "Pay-as-you-go credits. Packs start at $3.50. The coloring book reading uses 1 credit; most other readings use 10.",
+      "Pay-as-you-go credits. Packs start at $3.50. The coloring page uses 1 credit; most readings use 10.",
   },
   screenshot: `${SITE_URL}/images/SHARING.webp`,
   featureList: TOOLS.map((t) => t.name).join(", "),
@@ -59,7 +59,7 @@ const faqSchema = {
       name: "How does pricing work?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "You buy a small pack of credits and spend them on whichever readings you like. The coloring book reading uses 1 credit. Other readings — palm, face, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes — use 10 credits each. New accounts start with free credits, no card required.",
+        text: "You buy a small pack of credits and spend them on whichever photo experience you like. The coloring page uses 1 credit. Readings — palm, face, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes — use 10 credits each. New accounts start with free credits, no card required.",
       },
     },
     {

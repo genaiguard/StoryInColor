@@ -24,7 +24,7 @@ export type ServerToolConfig = {
 export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
   "coloring-book": {
     prompt:
-      "Convert this photo into a clean black-and-white line illustration suitable for a coloring book. If there are faces or figures, maintain the original features and essence, but subtly enhance them to appear sweeter, softer, and more charming—like a gently idealized animated style. Use thin, elegant lines with no shading or poche-style hatching. Simplify background details if needed, but preserve the overall mood and composition. The final image should feel graceful, warm, and beautiful, with a soft and uplifting tone.",
+      "Convert this photo into a clean black-and-white line illustration suitable for a printable coloring page. If there are faces or figures, maintain the original features and essence, but subtly enhance them to appear sweeter, softer, and more charming—like a gently idealized animated style. Use thin, elegant lines with no shading or poche-style hatching. Simplify background details if needed, but preserve the overall mood and composition. The final image should feel graceful, warm, and beautiful, with a soft and uplifting tone.",
     creditCost: 1,
     outputType: "image",
     imageSize: "1024x1536",

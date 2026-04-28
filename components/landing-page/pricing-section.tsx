@@ -63,7 +63,7 @@ export default function PricingSection() {
         {/* Single CTA + clarifier */}
         <div className="mt-12 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <p className="max-w-xl text-sm text-gray-500">
-            Most readings use 10 credits. The coloring book reading uses 1.
+            Most readings use 10 credits. The coloring page uses 1.
             New accounts start with free credits — no card required.
           </p>
           <Button

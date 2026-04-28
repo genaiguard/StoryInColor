@@ -18,7 +18,7 @@ export interface ToolCardProps {
 export function ToolCard({ tool, href, size = "md", showCost = false }: ToolCardProps) {
   const target = href ?? `/readings/${tool.slug}`;
   const aspect =
-    size === "sm" ? "aspect-[4/5]" : size === "lg" ? "aspect-[2/3]" : "aspect-[3/4]";
+    size === "sm" ? "aspect-[4/5]" : "aspect-[2/3]";
   const costLabel = tool.creditCost === 1 ? "1 credit" : `${tool.creditCost} credits`;
 
   return (
@@ -31,7 +31,7 @@ export function ToolCard({ tool, href, size = "md", showCost = false }: ToolCard
           src={tool.coverImage}
           alt={tool.name}
           fill
-          className="object-cover"
+          className="object-contain"
         />
       </div>
       <div className="p-5">

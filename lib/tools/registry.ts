@@ -9,10 +9,10 @@ export const TOOLS: Tool[] = [
   {
     id: "coloring-book",
     slug: "coloring-book",
-    name: "Coloring Book",
-    tagline: "Turn any photo into a beautiful coloring page",
+    name: "Coloring Page",
+    tagline: "Turn any photo into clean printable line art",
     heroCopy:
-      "Family photos, pet portraits, or vacation memories — turned into print-ready line art you can color in.",
+      "Family photos, pet portraits, or vacation memories — transformed into one print-ready page you can color in.",
     coverImage: "/images/tools/coloring-book.webp",
     creditCost: 1,
     category: "creative",
@@ -21,10 +21,10 @@ export const TOOLS: Tool[] = [
     seo: {
       metaTitle: "Photo to coloring page — free AI generator | StoryInColor",
       metaDescription:
-        "Turn any photo into a print-ready black-and-white coloring page. Family photos, pet portraits, vacation memories — your custom coloring book in seconds.",
+        "Turn any photo into a print-ready black-and-white coloring page. Family photos, pet portraits, vacation memories — a custom coloring page in seconds.",
       whatYouGet: [
         "A clean line illustration drawn from your photo",
-        "Print-ready black-and-white output sized for a standard page",
+        "Print-ready black-and-white output sized for one standard page",
         "Faithful preservation of the subject's likeness and pose",
         "Free starter credits when you sign up — no card required",
       ],
@@ -43,7 +43,7 @@ export const TOOLS: Tool[] = [
         },
         {
           q: "What file format do I get?",
-          a: "You get a high-resolution PNG ready to print or share. Each page is one credit, so you can build a full custom coloring book.",
+          a: "You get a high-resolution PNG ready to print or share. Each coloring page uses one credit.",
         },
       ],
       sampleImage: "/images/tools/coloring-book.webp",
@@ -86,7 +86,8 @@ export const TOOLS: Tool[] = [
         },
         PHOTO_PRIVACY_FAQ,
       ],
-      sampleImage: "/images/tools/palm-reading.webp",
+      inputImage: "/images/tools/palm-reading-input.webp",
+      sampleImage: "/images/tools/palm-reading-sample.webp",
     },
   },
   {

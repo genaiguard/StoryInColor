@@ -250,7 +250,7 @@ export default function CreditsPage() {
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Purchase Credits</h1>
             </div>
             <p className="text-gray-500">
-              Coloring book = 1 credit per page. Each premium tool (palm reading, face reading, style audit, etc.) = 10 credits per generation.
+              Coloring page = 1 credit. Each reading (palm reading, face reading, style audit, etc.) = 10 credits per generation.
             </p>
             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
               <div className="flex items-center gap-2">
@@ -273,7 +273,7 @@ export default function CreditsPage() {
           )}
 
           <div className="mt-8 mb-4 rounded-lg border border-orange-100 bg-orange-50/60 px-4 py-3 text-sm text-orange-800">
-            Coloring book = 1 credit. Premium tools = 10 credits.
+            Coloring page = 1 credit. Readings = 10 credits.
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -308,12 +308,12 @@ export default function CreditsPage() {
                       <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                       <span>
                         {pkg.id === 'small'
-                          ? '≈ 5 coloring pages — premium tools need 10 credits'
+                          ? '≈ 5 coloring pages — readings need 10 credits'
                           : pkg.id === 'medium'
-                          ? '≈ 10 coloring pages OR 1 premium analysis'
+                          ? '≈ 10 coloring pages OR 1 reading'
                           : pkg.id === 'large'
-                          ? '≈ 20 coloring pages OR 2 premium analyses'
-                          : '≈ 40 coloring pages OR 4 premium analyses'}
+                          ? '≈ 20 coloring pages OR 2 readings'
+                          : '≈ 40 coloring pages OR 4 readings'}
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
@@ -352,7 +352,7 @@ export default function CreditsPage() {
             </div>
             <div className="space-y-4 text-gray-600">
               <p>
-                Coloring book = 1 credit per page. Each premium tool (palm reading, face reading, style audit, etc.) = 10 credits per generation.
+                Coloring page = 1 credit. Each reading (palm reading, face reading, style audit, etc.) = 10 credits per generation.
               </p>
               <p>
                 New users receive 2 free credits to try the service. After using your free credits, you'll need to purchase more to keep creating.
@@ -408,7 +408,7 @@ export default function CreditsPage() {
                           type: 'usage',
                           date: usage.date,
                           amount: -1,
-                          details: usage.projectId ? `Used for Project ${usage.projectId.slice(0, 8)}...` : 'Used for image generation',
+                          details: usage.projectId ? `Used for generation ${usage.projectId.slice(0, 8)}...` : 'Used for image generation',
                           isInitialCredits: false
                         }))
                       ]

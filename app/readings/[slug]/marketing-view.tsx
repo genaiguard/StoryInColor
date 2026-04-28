@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import {
   Accordion,
   AccordionContent,
@@ -10,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import Header from "@/components/landing-page/header";
 import Footer from "@/components/landing-page/footer";
 import type { Tool } from "@/lib/tools/types";
+import { Wand2 } from "lucide-react";
 
 // Tools that touch wellness-adjacent territory need an inline, visible
 // non-medical disclaimer for legal cover — burying it inside an FAQ accordion
@@ -30,6 +30,7 @@ const WELLNESS_DISCLAIMER: Record<string, string> = {
  */
 export default function MarketingView({ tool }: { tool: Tool }) {
   const ctaHref = `/login?register=true&next=/readings/${tool.slug}`;
+  const input = tool.seo.inputImage;
   const sample = tool.seo.sampleImage || tool.coverImage;
   // When sampleImage is left identical to coverImage in the registry it means
   // a real sample output hasn't been shipped yet. Render the section anyway
@@ -58,8 +59,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
         </nav>
 
         {/* Hero */}
-        <section className="grid gap-10 md:grid-cols-2 md:items-center">
-          <div>
+        <section className="max-w-3xl">
             <span className="inline-flex items-center rounded-full bg-orange-50 px-3 py-1 text-xs font-medium uppercase tracking-wide text-orange-700">
               {tool.category}
             </span>
@@ -86,17 +86,6 @@ export default function MarketingView({ tool }: { tool: Tool }) {
             <p className="mt-4 text-xs text-gray-500">
               Free starter credits when you sign up — no card required.
             </p>
-          </div>
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <Image
-              src={tool.coverImage}
-              alt={`${tool.name} preview`}
-              width={600}
-              height={800}
-              priority
-              className="h-full w-full object-cover"
-            />
-          </div>
         </section>
 
         {/* Inline non-medical disclaimer for wellness-adjacent tools */}
@@ -162,55 +151,74 @@ export default function MarketingView({ tool }: { tool: Tool }) {
             How it works
           </h2>
           <ol className="mt-6 grid gap-4 md:grid-cols-3">
-            <li className="rounded-xl border border-gray-200 bg-white p-5">
-              <div className="text-sm font-semibold text-orange-600">Step 1</div>
-              <h3 className="mt-1 text-lg font-semibold text-gray-900">Upload</h3>
-              <p className="mt-2 text-sm text-gray-600">{tool.inputHint}</p>
+            <li className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+              {input && (
+                <div className="flex h-48 items-center justify-center border-b border-gray-200 bg-gray-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={input}
+                    alt={`${tool.name} upload example`}
+                    width={1024}
+                    height={1024}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+              )}
+              <div className="p-5">
+                <div className="text-sm font-semibold text-orange-600">Step 1</div>
+                <h3 className="mt-1 text-lg font-semibold text-gray-900">Upload photo</h3>
+                <p className="mt-2 text-sm text-gray-600">{tool.inputHint}</p>
+              </div>
             </li>
-            <li className="rounded-xl border border-gray-200 bg-white p-5">
-              <div className="text-sm font-semibold text-orange-600">Step 2</div>
-              <h3 className="mt-1 text-lg font-semibold text-gray-900">Generate</h3>
-              <p className="mt-2 text-sm text-gray-600">
-                We process your photo and craft your {tool.name.toLowerCase()} in
-                roughly 20 to 40 seconds.
-              </p>
+            <li className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+              <div className="flex h-48 items-center justify-center border-b border-gray-200 bg-orange-50">
+                <div className="relative h-28 w-36 rounded-lg border border-orange-200 bg-white shadow-sm">
+                  <div className="absolute left-4 right-4 top-4 h-2 rounded-full bg-orange-100" />
+                  <div className="absolute left-4 right-10 top-10 h-2 rounded-full bg-gray-100" />
+                  <div className="absolute bottom-4 left-4 right-4 h-12 rounded-md bg-gray-50" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-500 text-white shadow-sm">
+                      <Wand2 className="h-6 w-6" aria-hidden="true" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-5">
+                <div className="text-sm font-semibold text-orange-600">Step 2</div>
+                <h3 className="mt-1 text-lg font-semibold text-gray-900">Generate</h3>
+                <p className="mt-2 text-sm text-gray-600">
+                  We process your photo and craft your {tool.name.toLowerCase()} in
+                  roughly 20 to 40 seconds.
+                </p>
+              </div>
             </li>
-            <li className="rounded-xl border border-gray-200 bg-white p-5">
-              <div className="text-sm font-semibold text-orange-600">Step 3</div>
-              <h3 className="mt-1 text-lg font-semibold text-gray-900">Download</h3>
-              <p className="mt-2 text-sm text-gray-600">
-                Save the high-resolution image, share the link, or generate
-                another.
-              </p>
+            <li className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+              <div className="relative flex h-48 items-center justify-center border-b border-gray-200 bg-gray-50">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={sample}
+                  alt={`${tool.name} sample output`}
+                  width={1024}
+                  height={1536}
+                  className="h-full w-full object-contain"
+                />
+                {isPlaceholderSample && (
+                  <span className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-gray-700 shadow-sm ring-1 ring-gray-200">
+                    Real sample coming soon - placeholder
+                  </span>
+                )}
+              </div>
+              <div className="p-5">
+                <div className="text-sm font-semibold text-orange-600">Step 3</div>
+                <h3 className="mt-1 text-lg font-semibold text-gray-900">Download</h3>
+                <p className="mt-2 text-sm text-gray-600">
+                  Save the high-resolution image, share the link, or generate
+                  another.
+                </p>
+              </div>
             </li>
           </ol>
         </section>
-
-        {/* Sample output */}
-        <section className="mt-16">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
-            Sample output
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            A preview of the editorial layout you receive.
-          </p>
-          <div className="relative mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={sample}
-              alt={`${tool.name} sample output`}
-              width={1200}
-              height={800}
-              className="h-full w-full object-cover"
-            />
-            {isPlaceholderSample && (
-              <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200">
-                Real sample coming soon — placeholder
-              </span>
-            )}
-          </div>
-        </section>
-
 
         {/* FAQ */}
         <section className="mt-16">

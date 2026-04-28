@@ -17,7 +17,7 @@ const FAQS: FAQ[] = [
     value: "cost",
     question: "How much does a reading cost?",
     answer:
-      "The coloring book reading uses 1 credit. Other readings — palm, face, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes — use 10 credits each. Credit packs start at $3.50 for 5 credits.",
+      "The coloring page uses 1 credit. Readings — palm, face, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes — use 10 credits each. Credit packs start at $3.50 for 5 credits.",
   },
   {
     value: "photos",

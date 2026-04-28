@@ -22,15 +22,9 @@ import {
 import { 
   getFirestore, 
   doc, 
-  collection, 
-  query, 
-  getDocs, 
-  deleteDoc,
-  writeBatch,
   updateDoc,
   serverTimestamp,
-  getDoc,
-  setDoc
+  getDoc
 } from "firebase/firestore"
 import { ref, listAll, deleteObject, StorageReference } from "firebase/storage"
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers"
@@ -263,44 +257,6 @@ export default function SettingsPage() {
           if (process.env.NODE_ENV !== "production") console.log("No user document found");
         }
         
-        // Mark all projects as deleted, only if they exist
-        const projectsRef = collection(db, "users", user.uid, "projects");
-        const projectsSnapshot = await getDocs(projectsRef);
-        
-        if (projectsSnapshot.docs.length > 0) {
-          // Use batched writes for better performance
-          const MAX_BATCH_SIZE = 500; // Firestore limit
-          let batchCount = 0;
-          let batch = writeBatch(db);
-          
-          // Process each project document
-          for (const projectDoc of projectsSnapshot.docs) {
-            // Mark project as deleted if not already deleted
-            if (!projectDoc.data().deleted) {
-              batch.update(projectDoc.ref, {
-                deleted: true,
-                deletedAt: serverTimestamp()
-              });
-              batchCount++;
-              
-              // If we reach batch limit, commit and create new batch
-              if (batchCount >= MAX_BATCH_SIZE) {
-                await batch.commit();
-                batch = writeBatch(db);
-                batchCount = 0;
-              }
-            }
-          }
-          
-          // Commit any remaining changes
-          if (batchCount > 0) {
-            await batch.commit();
-          }
-          
-          if (process.env.NODE_ENV !== "production") console.log(`${batchCount} documents updated`);
-        } else {
-          if (process.env.NODE_ENV !== "production") console.log("No project documents found");
-        }
       } catch (firestoreError) {
         console.error("Database update error");
         // Continue with account deletion even if Firestore update fails
@@ -571,7 +527,7 @@ export default function SettingsPage() {
                     <p className="font-medium mb-1">Warning:</p>
                     <ul className="list-disc list-inside space-y-1">
                       <li>This action cannot be undone</li>
-                      <li>All your projects and data will be permanently deleted</li>
+                      <li>All your saved account data and generated files will be permanently deleted</li>
                       <li>You will not be able to recover any information</li>
                     </ul>
                   </div>
