@@ -63,8 +63,8 @@ export default function PricingSection() {
         {/* Single CTA + clarifier */}
         <div className="mt-12 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <p className="max-w-xl text-sm text-gray-500">
-            Most tools use 10 credits per generation. The classic coloring book uses 1.
-            New accounts get free starter credits — no card required.
+            Most readings use 10 credits. The coloring book reading uses 1.
+            New accounts start with free credits — no card required.
           </p>
           <Button
             className="rounded-full bg-gray-900 px-7 py-6 text-base font-medium text-white hover:bg-gray-800"

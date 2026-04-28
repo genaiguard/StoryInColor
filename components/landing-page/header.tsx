@@ -115,7 +115,7 @@ export default function Header({ activeSection, scrollToSection }: HeaderProps) 
               href="/tools"
               className="text-sm font-medium transition-colors hover:text-orange-500"
             >
-              Tools
+              Readings
             </Link>
           </motion.div>
           {NAV_ITEMS.map(renderDesktopNavItem)}
@@ -187,7 +187,7 @@ export default function Header({ activeSection, scrollToSection }: HeaderProps) 
                 onClick={closeMobile}
                 className="text-sm font-medium px-4 py-2 hover:bg-gray-100 rounded-md text-left"
               >
-                Tools
+                Readings
               </Link>
               {NAV_ITEMS.map(renderMobileNavItem)}
               <Link

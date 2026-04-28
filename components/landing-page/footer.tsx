@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { TOOLS } from "@/lib/tools/registry"
-import { TOOL_COUNT_WORD } from "@/lib/tools/copy"
 
 export default function Footer() {
   return (
@@ -15,7 +14,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-sm text-gray-600 max-w-xs">
-              {TOOL_COUNT_WORD} AI photo tools. One upload. A magazine-quality result in seconds.
+              Editorial AI readings — written like an editor, not an algorithm.
             </p>
             <div className="flex gap-3 pt-1">
               <Link
@@ -32,9 +31,9 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Tools column */}
+          {/* Readings column */}
           <div className="md:col-span-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">Tools</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Readings</h3>
             <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
               {TOOLS.map((tool) => (
                 <li key={tool.id}>
@@ -107,7 +106,7 @@ export default function Footer() {
         {/* Bottom row */}
         <div className="mt-10 pt-6 border-t border-gray-200 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <p className="text-xs text-gray-500">
-            © 2026 Story In Color. All rights reserved.
+            © {new Date().getFullYear()} Story In Color. All rights reserved.
           </p>
           <p className="text-xs text-gray-500">Made with care.</p>
         </div>

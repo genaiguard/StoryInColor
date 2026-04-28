@@ -1,24 +1,24 @@
-// JSON-LD structured data for the home page. Renders inline
+// JSON-LD structured data for the home page. Rendered as inline
 // <script type="application/ld+json"> elements which crawlers index even
 // when emitted from a client component (App Router supports this).
 //
 // Page-level <title>, <meta description>, OpenGraph, canonical, and
-// Twitter tags are emitted by the root layout's `export const metadata`
-// (see app/layout.tsx). next/head no-ops in App Router and was the reason
+// Twitter tags live on the root layout's `export const metadata`
+// (app/layout.tsx). next/head no-ops in App Router and was the reason
 // this file's previous output never reached the static HTML.
 
 import { TOOLS } from "@/lib/tools/registry";
-import { TOOL_COUNT_WORD } from "@/lib/tools/copy";
 
 const SITE_URL = "https://storyincolor.com";
-const DESCRIPTION = `Upload a photo, get something incredible back. ${TOOL_COUNT_WORD} AI photo tools — coloring book, palm reading, face reading, aura, iridology, handwriting, style audit, skincare, plate analysis, plant care, room vibes — in one place.`;
+const DESCRIPTION =
+  "What does your photo know about you? Editorial AI readings of your palm, face, handwriting, plate, plant, room, and more. Written like an editor, not an algorithm.";
 
 const webAppSchema = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "StoryInColor",
   url: SITE_URL,
-  applicationCategory: "MultimediaApplication",
+  applicationCategory: "LifestyleApplication",
   description: DESCRIPTION,
   offers: {
     "@type": "AggregateOffer",
@@ -27,7 +27,7 @@ const webAppSchema = {
     highPrice: "10.00",
     offerCount: 4,
     description:
-      "Credit packs starting at $3.50 for 5 credits. Coloring book is 1 credit per generation; premium tools are 10 credits per generation.",
+      "Pay-as-you-go credits. Packs start at $3.50. The coloring book reading uses 1 credit; most other readings use 10.",
   },
   screenshot: `${SITE_URL}/images/SHARING.webp`,
   featureList: TOOLS.map((t) => t.name).join(", "),
@@ -40,18 +40,18 @@ const faqSchema = {
   mainEntity: [
     {
       "@type": "Question",
-      name: "What kind of photos can I upload?",
+      name: "What kinds of photos can I bring?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Each tool has its own input — palm photos for the palm reader, an outfit photo for the style audit, a meal photo for plate analysis, etc. JPG, PNG, or WEBP up to 10MB. The clearer and better-lit the photo, the better the result.",
+        text: "Each reading takes a different photo: your open palm for palm reading, a clear selfie for face or aura, a top-down meal for plate, a wide shot of your room for room vibes, your handwriting for graphology, and so on. JPG, PNG, or WEBP up to 10 MB. The clearer and better-lit, the better the reading.",
       },
     },
     {
       "@type": "Question",
-      name: "How long does a generation take?",
+      name: "How long does a reading take?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Most tools finish in 20 to 40 seconds. You stay on the result page while the tool works and the finished image appears as soon as it's ready.",
+        text: "Most readings finish in roughly 20 to 40 seconds. You stay on the result page while we work and the finished spread appears as soon as it's ready.",
       },
     },
     {
@@ -59,46 +59,16 @@ const faqSchema = {
       name: "How does pricing work?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "You buy credits and spend them per generation. The coloring book is 1 credit. Premium tools (palm reading, face reading, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes) are 10 credits each. Credit packs start at $3.50 for 5 credits.",
+        text: "You buy a small pack of credits and spend them on whichever readings you like. The coloring book reading uses 1 credit. Other readings — palm, face, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes — use 10 credits each. New accounts start with free credits, no card required.",
       },
     },
     {
       "@type": "Question",
-      name: "Are the wellness-style readings medical advice?",
+      name: "Are wellness-style readings medical advice?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "No. Iridology, skincare glow, and plate analysis are for entertainment and general wellness reflection only. They are not medical advice, diagnosis, or treatment. Consult a qualified professional for any health concern.",
+        text: "No. Iridology, skincare, and plate readings are intended for entertainment and gentle wellness reflection only — not medical advice, diagnosis, or treatment. Consult a qualified professional for any health concern.",
       },
-    },
-  ],
-};
-
-const howToSchema = {
-  "@context": "https://schema.org",
-  "@type": "HowTo",
-  name: "How to use a StoryInColor AI photo tool",
-  description: "Three simple steps from upload to a finished result.",
-  step: [
-    {
-      "@type": "HowToStep",
-      name: "Sign in",
-      text: "Create a free StoryInColor account. New accounts come with starter credits.",
-      url: `${SITE_URL}#how-it-works`,
-      image: `${SITE_URL}/images/how-to-upload.webp`,
-    },
-    {
-      "@type": "HowToStep",
-      name: "Pick a tool and upload your photo",
-      text: `Choose from ${TOOLS.length} tools — coloring book, palm reading, face reading, aura, iridology, handwriting, style audit, skincare glow, plate analysis, plant care, or room vibes — and drag in one photo.`,
-      url: `${SITE_URL}/tools`,
-      image: `${SITE_URL}/images/how-to-customize.webp`,
-    },
-    {
-      "@type": "HowToStep",
-      name: "Get your result",
-      text: "Wait 20–40 seconds while the tool processes. Download, share, or generate another.",
-      url: `${SITE_URL}#how-it-works`,
-      image: `${SITE_URL}/images/how-to-download.webp`,
     },
   ],
 };
@@ -113,10 +83,6 @@ export default function LandingPageSEO() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
       />
     </>
   );

@@ -163,17 +163,17 @@ export function BlogPostContent({ post }: BlogPostContentProps) {
 
       {/* Call to Action */}
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 my-8">
-        <h3 className="text-2xl font-bold mb-4">Ready to Create Your Own Coloring Pages?</h3>
+        <h3 className="text-2xl font-bold mb-4">What does your photo know about you?</h3>
         <p className="mb-4 text-gray-700">
-          Coloring book is one of eleven AI photo tools on StoryInColor. Browse the
-          full collection — palm reading, style audit, plate analysis, plant care,
-          and more — and pick the one that fits your photo.
+          The coloring book is one of the readings on StoryInColor. Browse the
+          full reading room — palm, style, plate, plant, room, and more — and pick
+          the one that fits the photo you have.
         </p>
         <Link
           href="/tools"
           className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
         >
-          Browse all tools
+          Visit the reading room
         </Link>
       </div>
 

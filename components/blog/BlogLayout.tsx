@@ -23,7 +23,7 @@ export function BlogLayout({ children }: BlogLayoutProps) {
                 Blog
               </Link>
               <Link href="/tools" className="text-gray-600 hover:text-orange-500">
-                Tools
+                Readings
               </Link>
             </nav>
           </div>

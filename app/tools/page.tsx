@@ -3,23 +3,24 @@ import Header from "@/components/landing-page/header";
 import Footer from "@/components/landing-page/footer";
 import { ToolGrid } from "@/components/tools/tool-grid";
 import { TOOLS } from "@/lib/tools/registry";
-import { TOOL_COUNT_WORD } from "@/lib/tools/copy";
 
-const SHORT_DESCRIPTION = `${TOOL_COUNT_WORD} AI photo tools. One upload. A magazine-quality result in seconds.`;
+const SHORT_DESCRIPTION =
+  "Editorial AI photo readings — palm reading, face reading, style audit, plant care, plate analysis, and more. Each one designed to be saved.";
 
 export const metadata: Metadata = {
-  title: "All AI Photo Tools | StoryInColor",
-  description: `${TOOL_COUNT_WORD} AI photo tools in one place. Upload one photo and get a magazine-quality result — coloring book, palmistry, style audits, plant care, and more.`,
+  title: "The reading room | StoryInColor",
+  description:
+    "Every reading on StoryInColor, in one place — palm reading, face reading, aura, iridology, handwriting, style audit, plate analysis, plant care, room vibes, skincare, coloring book. Bring whatever you have a photo of.",
   alternates: { canonical: "https://storyincolor.com/tools" },
   openGraph: {
-    title: "All AI Photo Tools | StoryInColor",
+    title: "The reading room | StoryInColor",
     description: SHORT_DESCRIPTION,
     type: "website",
     url: "https://storyincolor.com/tools",
   },
   twitter: {
     card: "summary_large_image",
-    title: "All AI Photo Tools | StoryInColor",
+    title: "The reading room | StoryInColor",
     description: SHORT_DESCRIPTION,
   },
 };
@@ -28,8 +29,9 @@ function CatalogJsonLd() {
   const json = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: "StoryInColor AI photo tools",
-    description: `${TOOL_COUNT_WORD} AI photo tools that turn one upload into a finished, share-ready result.`,
+    name: "StoryInColor — the reading room",
+    description:
+      "Editorial AI photo readings, written like an editor, not an algorithm.",
     numberOfItems: TOOLS.length,
     itemListElement: TOOLS.map((tool, idx) => ({
       "@type": "ListItem",
@@ -57,12 +59,12 @@ export default function ToolsCatalogPage() {
         <section className="container mx-auto max-w-7xl px-4 md:px-6 py-12 md:py-16">
           <div className="max-w-3xl">
             <h1 className="text-4xl font-bold tracking-tight text-gray-900 md:text-5xl">
-              {TOOL_COUNT_WORD} AI photo tools. One upload. Pick yours.
+              The reading room.
             </h1>
             <p className="mt-4 text-lg text-gray-600">
-              From a print-ready coloring page to a magazine-quality palm reading,
-              every tool starts with a single photo and finishes in roughly 20 to
-              40 seconds.
+              Every reading we publish, in one place. Bring whatever you have a
+              photo of — your palm, your handwriting, your plate, your plant,
+              your room — and we'll write you back.
             </p>
           </div>
 

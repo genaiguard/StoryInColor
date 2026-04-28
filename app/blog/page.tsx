@@ -43,17 +43,16 @@ export default function BlogPage() {
 
         {/* Call to Action */}
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-8 text-center">
-          <h3 className="text-2xl font-bold mb-4">Eleven AI photo tools. One upload. Pick yours.</h3>
+          <h3 className="text-2xl font-bold mb-4">What does your photo know about you?</h3>
           <p className="text-gray-700 mb-6 max-w-2xl mx-auto">
-            From a one-tap coloring book to a magazine-style palm reading,
-            StoryInColor turns one photo into a finished, share-ready result in
-            roughly 20 to 40 seconds.
+            Editorial AI readings of your palm, your handwriting, your plate,
+            your room — wherever your life leaves a trace. Designed to be saved.
           </p>
           <a
             href="/tools"
             className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-medium transition-colors"
           >
-            Browse all tools
+            Visit the reading room
           </a>
         </div>
       </div>
