@@ -70,6 +70,22 @@ This means the source repo is private, the served repo is public, and `out/` in 
 
 `/admin` and `getAdminDashboardData` are gated on `request.auth.token.email === 'ipekcioglu@me.com'` — the admin email is hard-coded in `firestore.rules`, `storage.rules`, and the function. Changing the admin requires editing all three plus redeploying rules and functions.
 
+### Analytics + attribution
+
+Five layers, all interlocking. Touch them as a system, not piecemeal — the deduplication only works when client + server agree on `event_id`.
+
+- **Capture** (`lib/attribution/capture.ts`, `components/tracking/attribution-capture.tsx`). On every route change we read URL UTMs / `gclid` / `fbclid` / `msclkid`, infer source from `document.referrer`, and persist a `firstTouch` + `lastTouch` blob to localStorage AND a 365-day first-party cookie (`sic_attr_first`). First-touch only fires on `/`, `/readings`, or `/readings/<slug>` — legal pages and dashboard surfaces are denylisted so SEO traffic to `/privacy` doesn't poison attribution. An anonymous browser id (`sic_anon_id`) is also issued on first visit.
+- **Persist** (`lib/attribution/persist.ts`). On signup completion (both email + Google paths in `app/login/page.tsx`), the browser writes `users/{uid}.profile` and `users/{uid}.attribution` to Firestore. `users/{uid}` is owner-writable per `firestore.rules:35-38`; we use `set({merge:true})` so the soft-delete `deleted` flag survives.
+- **ID linking** (`components/tracking/auth-bridge.tsx`). Whenever the Firebase user changes, we push the UID into Clarity (`clarity("identify", uid, ...)`), GA4 (`gtag("config", { user_id })`), and Meta Pixel (`fbq("init", { external_id: sha256(uid) })`). Clarity hashes server-side; Pixel external_id is sha256 hex client-side; GA4 hashes internally.
+- **Funnel events** (`lib/analytics/events.ts`). One typed API for every conversion. Each helper generates an `event_id` UUID and fans out to Pixel (`fbq("track", name, params, { eventID: id })`), GA4 (`gtag("event", snake_name, { event_id, ...params })`), and Clarity (`clarity("event", name)`). Events: `trackViewReading`, `trackViewReadingResult`, `trackPricingCtaClick` (Lead), `trackCompleteRegistration`, `trackInitiateCheckout`, `trackPurchase`. The InitiateCheckout `event_id` is stashed in `localStorage.sic_pending_fb_event_id` AND threaded through Stripe metadata (`fbEventId`) so the post-redirect Purchase emit on the dashboard reuses the same id.
+- **Server-side conversions** (`functions/src/conversions/`). `dispatchServerConversion` posts to Meta CAPI + GA4 Measurement Protocol with the SAME `event_id` the browser used → Meta dedupes within 48h. Wired in `stripeWebhook` (Purchase) and `generateForTool` (ReadingStarted, ReadingCompleted). `ReadingFailed` is intentionally not mirrored — Tier-3 internal-only event.
+
+**Master kill switch:** `STORYINCOLOR_ENABLE_SERVER_CONVERSIONS=true` env var on the Cloud Function. Unset/false → every server conversion call is a no-op. Use `META_TEST_EVENT_CODE` env var to send Meta events as test events while validating the wiring without affecting production attribution. The required Firebase secrets are `META_CAPI_TOKEN` and `GA4_MP_API_SECRET`; the env vars `META_PIXEL_ID`, `GA4_MEASUREMENT_ID` are non-secret and live in `functions/.env` (or equivalent).
+
+**Where attribution shows up in the admin:** `/admin` lists each user with `firstTouch` + `lastTouch` blocks plus linked tracker IDs. Source filter dropdown narrows the list. The "Funnel by source" table at the top rolls up signups, activated users, paying customers, revenue, conversion rate, and activation rate per first-touch source. All computed server-side in `getAdminDashboardData`.
+
+**Privacy policy:** kept generic on purpose. Sections 7 (cookies/tracking), 8 (third-party services list including "Analytics and performance monitoring"), and 14 (Facebook Pixel) cover the spirit of what's collected. Adding a new tracker (e.g. TikTok Pixel) probably warrants revisiting Section 14; adjusting CAPI/Clarity/GA wiring within the existing tools does not.
+
 ## Local dev caveats
 
 - **Never run `npm run build` while `npm run dev` is up.** The production build writes to the same `.next/` directory the dev server is serving SSR chunks from, and the chunk hashes don't match. The dev server will then 500 with `ENOENT: ... _ssr_components_...` and 404 every CSS/JS asset. Recovery: stop the dev server, `rm -rf .next`, restart. If you need a build verification, stop the dev server first.
