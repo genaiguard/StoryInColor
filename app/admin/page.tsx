@@ -1,34 +1,40 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { 
-  AlertCircle, 
-  RefreshCw, 
-  Search, 
-  User, 
-  Users, 
-  DollarSign, 
-  CreditCard, 
-  Image as ImageIcon, 
-  Wand2,
+import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
+import {
+  AlertCircle,
+  ArrowDown,
+  ArrowLeft,
   ArrowUp,
-  ArrowDown
-} from "lucide-react"
-import { useFirebase } from "@/app/firebase/firebase-provider"
-import { getFunctions, httpsCallable } from "firebase/functions"
-import { toast } from "sonner"
+  CreditCard,
+  DollarSign,
+  Image as ImageIcon,
+  Loader2,
+  RefreshCw,
+  Search,
+  User,
+  Users,
+  Wand2,
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useFirebase } from "@/app/firebase/firebase-provider";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { getToolById } from "@/lib/tools/registry";
 
 // --- Type Definitions (Matching Cloud Function Response) ---
+// Field names mirror the server contract — `creditBalance` and
+// `generationCount` are how the Cloud Function returns the data; the UI
+// surfaces them as "Readings" since 1 credit == 1 reading.
 interface AggregatedStats {
   totalUsers: number;
-  totalRevenue: number; // In dollars
+  totalRevenue: number; // dollars
   payingCustomers: number;
   totalUploads: number;
   completedGenerations: number;
@@ -43,14 +49,14 @@ interface UserGenerationSummary {
 }
 
 interface EnrichedUser {
-  id: string; // Firebase Auth UID
+  id: string;
   email: string | null;
   displayName: string | null;
-  createdAt: string; // ISO string format (User creation)
-  disabled: boolean; // Added
-  deleted: boolean; // Added
+  createdAt: string;
+  disabled: boolean;
+  deleted: boolean;
   creditBalance: number;
-  totalSpent: number; // In dollars
+  totalSpent: number;
   generationCount: number;
   failedGenerationCount: number;
   latestGenerationCreatedAt: string | null;
@@ -59,34 +65,137 @@ interface EnrichedUser {
 
 interface AdminDashboardData {
   success: boolean;
-  aggregatedStats?: AggregatedStats; // Make optional for initial state
-  users?: EnrichedUser[]; // Make optional for initial state
+  aggregatedStats?: AggregatedStats;
+  users?: EnrichedUser[];
   message?: string;
   error?: string;
 }
 
-// Admin emails allowed to access this interface .
-const ADMIN_EMAILS = ['ipekcioglu@me.com'];
+// Admin email is ALSO hard-coded server-side in firestore.rules,
+// storage.rules, and functions/src/index.ts (getAdminDashboardData).
+// Changing the admin requires updating all four.
+const ADMIN_EMAILS = ["ipekcioglu@me.com"];
 
-type SortKey = 'userCreatedAt' | 'lastGenerationCreatedAt' | 'email' | 'totalSpent';
-type SortDirection = 'asc' | 'desc';
+type SortKey =
+  | "userCreatedAt"
+  | "lastGenerationCreatedAt"
+  | "email"
+  | "totalSpent";
+type SortDirection = "asc" | "desc";
+
+// ---------------------------------------------------------------------------
+// Small reusable shells
+// ---------------------------------------------------------------------------
+
+function PageHeader({ onRefresh }: { onRefresh?: () => void }) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-white/5 bg-black/60 backdrop-blur-md">
+      <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-8">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="liquid-glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Dashboard
+          </Link>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="liquid-glass inline-flex h-10 w-10 items-center justify-center rounded-full"
+              aria-label="Refresh data"
+              title="Refresh data"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Link
+          href="/"
+          className="text-base font-semibold tracking-[-0.02em] text-white sm:text-lg"
+        >
+          <span className="font-light">Story</span>
+          <span className="font-semibold">In</span>
+          <span className="font-light">Color</span>
+        </Link>
+      </div>
+    </header>
+  );
+}
+
+function CenteredState({
+  icon,
+  title,
+  body,
+  cta,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  cta?: { label: string; href: string };
+}) {
+  return (
+    <div className="flex min-h-screen flex-col bg-black text-white">
+      <PageHeader />
+      <main className="flex flex-1 items-center justify-center px-4 py-10">
+        <div className="liquid-glass mx-auto max-w-md rounded-2xl p-8 text-center">
+          <span className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
+            {icon}
+          </span>
+          <h2 className="text-2xl font-normal tracking-[-0.02em]">{title}</h2>
+          <p className="mt-2 text-sm text-gray-400">{body}</p>
+          {cta && (
+            <Link
+              href={cta.href}
+              className="mt-6 inline-flex items-center justify-center rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-colors hover:bg-gray-200"
+            >
+              {cta.label}
+            </Link>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function FullScreenSpinner({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-screen flex-col bg-black text-white">
+      <PageHeader />
+      <main className="flex flex-1 items-center justify-center px-4 py-10">
+        <div className="text-center">
+          <Loader2 className="mx-auto mb-4 h-10 w-10 animate-spin text-white" />
+          <p className="text-sm text-gray-400">{label}</p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 export default function AdminPage() {
-  // --- State Variables ---
   const [stats, setStats] = useState<AggregatedStats | null>(null);
   const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [showOnlyUsersWithGenerations, setShowOnlyUsersWithGenerations] = useState(false);
+  const [showOnlyUsersWithReadings, setShowOnlyUsersWithReadings] =
+    useState(false);
   const [showOnlyPaidUsers, setShowOnlyPaidUsers] = useState(false);
-  const [sortBy, setSortBy] = useState<SortKey>('userCreatedAt');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  
-  const { user, initialized } = useFirebase() || { user: null, initialized: false };
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email || '');
-  
-  // --- Data Fetching Effect ---
+  const [sortBy, setSortBy] = useState<SortKey>("userCreatedAt");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const { user, initialized } = useFirebase() ?? {
+    user: null,
+    initialized: false,
+  };
+  const isAdmin = !!user && ADMIN_EMAILS.includes(user.email || "");
+
   useEffect(() => {
     if (!initialized || !user || !isAdmin) {
       if (initialized && user && !isAdmin) {
@@ -95,419 +204,554 @@ export default function AdminPage() {
       setLoading(false);
       return;
     }
-    
+
+    let cancelled = false;
+
     const loadAdminData = async () => {
       setLoading(true);
       setError("");
-      if (process.env.NODE_ENV !== "production") console.log("[Admin Page] Calling getAdminDashboardData function...");
-      
+
       try {
         const functions = getFunctions();
-        const getAdminDataFn = httpsCallable<unknown, AdminDashboardData>(functions, 'getAdminDashboardData');
-        const result = await getAdminDataFn();
+        const fn = httpsCallable<unknown, AdminDashboardData>(
+          functions,
+          "getAdminDashboardData",
+        );
+        const result = await fn();
         const data = result.data;
 
+        if (cancelled) return;
+
         if (data.success && data.aggregatedStats && data.users) {
-          if (process.env.NODE_ENV !== "production") console.log("[Admin Page] Received data:", data);
           setStats(data.aggregatedStats);
           setUsers(data.users);
         } else {
-          console.error("[Admin Page] Failed to load admin data:", data.message || data.error);
-          setError(data.message || data.error || "Failed to load admin dashboard data.");
+          setError(
+            data.message ||
+              data.error ||
+              "Failed to load admin dashboard data.",
+          );
         }
       } catch (err) {
-        console.error("[Admin Page] Error calling getAdminDashboardData:", err);
-        setError(`An error occurred: ${err instanceof Error ? err.message : String(err)}`);
+        if (cancelled) return;
+        setError(
+          `An error occurred: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    
+
     loadAdminData();
-  }, [initialized, user, isAdmin]);
-  
-  // --- Filtering & Sorting Logic (Using useMemo for efficiency) ---
+    return () => {
+      cancelled = true;
+    };
+  }, [initialized, user, isAdmin, refreshKey]);
+
   const processedUsers = useMemo(() => {
     let processed = users;
 
-    // Apply Filters
-    if (showOnlyUsersWithGenerations) {
-      processed = processed.filter(userData => userData.generationCount > 0);
+    if (showOnlyUsersWithReadings) {
+      processed = processed.filter((u) => u.generationCount > 0);
     }
     if (showOnlyPaidUsers) {
-      processed = processed.filter(userData => userData.totalSpent > 0);
+      processed = processed.filter((u) => u.totalSpent > 0);
     }
 
-    // Apply Search Term
     if (searchTerm) {
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        processed = processed.filter(userData => 
-            (userData.email && userData.email.toLowerCase().includes(lowerSearchTerm)) ||
-            (userData.displayName && userData.displayName.toLowerCase().includes(lowerSearchTerm)) ||
-            userData.generations.some(generation => 
-              generation.id.toLowerCase().includes(lowerSearchTerm) ||
-              generation.toolId.toLowerCase().includes(lowerSearchTerm) ||
-              generation.status.toLowerCase().includes(lowerSearchTerm)
-            ) ||
-            userData.id.toLowerCase().includes(lowerSearchTerm)
-        );
+      const q = searchTerm.toLowerCase();
+      processed = processed.filter(
+        (u) =>
+          (u.email && u.email.toLowerCase().includes(q)) ||
+          (u.displayName && u.displayName.toLowerCase().includes(q)) ||
+          u.id.toLowerCase().includes(q) ||
+          u.generations.some(
+            (g) =>
+              g.id.toLowerCase().includes(q) ||
+              g.toolId.toLowerCase().includes(q) ||
+              g.status.toLowerCase().includes(q),
+          ),
+      );
     }
 
-    // Apply Sorting
     processed.sort((a, b) => {
-      let comparison = 0;
+      let cmp = 0;
       switch (sortBy) {
-        case 'userCreatedAt':
-          comparison = (new Date(a.createdAt)).getTime() - (new Date(b.createdAt)).getTime();
+        case "userCreatedAt":
+          cmp =
+            new Date(a.createdAt).getTime() -
+            new Date(b.createdAt).getTime();
           break;
-        case 'lastGenerationCreatedAt':
-          const dateA = a.latestGenerationCreatedAt ? new Date(a.latestGenerationCreatedAt).getTime() : 0;
-          const dateB = b.latestGenerationCreatedAt ? new Date(b.latestGenerationCreatedAt).getTime() : 0;
-          comparison = dateA - dateB;
+        case "lastGenerationCreatedAt": {
+          const da = a.latestGenerationCreatedAt
+            ? new Date(a.latestGenerationCreatedAt).getTime()
+            : 0;
+          const db = b.latestGenerationCreatedAt
+            ? new Date(b.latestGenerationCreatedAt).getTime()
+            : 0;
+          cmp = da - db;
           break;
-        case 'email':
-          comparison = (a.email || '').localeCompare(b.email || '');
+        }
+        case "email":
+          cmp = (a.email || "").localeCompare(b.email || "");
           break;
-        case 'totalSpent':
-          comparison = a.totalSpent - b.totalSpent;
+        case "totalSpent":
+          cmp = a.totalSpent - b.totalSpent;
           break;
       }
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return sortDirection === "asc" ? cmp : -cmp;
     });
 
     return processed;
-  }, [users, showOnlyUsersWithGenerations, showOnlyPaidUsers, searchTerm, sortBy, sortDirection]);
-  
-  // --- Render Logic ---
+  }, [
+    users,
+    showOnlyUsersWithReadings,
+    showOnlyPaidUsers,
+    searchTerm,
+    sortBy,
+    sortDirection,
+  ]);
 
-  // Loading State
   if (loading && (!initialized || !user || !isAdmin)) {
-     // Show minimal loading if auth state is not ready
-     return <MinimalLoadingState />;
+    return <FullScreenSpinner label="Loading…" />;
   }
   if (loading) {
-     return <FullPageLoadingState message="Loading Admin Dashboard..." />;
+    return <FullScreenSpinner label="Loading admin dashboard…" />;
   }
-
-  // Access Denied / Not Signed In States (Keep as is)
   if (initialized && user && !isAdmin) {
-    return <AccessDeniedState />;
+    return (
+      <CenteredState
+        icon={<AlertCircle className="h-6 w-6 text-red-300" />}
+        title="Access denied"
+        body="You don't have permission to access this page."
+        cta={{ label: "Return to dashboard", href: "/dashboard" }}
+      />
+    );
   }
   if (initialized && !user) {
-    return <NotSignedInState />;
+    return (
+      <CenteredState
+        icon={<AlertCircle className="h-6 w-6 text-amber-300" />}
+        title="Not signed in"
+        body="Please sign in to access the admin dashboard."
+        cta={{ label: "Sign in", href: "/login" }}
+      />
+    );
   }
 
-  // Main Admin Dashboard Render
-  return (
-    <div className="flex min-h-screen flex-col bg-gray-50">
-      {/* Header (Keep as is) */}
-      <header className="border-b sticky top-0 bg-white z-50 shadow-sm">
-        <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4 md:px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold">
-              Story<span className="text-orange-500">InColor</span>
-            </span>
-          </Link>
-          <nav className="flex items-center gap-3 md:gap-6">
-            <Link href="/dashboard" className="text-sm font-medium">
-              Dashboard
-            </Link>
-            <Link href="/admin" className="text-sm font-medium text-orange-500">
-              Admin
-            </Link>
-          </nav>
-        </div>
-      </header>
+  const refresh = () => setRefreshKey((k) => k + 1);
 
-      <main className="flex-1 py-6 md:py-8 px-4">
+  return (
+    <div className="flex min-h-screen flex-col bg-black text-white">
+      <PageHeader onRefresh={refresh} />
+
+      <main className="flex-1 px-4 py-10 md:px-8 md:py-14">
         <div className="container mx-auto max-w-7xl">
-          {/* Top Header Section (Keep as is) */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
+          {/* Title row */}
+          <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-              <p className="text-gray-500">Overview of users, generations, and revenue</p>
-            </div>
-            <div className="flex gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                <Input
-                  type="search"
-                  placeholder="Search users or generations..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
+              <div className="mb-4 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+                <span
+                  className="h-px w-8 bg-white/20"
+                  aria-hidden="true"
                 />
+                Admin
               </div>
-              <Button 
-                variant="outline" 
-                onClick={() => window.location.reload()} // Simple reload for now
-                title="Refresh Data"
+              <h1
+                className="text-3xl font-normal tracking-[-0.04em] sm:text-4xl md:text-5xl"
               >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+                Operator{" "}
+                <span className="italic font-light text-gray-400">
+                  console.
+                </span>
+              </h1>
+              <p className="mt-3 text-base text-gray-400 md:text-lg">
+                Users, readings, and revenue at a glance.
+              </p>
+            </div>
+            <div className="relative w-full md:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <input
+                type="search"
+                placeholder="Search users or readings…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-full border border-white/10 bg-white/[0.04] py-2.5 pl-9 pr-4 text-sm text-white placeholder-gray-500 transition-colors focus:border-white/30 focus:outline-none"
+              />
             </div>
           </div>
 
-          {/* Error Display (Keep as is) */}
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-red-700">
-                  <p className="font-medium mb-1">Error Loading Data</p>
-                  <p>{error}</p>
+            <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-4 text-sm text-red-200">
+              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-300" />
+              <div>
+                <p className="font-medium">Error loading data</p>
+                <p className="mt-1">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Aggregated KPI tiles */}
+          {stats && (
+            <div className="mb-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+              <StatCard
+                label="Total users"
+                value={stats.totalUsers.toLocaleString()}
+                icon={Users}
+              />
+              <StatCard
+                label="Paying customers"
+                value={stats.payingCustomers.toLocaleString()}
+                icon={CreditCard}
+              />
+              <StatCard
+                label="Total revenue"
+                value={`$${stats.totalRevenue.toFixed(2)}`}
+                icon={DollarSign}
+              />
+              <StatCard
+                label="Photos uploaded"
+                value={stats.totalUploads.toLocaleString()}
+                icon={ImageIcon}
+              />
+              <StatCard
+                label="Readings completed"
+                value={stats.completedGenerations.toLocaleString()}
+                icon={Wand2}
+              />
+              <StatCard
+                label="Readings failed"
+                value={stats.failedGenerations.toLocaleString()}
+                icon={AlertCircle}
+              />
+            </div>
+          )}
+
+          {/* Filters + sort */}
+          <div className="liquid-glass mb-8 rounded-2xl p-6 md:p-7">
+            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+                  Filters
+                </h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <FilterChip
+                    on={showOnlyUsersWithReadings}
+                    onClick={() =>
+                      setShowOnlyUsersWithReadings((v) => !v)
+                    }
+                    label="Has readings"
+                  />
+                  <FilterChip
+                    on={showOnlyPaidUsers}
+                    onClick={() => setShowOnlyPaidUsers((v) => !v)}
+                    label="Paying users"
+                  />
+                </div>
+              </div>
+              <div>
+                <h2 className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+                  Sort
+                </h2>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={sortBy}
+                    onValueChange={(v) => setSortBy(v as SortKey)}
+                  >
+                    <SelectTrigger className="w-[220px] rounded-full border-white/10 bg-white/[0.04] text-sm text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-black text-white">
+                      <SelectItem value="userCreatedAt">
+                        Signup date
+                      </SelectItem>
+                      <SelectItem value="lastGenerationCreatedAt">
+                        Latest reading
+                      </SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="totalSpent">Total spent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSortDirection((p) =>
+                        p === "asc" ? "desc" : "asc",
+                      )
+                    }
+                    className="liquid-glass inline-flex h-10 w-10 items-center justify-center rounded-full"
+                    aria-label={`Sort ${
+                      sortDirection === "asc" ? "ascending" : "descending"
+                    }`}
+                    title={`Sort ${
+                      sortDirection === "asc" ? "ascending" : "descending"
+                    }`}
+                  >
+                    {sortDirection === "asc" ? (
+                      <ArrowUp className="h-4 w-4" />
+                    ) : (
+                      <ArrowDown className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Aggregated Stats Section */}
-          {stats && (
-            <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              <StatCard title="Total Users" value={stats.totalUsers.toLocaleString()} icon={Users} />
-              <StatCard title="Paying Customers" value={stats.payingCustomers.toLocaleString()} icon={CreditCard} />
-              <StatCard title="Total Revenue" value={`$${stats.totalRevenue.toFixed(2)}`} icon={DollarSign} />
-              <StatCard title="Images Uploaded" value={stats.totalUploads.toLocaleString()} icon={ImageIcon} />
-              <StatCard title="Completed Generations" value={stats.completedGenerations.toLocaleString()} icon={Wand2} />
-              <StatCard title="Failed Generations" value={stats.failedGenerations.toLocaleString()} icon={AlertCircle} />
-            </div>
-          )}
-          
-          {/* --- NEW Filter and Sort Controls --- */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Filters & Sorting</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col md:flex-row gap-6">
-              {/* Filters */}
-              <div className="space-y-3">
-                  <Label className="font-medium">Filters</Label>
-                  <div className="flex items-center space-x-2">
-                      <Checkbox 
-                          id="filter-generations" 
-                          checked={showOnlyUsersWithGenerations} 
-                          onCheckedChange={(checked) => setShowOnlyUsersWithGenerations(Boolean(checked))}
-                      />
-                      <Label htmlFor="filter-generations" className="text-sm font-normal cursor-pointer">Has Generations</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                      <Checkbox 
-                          id="filter-paid" 
-                          checked={showOnlyPaidUsers} 
-                          onCheckedChange={(checked) => setShowOnlyPaidUsers(Boolean(checked))}
-                      />
-                      <Label htmlFor="filter-paid" className="text-sm font-normal cursor-pointer">Is Paying User</Label>
-                  </div>
-              </div>
-              {/* Sorting */}
-              <div className="flex-1 space-y-3">
-                  <Label htmlFor="sort-by" className="font-medium">Sort By</Label>
-                  <div className="flex gap-2">
-                      <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortKey)}>
-                          <SelectTrigger id="sort-by" className="w-full md:w-[200px]">
-                              <SelectValue placeholder="Select sort field" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="userCreatedAt">User Created Date</SelectItem>
-                              <SelectItem value="lastGenerationCreatedAt">Last Generation Date</SelectItem>
-                              <SelectItem value="email">Email</SelectItem>
-                              <SelectItem value="totalSpent">Total Spent</SelectItem>
-                          </SelectContent>
-                      </Select>
-                      <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')} 
-                          title={`Sort direction: ${sortDirection === 'asc' ? 'Ascending' : 'Descending'}`}
-                      >
-                          {sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-                      </Button>
-                  </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* User List Section */}
-          {loading ? (
-            // Show spinner only if already past initial auth loading
-            <div className="flex justify-center items-center p-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
-            </div>
-          ) : processedUsers.length > 0 ? (
-            <div className="space-y-8">
-              {processedUsers.map((userData) => (
-                <UserDetailCard key={userData.id} userData={userData} />
+          {/* Users list */}
+          {processedUsers.length > 0 ? (
+            <div className="space-y-5">
+              {processedUsers.map((u) => (
+                <UserDetailCard key={u.id} userData={u} />
               ))}
             </div>
           ) : (
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="rounded-full bg-blue-100 p-6 mb-4">
-                  <User className="h-10 w-10 text-blue-500" />
-                </div>
-                <h3 className="text-xl font-medium mb-2">No Users Found</h3>
-                <p className="text-gray-500 text-center max-w-md mb-6">
-                  {searchTerm ? "No users match your search criteria." : "No users have been created yet or data is still loading."}
-                </p>
-              </div>
+            <div className="liquid-glass rounded-2xl p-10 text-center">
+              <span className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
+                <User className="h-5 w-5 text-gray-300" />
+              </span>
+              <h3 className="text-lg font-medium text-white">
+                No users found
+              </h3>
+              <p className="mt-2 text-sm text-gray-400">
+                {searchTerm
+                  ? "No users match your search criteria."
+                  : "No users have been created yet."}
+              </p>
             </div>
           )}
         </div>
       </main>
 
-      {/* Footer (Keep as is) */}
-      <footer className="border-t bg-white mt-8">
-        <div className="container mx-auto px-4 md:px-6 py-4 md:py-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-col gap-1 md:gap-2">
-              <Link href="/" className="flex items-center gap-2">
-                <span className="text-lg font-bold">
-                  Story<span className="text-orange-500">InColor</span>
-                </span>
-              </Link>
-              <p className="text-xs text-gray-500">© {new Date().getFullYear()} StoryInColor. All rights reserved.</p>
-            </div>
-          </div>
+      <footer className="border-t border-white/5 bg-black">
+        <div className="container mx-auto flex flex-col gap-2 px-4 py-6 md:flex-row md:items-center md:justify-between md:px-8">
+          <p className="text-xs text-gray-500">
+            © {new Date().getFullYear()} Story In Color. Admin console.
+          </p>
+          <p className="text-xs text-gray-500">
+            Read-only — actions disabled in this view.
+          </p>
         </div>
       </footer>
     </div>
-  )
+  );
 }
 
-// --- Helper Components ---
+// ---------------------------------------------------------------------------
+// Subcomponents
+// ---------------------------------------------------------------------------
 
-// Simple loading state for when auth is initializing
-const MinimalLoadingState = () => (
-  <div className="flex h-screen items-center justify-center bg-gray-50">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-  </div>
-);
-
-// Full page loading state
-const FullPageLoadingState = ({ message }: { message: string }) => (
-  <div className="flex min-h-screen items-center justify-center bg-gray-50">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-      <p className="text-gray-500">{message}</p>
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="liquid-glass rounded-2xl p-5">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+          {label}
+        </span>
+        <Icon className="h-4 w-4 text-gray-400" />
+      </div>
+      <div
+        className="mt-3 text-2xl font-normal text-white sm:text-3xl"
+        style={{ letterSpacing: "-0.03em" }}
+      >
+        {value}
+      </div>
     </div>
-  </div>
-);
+  );
+}
 
-// Access Denied Component
-const AccessDeniedState = () => (
-  <div className="flex min-h-screen flex-col bg-gray-50">
-    {/* Basic Header */} 
-    <header className="border-b bg-white"><div className="container mx-auto h-16 flex items-center px-4"><Link href="/"><span className="text-xl font-bold">Story<span className="text-orange-500">InColor</span></span></Link></div></header>
-    <main className="flex-1 flex items-center justify-center">
-      <div className="text-center p-6">
-        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-        <p className="text-gray-500 mb-4">You don't have permission to access this page.</p>
-        <Button asChild><Link href="/dashboard">Return to Dashboard</Link></Button>
-      </div>
-    </main>
-  </div>
-);
+function FilterChip({
+  on,
+  onClick,
+  label,
+}: {
+  on: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+        on ? "bg-white text-black" : "liquid-glass text-gray-200"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 
-// Not Signed In Component
-const NotSignedInState = () => (
-  <div className="flex min-h-screen flex-col bg-gray-50">
-     {/* Basic Header */} 
-    <header className="border-b bg-white"><div className="container mx-auto h-16 flex items-center px-4"><Link href="/"><span className="text-xl font-bold">Story<span className="text-orange-500">InColor</span></span></Link></div></header>
-    <main className="flex-1 flex items-center justify-center">
-      <div className="text-center p-6">
-        <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold mb-2">Not Signed In</h2>
-        <p className="text-gray-500 mb-4">Please sign in to access the admin dashboard.</p>
-        <Button asChild><Link href="/login">Sign In</Link></Button>
-      </div>
-    </main>
-  </div>
-);
+function StatusPill({
+  tone,
+  label,
+}: {
+  tone: "neutral" | "warn" | "danger" | "good";
+  label: string;
+}) {
+  const cls = {
+    neutral: "border-white/10 bg-white/[0.04] text-gray-200",
+    warn: "border-amber-500/30 bg-amber-500/[0.08] text-amber-200",
+    danger: "border-red-500/30 bg-red-500/[0.08] text-red-200",
+    good: "border-emerald-500/30 bg-emerald-500/[0.08] text-emerald-200",
+  }[tone];
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${cls}`}
+    >
+      {label}
+    </span>
+  );
+}
 
-// Stat Card Component
-const StatCard = ({ title, value, icon: Icon }: { title: string; value: string | number; icon: React.ElementType }) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      <Icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-      {/* <p className="text-xs text-muted-foreground">+20.1% from last month</p> */}
-    </CardContent>
-  </Card>
-);
+function GenerationStatusBadge({ status }: { status: string }) {
+  const tone =
+    status === "complete"
+      ? "good"
+      : status === "failed"
+        ? "danger"
+        : status === "processing"
+          ? "warn"
+          : "neutral";
+  const label = status.charAt(0).toUpperCase() + status.slice(1);
+  return <StatusPill tone={tone} label={label} />;
+}
 
-// User Detail Card Component (Updated with Disabled/Deleted status)
-const UserDetailCard = ({ userData }: { userData: EnrichedUser }) => (
-  <div key={userData.id} className={`rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden ${userData.disabled || userData.deleted ? 'opacity-60 bg-gray-100' : ''}`}>
-    {/* User Header (Updated tags) */}
-    <div className={`p-4 border-b ${userData.disabled || userData.deleted ? 'bg-gray-100' : 'bg-gray-50'}`}>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-        {/* User Info (Email, ID, Created Date) */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="rounded-full bg-blue-100 p-2 flex-shrink-0">
-              <User className="h-5 w-5 text-blue-600" />
+function UserDetailCard({ userData }: { userData: EnrichedUser }) {
+  const dimmed = userData.disabled || userData.deleted;
+  const balanceLabel =
+    userData.creditBalance === 1
+      ? "1 reading"
+      : `${userData.creditBalance} readings`;
+
+  return (
+    <div
+      className={`liquid-glass overflow-hidden rounded-2xl ${
+        dimmed ? "opacity-60" : ""
+      }`}
+    >
+      {/* Header */}
+      <div className="border-b border-white/5 p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/5">
+              <User className="h-5 w-5 text-gray-300" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-lg font-semibold truncate" title={userData.email || userData.id}>
-                {userData.email || "No Email Available"}
+              <h3
+                className="truncate text-base font-medium text-white md:text-lg"
+                title={userData.email || userData.id}
+              >
+                {userData.email || "No email"}
               </h3>
-              <p className="text-sm text-gray-500 truncate">
-                {userData.displayName ? <span title={userData.displayName}>{userData.displayName} • </span> : ''}
-                <span className="text-xs">ID: <span className="font-mono" title={userData.id}>{userData.id}</span></span>
-                {` • Created: ${new Date(userData.createdAt).toLocaleDateString()}`}
+              <p className="mt-0.5 truncate text-xs text-gray-500">
+                {userData.displayName ? (
+                  <span title={userData.displayName}>
+                    {userData.displayName} ·{" "}
+                  </span>
+                ) : null}
+                <span title={userData.id} className="font-mono">
+                  {userData.id.slice(0, 12)}…
+                </span>
+                <span> · Joined {formatDate(userData.createdAt)}</span>
               </p>
             </div>
-        </div>
-        {/* Status Tags */}
-        <div className="flex flex-wrap gap-2 flex-shrink-0 mt-2 md:mt-0 items-center">
-            {/* Deleted/Disabled Badges */}
-            {userData.deleted && (
-                <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded border border-red-300">Soft Deleted</span>
-            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {userData.deleted && <StatusPill tone="danger" label="Deleted" />}
             {userData.disabled && (
-                  <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded border border-yellow-300">Account Disabled</span>
+              <StatusPill tone="warn" label="Disabled" />
             )}
-            {/* Other stats */}
-            <div className="bg-blue-100 px-3 py-1 rounded-full text-center" title={`${userData.generationCount} generation jobs`}>
-                <p className="text-xs text-blue-800 font-medium">{userData.generationCount} Generation{userData.generationCount !== 1 ? 's' : ''}</p>
-            </div>
-             <div className="bg-purple-100 px-3 py-1 rounded-full text-center" title={`${userData.failedGenerationCount} failed generation jobs`}>
-                <p className="text-xs text-purple-800 font-medium">{userData.failedGenerationCount} Failed</p>
-            </div>
-             <div className="bg-green-100 px-3 py-1 rounded-full text-center" title={`$${userData.totalSpent.toFixed(2)} spent`}>
-                <p className="text-xs text-green-800 font-medium">${userData.totalSpent.toFixed(2)} Spent</p>
-            </div>
-             <div className="bg-yellow-100 px-3 py-1 rounded-full text-center" title={`${userData.creditBalance} credits remaining`}>
-                <p className="text-xs text-yellow-800 font-medium">{userData.creditBalance} Credits</p>
-            </div>
+            <StatusPill
+              tone="neutral"
+              label={`${userData.generationCount} reading${userData.generationCount === 1 ? "" : "s"}`}
+            />
+            {userData.failedGenerationCount > 0 && (
+              <StatusPill
+                tone="warn"
+                label={`${userData.failedGenerationCount} failed`}
+              />
+            )}
+            <StatusPill
+              tone="good"
+              label={`$${userData.totalSpent.toFixed(2)} spent`}
+            />
+            <StatusPill tone="neutral" label={balanceLabel} />
+          </div>
         </div>
       </div>
+
+      {/* Recent readings */}
+      <div className="p-5">
+        <h4 className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+          Recent readings
+          {userData.generations.length > 0
+            ? ` · showing ${userData.generations.length}`
+            : ""}
+        </h4>
+        {userData.generations.length > 0 ? (
+          <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
+            {userData.generations.map((g) => {
+              const tool = getToolById(g.toolId);
+              const toolName = tool?.name ?? g.toolId;
+              return (
+                <li
+                  key={g.id}
+                  className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-white">
+                      {toolName}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-gray-500">
+                      <span className="font-mono">{g.id.slice(0, 8)}…</span>
+                      {g.createdAt
+                        ? ` · ${formatDateTime(g.createdAt)}`
+                        : ""}
+                    </p>
+                  </div>
+                  <GenerationStatusBadge status={g.status} />
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm text-gray-500">
+            No readings yet.
+          </p>
+        )}
+      </div>
     </div>
-    
-    {/* Generations List */}
-    <div className="p-4">
-      <h4 className="text-sm font-medium mb-3">Recent Generations ({userData.generations.length > 0 ? `showing up to ${userData.generations.length}` : '0'})</h4>
-      {userData.generations.length > 0 ? (
-        <div className="space-y-3">
-          {userData.generations.map(generation => (
-            <div key={generation.id} className="flex items-center justify-between border p-3 rounded-md bg-white">
-              <div>
-                <p className="text-sm font-medium text-gray-900">{generation.toolId}</p>
-                <p className="text-xs text-gray-500">
-                  Status: {generation.status}
-                  {generation.createdAt ? ` • ${new Date(generation.createdAt).toLocaleString()}` : ""}
-                  {" • "}ID: <span className="font-mono">{generation.id}</span>
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-gray-500 text-sm italic">No generations found for this user.</p>
-      )}
-    </div>
-  </div>
-); 
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Date helpers
+// ---------------------------------------------------------------------------
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString();
+  } catch {
+    return iso;
+  }
+}
+
+function formatDateTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
+}
