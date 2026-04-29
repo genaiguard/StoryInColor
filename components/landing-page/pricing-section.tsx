@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, CheckCircle, Play } from "lucide-react";
-import { trackEvent } from "@/components/tracking/facebook-pixel";
+import { trackPricingCtaClick } from "@/lib/analytics/events";
 import { CinematicSection } from "@/components/cinematic/cinematic-section";
 import { CREDIT_PACKAGES } from "@/app/firebase/credits-helpers";
 
@@ -128,10 +128,10 @@ export default function PricingSection() {
         <Link
           href="/login?register=true"
           onClick={() => {
-            trackEvent("InitiateCheckout", {
-              content_name: "Pricing CTA",
-              content_category: "pricing",
-            });
+            // Renamed from InitiateCheckout — that event is reserved for the
+            // moment we actually dispatch a Stripe redirect (see
+            // app/credits/page.tsx). Pre-auth pricing intent is a Lead.
+            trackPricingCtaClick({ contentName: "Pricing CTA" });
           }}
           className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-base font-medium text-black transition-colors hover:bg-gray-200"
         >

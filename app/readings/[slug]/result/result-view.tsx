@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { useFirebase } from "@/app/firebase/firebase-provider";
+import { trackViewReadingResult } from "@/lib/analytics/events";
 import type { Job, Tool } from "@/lib/tools/types";
 
 type Props = { tool: Tool };
@@ -144,6 +145,25 @@ export default function ResultView({ tool }: Props) {
   const [job, setJob] = useState<Job | null>(null);
   const [docMissing, setDocMissing] = useState<boolean>(false);
   const [subError, setSubError] = useState<string | null>(null);
+  // Fire view_reading_result exactly once per job — Firestore subscription
+  // ticks repeatedly even after status flips to complete, so we need a
+  // ref-guard to dedupe.
+  const resultViewedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      job?.status === "complete" &&
+      jobId &&
+      resultViewedRef.current !== jobId
+    ) {
+      resultViewedRef.current = jobId;
+      trackViewReadingResult({
+        toolId: tool.id,
+        toolName: tool.name,
+        jobId,
+      });
+    }
+  }, [job?.status, jobId, tool.id, tool.name]);
 
   useEffect(() => {
     if (initialized && !loading && !user) {

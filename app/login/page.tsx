@@ -14,7 +14,7 @@ import {
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getAuth } from "firebase/auth";
-import { trackEvent, trackSignUp } from "@/components/tracking/facebook-pixel";
+import { trackCompleteRegistration } from "@/lib/analytics/events";
 import { persistUserProfileAndAttribution } from "@/lib/attribution/persist";
 import { toast } from "sonner";
 
@@ -96,11 +96,7 @@ function LoginForm() {
         }
       }
 
-      trackSignUp();
-      trackEvent("CompleteRegistration", {
-        content_name: "User Registration",
-        method: "email",
-      });
+      trackCompleteRegistration({ method: "email" });
 
       try {
         const functions = getFunctions();
@@ -156,11 +152,7 @@ function LoginForm() {
           }
         }
 
-        trackSignUp();
-        trackEvent("CompleteRegistration", {
-          content_name: "User Registration",
-          method: "google",
-        });
+        trackCompleteRegistration({ method: "google" });
 
         try {
           const functions = getFunctions();

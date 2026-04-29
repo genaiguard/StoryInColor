@@ -290,7 +290,7 @@ export const submitContactForm = onCall({
 /**
  * Creates a Stripe checkout session for credit purchase
  */
-export const createCreditCheckout = onCall<{packageId: string, origin?: string}>(
+export const createCreditCheckout = onCall<{packageId: string, origin?: string, fbEventId?: string}>(
   {
     secrets: [STRIPE_SECRET_KEY],
     labels: {
@@ -299,20 +299,26 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string}>
   },
   async (request) => {
     console.log("[createCreditCheckout] Function called with request:", request.data);
-    
+
     // Verify auth context is present
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'User must be authenticated to purchase credits');
     }
-    
+
     const userId = request.auth.uid;
     const userEmail = request.auth.token.email;
     console.log(`[Auth] User authenticated: ${userId}`);
 
-    // Extract packageId from data
-    const { packageId, origin } = request.data;
+    // Extract packageId from data. fbEventId is the shared deduplication id
+    // generated client-side at InitiateCheckout time. Phase 4 stripeWebhook
+    // will pull it from session.metadata when firing the CAPI Purchase
+    // mirror so Meta deduplicates with the client Pixel emit.
+    const { packageId, origin, fbEventId } = request.data;
     console.log("[Request Body] Received packageId:", packageId);
     console.log("[Request Body] Received origin:", origin);
+    if (fbEventId) {
+      console.log("[Request Body] Received fbEventId for CAPI dedup:", fbEventId);
+    }
 
     // Validate packageId
     if (!packageId) {
@@ -394,12 +400,16 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string}>
         locale: 'en',
         client_reference_id: userId,
         customer_email: userEmail || undefined,
-        metadata: { 
+        metadata: {
           userId,
           packageId,
           creditAmount: String(creditPackage.credits),
           priceInCents: String(creditPackage.price),
-          type: 'credit_purchase'
+          type: 'credit_purchase',
+          // Shared dedup id for Meta CAPI mirror in stripeWebhook. Empty
+          // string when caller didn't supply one (e.g. an older client) —
+          // stripeWebhook generates a fallback id in that case.
+          fbEventId: fbEventId || '',
         },
         success_url: `${domain}/dashboard?credit_purchase=success`,
         cancel_url: `${domain}/credits`,

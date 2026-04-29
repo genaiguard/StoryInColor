@@ -26,7 +26,7 @@ import {
 import { ToolGrid } from "@/components/tools/tool-grid";
 import { getToolById } from "@/lib/tools/registry";
 import { toast } from "sonner";
-import { trackEvent } from "@/components/tracking/facebook-pixel";
+import { trackPurchase } from "@/lib/analytics/events";
 
 interface JobDoc {
   generationId?: string;
@@ -228,12 +228,45 @@ export default function DashboardPage() {
               setIsProcessingCreditPurchase(false);
               sessionStorage.setItem(acknowledgedSessionKey, "true");
 
-              trackEvent("Purchase", {
-                content_name: "Credit Purchase",
-                content_category: "credits",
-                value: mostRecentPurchase.pricePaid / 100,
-                currency: "USD",
-                num_items: mostRecentPurchase.creditAmount,
+              // Look for the event_id that credits/page.tsx stashed when
+              // it dispatched the Stripe redirect. If the packageId matches,
+              // re-use it so this Pixel emit dedupes with the Phase-4 CAPI
+              // mirror coming from stripeWebhook. Stale slots (different
+              // packageId, or older than 1h) are ignored — the user must
+              // have abandoned and started a new flow.
+              let stashedEventId: string | undefined;
+              try {
+                const raw = window.localStorage.getItem(
+                  "sic_pending_fb_event_id",
+                );
+                if (raw) {
+                  const parsed = JSON.parse(raw) as {
+                    id?: string;
+                    packageId?: string;
+                    createdAt?: number;
+                  };
+                  const ageMs = Date.now() - (parsed.createdAt ?? 0);
+                  if (
+                    parsed.id &&
+                    parsed.packageId === mostRecentPurchase.packageId &&
+                    ageMs < 1000 * 60 * 60
+                  ) {
+                    stashedEventId = parsed.id;
+                  }
+                  // Clear the slot regardless — stale entries shouldn't
+                  // outlive a single completed purchase flow.
+                  window.localStorage.removeItem("sic_pending_fb_event_id");
+                }
+              } catch {
+                /* localStorage may be unavailable — fall through to a
+                   freshly-generated event_id with no dedup */
+              }
+
+              trackPurchase({
+                packageId: mostRecentPurchase.packageId,
+                valueCents: mostRecentPurchase.pricePaid,
+                numItems: mostRecentPurchase.creditAmount,
+                eventId: stashedEventId,
               });
 
               toast.success("Credits added successfully!");

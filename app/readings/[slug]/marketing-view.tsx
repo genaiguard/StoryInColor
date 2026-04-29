@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { Check, Wand2, Play, AlertTriangle } from "lucide-react";
 import {
@@ -12,6 +13,7 @@ import Header from "@/components/landing-page/header";
 import Footer from "@/components/landing-page/footer";
 import { CinematicHero } from "@/components/cinematic/cinematic-hero";
 import { CinematicSection } from "@/components/cinematic/cinematic-section";
+import { trackViewReading } from "@/lib/analytics/events";
 import type { Tool } from "@/lib/tools/types";
 
 // Tools that touch wellness-adjacent territory need an inline, visible
@@ -39,6 +41,16 @@ export default function MarketingView({ tool }: { tool: Tool }) {
   const sample = tool.seo.sampleImage || tool.coverImage;
   const isPlaceholderSample = sample === tool.coverImage;
   const wellnessNotice = WELLNESS_DISCLAIMER[tool.id];
+
+  // Tier-1 funnel event: a visitor saw a reading detail page. Fires on
+  // every mount AND on every slug change (each reading is its own
+  // ViewContent). Also fires under the auth-gated workflow path because
+  // marketing-view stays in the static HTML even when the signed-in
+  // workflow is mounted; the SEO surface is what tells us "they looked
+  // at face-reading".
+  useEffect(() => {
+    trackViewReading({ toolId: tool.id, toolName: tool.name });
+  }, [tool.id, tool.name]);
 
   return (
     <div data-tool-marketing className="flex min-h-screen flex-col bg-black">

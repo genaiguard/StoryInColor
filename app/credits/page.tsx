@@ -32,6 +32,7 @@ import {
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { loadStripe } from "@stripe/stripe-js";
+import { newEventId, trackInitiateCheckout } from "@/lib/analytics/events";
 
 function PageHeader() {
   return (
@@ -177,9 +178,40 @@ export default function CreditsPage() {
       const origin =
         typeof window !== "undefined" ? window.location.origin : null;
 
+      // Generate the event_id once here; it will:
+      //   1) be passed to createCreditCheckout, which stores it on the
+      //      Stripe session metadata (`fbEventId`) so Phase-4 CAPI mirror
+      //      can echo it from the webhook.
+      //   2) be passed to trackInitiateCheckout RIGHT NOW so Pixel records
+      //      the same id Phase-4 CAPI will echo.
+      //   3) be stashed in localStorage so the post-redirect dashboard
+      //      Purchase emit re-uses the same id (full Pixel ↔ CAPI dedup
+      //      across the redirect boundary).
+      // Result: Pixel + CAPI dedupe end-to-end on a single event_id.
+      const checkoutEventId = newEventId();
+      try {
+        // Slot is read + cleared by app/dashboard/page.tsx when the
+        // ?credit_purchase=success param is processed. We keep packageId
+        // alongside so the dashboard can confirm the latest stashed id
+        // matches the just-completed purchase before reusing it.
+        window.localStorage.setItem(
+          "sic_pending_fb_event_id",
+          JSON.stringify({
+            id: checkoutEventId,
+            packageId: creditPackage.id,
+            createdAt: Date.now(),
+          }),
+        );
+      } catch {
+        /* private mode — Phase-4 CAPI will still dedupe on its end via
+           session.metadata.fbEventId; client-side will fire a fresh id and
+           potentially double-count, which is acceptable */
+      }
+
       const result = await createCreditCheckout({
         packageId: creditPackage.id,
         origin,
+        fbEventId: checkoutEventId,
       });
 
       const data = result.data as any;
@@ -198,6 +230,16 @@ export default function CreditsPage() {
       if (!stripe) {
         throw new Error("Failed to load Stripe library");
       }
+
+      // Fire InitiateCheckout BEFORE redirect — once we redirect to Stripe,
+      // the Pixel won't have a chance to flush. fbq queues internally so
+      // even sub-millisecond before navigation it'll send.
+      trackInitiateCheckout({
+        packageId: creditPackage.id,
+        valueCents: creditPackage.price,
+        numItems: creditPackage.credits,
+        eventId: checkoutEventId,
+      });
 
       toast.info(
         "You will be redirected to our payment processor to complete your purchase securely",
