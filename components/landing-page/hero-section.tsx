@@ -21,6 +21,12 @@ const FEATURED = FEATURED_IDS.map((id) => {
   return tool;
 });
 
+// First rotation kicks in fast — the blur-fade-up entry animation finishes
+// around ~1550ms, so this lets the visitor see the title settle, then
+// gives them roughly 250ms to read it before the carousel cycles. The
+// goal: prove there's a carousel before the first scroll (which usually
+// happens in 2-3s on landing pages).
+const FIRST_ROTATE_MS = 1800;
 const ROTATE_MS = 3850;
 
 export default function HeroSection() {
@@ -28,14 +34,23 @@ export default function HeroSection() {
   const [paused, setPaused] = useState(false);
   const featured = FEATURED[idx];
 
-  // Auto-rotate the featured reading. Pauses while the cursor is on the hero
-  // so visitors can finish reading what they hovered over.
+  // Auto-rotate the featured reading. The first cycle fires fast (so a
+  // visitor who scrolls within a couple seconds still sees the carousel
+  // do something), then we settle into the normal cadence. Pauses while
+  // the cursor is on the hero so visitors can finish reading.
   useEffect(() => {
     if (paused) return;
-    const t = window.setInterval(() => {
+    let intervalId: number | undefined;
+    const timeoutId = window.setTimeout(() => {
       setIdx((i) => (i + 1) % FEATURED.length);
-    }, ROTATE_MS);
-    return () => window.clearInterval(t);
+      intervalId = window.setInterval(() => {
+        setIdx((i) => (i + 1) % FEATURED.length);
+      }, ROTATE_MS);
+    }, FIRST_ROTATE_MS);
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (intervalId !== undefined) window.clearInterval(intervalId);
+    };
   }, [paused]);
 
   return (
