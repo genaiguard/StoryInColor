@@ -17,7 +17,7 @@ const FAQS: FAQ[] = [
     value: "cost",
     question: "How much does a reading cost?",
     answer:
-      "One reading is one purchase. Single Issue is $9.99 for one reading. The Three pack is $24 ($8 each, 20% off). The Six pack is $39 ($6.50 each, 35% off). Signing up is free, and you can try a coloring page without spending anything.",
+      "Pay-as-you-go. Single Issue is $9.99 for one reading. The Three pack is $24 ($8 each, 20% off). The Six pack is $39 ($6.50 each, 35% off). Signing up is free, no card required.",
   },
   {
     value: "subscription",

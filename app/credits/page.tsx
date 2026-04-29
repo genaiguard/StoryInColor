@@ -308,8 +308,8 @@ export default function CreditsPage() {
               <span className="italic font-light text-gray-400">balance.</span>
             </h1>
             <p className="mt-3 text-base text-gray-400 md:text-lg">
-              One reading is one purchase — no subscriptions, no expiry, no
-              surprise charges.
+              Pay-as-you-go. No subscription, no expiry, no surprise
+              charges.
             </p>
             <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm">
               <Sparkles className="h-4 w-4 text-white" />
@@ -447,9 +447,9 @@ export default function CreditsPage() {
             </div>
             <div className="space-y-3 text-sm text-gray-300 md:text-base">
               <p>
-                One reading is one purchase — pick a pack, then spend it on any
-                editorial reading on the site (palm, face, beauty report, aura,
-                iridology, handwriting, style audit, skincare).
+                Pick a pack, then spend it on any editorial reading on the
+                site (palm, face, beauty report, color analysis, hairstyle
+                analysis, aura, iridology, handwriting, style audit, skincare).
               </p>
               <p>
                 Readings never expire, there's no subscription, and you can

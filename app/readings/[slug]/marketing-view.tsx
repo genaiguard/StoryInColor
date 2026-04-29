@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Wand2, Play, AlertTriangle, ArrowRight } from "lucide-react";
+import { Check, Wand2, Play, AlertTriangle } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -133,20 +133,20 @@ export default function MarketingView({ tool }: { tool: Tool }) {
           title={
             <>
               From photo{" "}
-              <span className="italic font-light text-gray-400">to spread.</span>
+              <span className="italic font-light text-gray-400">to reading.</span>
             </>
           }
           topBorder
           containerWidth="default"
         >
-          {/* Two cards (Upload → Download) with a centered visual transition
-              between them. The transition is a small icon + label on
-              desktop, and a flow arrow on mobile, replacing the old "Step 2:
-              Generate" card so the editorial spread reads as the
-              destination, not a third equal step. */}
-          <div className="grid items-center gap-5 md:grid-cols-[1fr_auto_1fr] md:gap-4">
+          {/* Two cards stacked top-to-bottom (Upload → Reading) with a
+              centered horizontal transition between them. Each card is
+              full container width — the input/sample image fills its
+              card at native 2:3 portrait, much larger than a thumbnail.
+              Reads top-to-bottom like a print magazine spread. */}
+          <div className="flex flex-col items-stretch gap-6 md:gap-8">
             <div className="liquid-glass overflow-hidden rounded-2xl">
-              <div className="relative flex h-56 items-center justify-center overflow-hidden border-b border-white/5 bg-black">
+              <div className="relative mx-auto flex aspect-[3/2] w-full max-w-3xl items-center justify-center overflow-hidden border-b border-white/5 bg-black">
                 {input ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -162,32 +162,28 @@ export default function MarketingView({ tool }: { tool: Tool }) {
                   </div>
                 )}
               </div>
-              <div className="p-5">
-                <h3 className="text-lg font-medium text-white">
+              <div className="p-5 md:p-6">
+                <h3 className="text-lg font-medium text-white md:text-xl">
                   Upload your photo
                 </h3>
                 <p className="mt-2 text-sm text-gray-400">{tool.inputHint}</p>
               </div>
             </div>
 
-            {/* Transition visual — vertical (mobile) and horizontal (desktop) */}
+            {/* Horizontal transition between the two cards */}
             <div
               aria-hidden="true"
-              className="flex flex-row items-center justify-center gap-3 py-2 md:flex-col md:px-2 md:py-0"
+              className="mx-auto flex w-full max-w-3xl items-center justify-center gap-3"
             >
-              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent md:h-12 md:w-px md:flex-none md:bg-gradient-to-b" />
+              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               <span className="liquid-glass flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full">
                 <Wand2 className="h-5 w-5 text-white" />
               </span>
-              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent md:h-12 md:w-px md:flex-none md:bg-gradient-to-b" />
-              <ArrowRight
-                className="h-4 w-4 text-white/40 md:hidden"
-                aria-hidden="true"
-              />
+              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
             </div>
 
             <div className="liquid-glass overflow-hidden rounded-2xl">
-              <div className="relative flex h-56 items-center justify-center overflow-hidden border-b border-white/5 bg-black">
+              <div className="relative mx-auto flex aspect-[2/3] w-full max-w-2xl items-center justify-center overflow-hidden border-b border-white/5 bg-black">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={sample}
@@ -197,18 +193,18 @@ export default function MarketingView({ tool }: { tool: Tool }) {
                   className="h-full w-full object-contain"
                 />
                 {isPlaceholderSample && (
-                  <span className="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-gray-200 ring-1 ring-white/10">
+                  <span className="absolute right-3 top-3 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-medium text-gray-200 ring-1 ring-white/10">
                     Sample coming soon
                   </span>
                 )}
               </div>
-              <div className="p-5">
-                <h3 className="text-lg font-medium text-white">
-                  Save your spread
+              <div className="p-5 md:p-6">
+                <h3 className="text-lg font-medium text-white md:text-xl">
+                  The reading.
                 </h3>
                 <p className="mt-2 text-sm text-gray-400">
-                  A high-resolution editorial spread, ready to download, share,
-                  or print.
+                  A high-resolution editorial reading, ready to download,
+                  share, or print.
                 </p>
               </div>
             </div>
@@ -279,7 +275,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
               </Link>
             </div>
             <p className="mt-4 text-xs text-gray-500">
-              One reading is one purchase. No subscription, no expiry.
+              Pay-as-you-go. No subscription, no expiry.
             </p>
           </div>
         </section>

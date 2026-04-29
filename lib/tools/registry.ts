@@ -44,10 +44,11 @@ export const TOOLS: Tool[] = [
         },
         {
           q: "What file format do I get?",
-          a: "You get a high-resolution PNG ready to print or share. Each coloring page uses one credit.",
+          a: "You get a high-resolution PNG ready to print or share. The coloring page is free for any signed-in user.",
         },
       ],
-      sampleImage: "/images/tools/coloring-book.webp",
+      inputImage: "/images/tools/coloring-book-input.webp",
+      sampleImage: "/images/tools/coloring-book-sample.webp",
     },
   },
   {
@@ -214,7 +215,7 @@ export const TOOLS: Tool[] = [
         },
         PHOTO_PRIVACY_FAQ,
       ],
-      sampleImage: "/images/tools/aura-reading.webp",
+      sampleImage: "/images/tools/aura-reading-sample.webp",
     },
   },
   {
@@ -255,7 +256,8 @@ export const TOOLS: Tool[] = [
         },
         PHOTO_PRIVACY_FAQ,
       ],
-      sampleImage: "/images/tools/iridology.webp",
+      inputImage: "/images/tools/iridology-input.webp",
+      sampleImage: "/images/tools/iridology-sample.webp",
     },
   },
   {
@@ -296,7 +298,8 @@ export const TOOLS: Tool[] = [
         },
         PHOTO_PRIVACY_FAQ,
       ],
-      sampleImage: "/images/tools/handwriting.webp",
+      inputImage: "/images/tools/handwriting-input.webp",
+      sampleImage: "/images/tools/handwriting-sample.webp",
     },
   },
   {
@@ -336,7 +339,8 @@ export const TOOLS: Tool[] = [
         },
         PHOTO_PRIVACY_FAQ,
       ],
-      sampleImage: "/images/tools/style-audit.webp",
+      inputImage: "/images/tools/style-audit-input.webp",
+      sampleImage: "/images/tools/style-audit-sample.webp",
     },
   },
   {
@@ -460,7 +464,8 @@ export const TOOLS: Tool[] = [
         },
         PHOTO_PRIVACY_FAQ,
       ],
-      sampleImage: "/images/tools/skincare-glow.webp",
+      inputImage: "/images/tools/skincare-glow-input.webp",
+      sampleImage: "/images/tools/skincare-glow-sample.webp",
     },
   },
 ];

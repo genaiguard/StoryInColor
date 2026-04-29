@@ -228,39 +228,58 @@ export const generateForTool = onCall(
         }
       }
 
-      const formData = new FormData();
-      formData.append("model", "gpt-image-1");
-      formData.append("prompt", config.prompt);
-      formData.append("n", "1");
-      formData.append("size", config.imageSize);
-      formData.append("quality", config.quality);
-      formData.append("output_format", "png");
-      formData.append("moderation", "low");
-
+      // /v1/images/edits expects multipart/form-data (image attachment).
+      // /v1/images/generations expects application/json. Mixing them up
+      // returns OpenAI 400 unsupported_content_type — that was the bug
+      // the script + this handler had until 2026-04-29; aura-reading
+      // (the only generations-endpoint tool today) was unable to render
+      // for any signed-in user.
+      let resp: Response;
       if (config.endpoint === "edits") {
         if (!inputBuffer) {
           throw new Error("Internal: input buffer missing for edits endpoint");
         }
+        const formData = new FormData();
+        formData.append("model", "gpt-image-1");
+        formData.append("prompt", config.prompt);
+        formData.append("n", "1");
+        formData.append("size", config.imageSize);
+        formData.append("quality", config.quality);
+        formData.append("output_format", "png");
+        formData.append("moderation", "low");
         formData.append("input_fidelity", config.inputFidelity);
         formData.append("image", inputBuffer, {
           filename: inputFilename,
           contentType: inputContentType,
         });
+        resp = (await fetch("https://api.openai.com/v1/images/edits", {
+          method: "POST",
+          headers: {
+            ...formData.getHeaders(),
+            Authorization: `Bearer ${OPENAI_API_KEY.value()}`,
+          },
+          body: formData,
+        })) as unknown as Response;
+      } else {
+        // generations — JSON body, no image attachment
+        resp = (await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENAI_API_KEY.value()}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-image-1",
+            prompt: config.prompt,
+            n: 1,
+            size: config.imageSize,
+            quality: config.quality,
+            output_format: "png",
+            moderation: "low",
+          }),
+        })) as unknown as Response;
       }
 
-      const apiUrl =
-        config.endpoint === "generations"
-          ? "https://api.openai.com/v1/images/generations"
-          : "https://api.openai.com/v1/images/edits";
-
-      const resp = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          ...formData.getHeaders(),
-          Authorization: `Bearer ${OPENAI_API_KEY.value()}`,
-        },
-        body: formData,
-      });
       if (!resp.ok) {
         const txt = await resp.text();
         throw new Error(`OpenAI ${resp.status}: ${txt}`);

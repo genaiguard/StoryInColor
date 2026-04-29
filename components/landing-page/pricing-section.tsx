@@ -27,11 +27,11 @@ export default function PricingSection() {
       eyebrow="Pricing"
       title={
         <>
-          One reading,{" "}
-          <span className="italic font-light text-gray-400">one purchase.</span>
+          Pay only for what you{" "}
+          <span className="italic font-light text-gray-400">read.</span>
         </>
       }
-      description="One reading is one purchase. No subscription, no expiry, no surprise charges."
+      description="Pay-as-you-go. No subscription, no expiry, no surprise charges."
       topBorder
       containerWidth="default"
     >
@@ -123,7 +123,7 @@ export default function PricingSection() {
 
       <div className="mt-14 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
         <p className="max-w-xl text-sm text-gray-400">
-          Sign up free and try a coloring page first — no card required.
+          Sign up free — no card required.
         </p>
         <Link
           href="/login?register=true"

@@ -119,7 +119,11 @@ const INPUT_PROMPTS = {
 
 const READINGS = {
   "coloring-book": {
-    inputType: "portrait",
+    // Marketing sample uses the blonde-portrait that the beauty-report
+    // sample uses, so the coloring-page detail page shows a recognisable
+    // person being turned into line art. Real users still upload any
+    // photo (family, pet, vacation) — this is just the catalog preview.
+    inputType: "blonde-portrait",
     prompt:
       "Convert this photo into a clean black-and-white line illustration suitable for a printable coloring page. If there are faces or figures, maintain the original features and essence, but subtly enhance them to appear sweeter, softer, and more charming—like a gently idealized animated style. Use thin, elegant lines with no shading or poche-style hatching. Simplify background details if needed, but preserve the overall mood and composition. The final image should feel graceful, warm, and beautiful, with a soft and uplifting tone.",
     endpoint: "edits",
@@ -310,16 +314,20 @@ async function prepareInput(inputBuf, preprocessing) {
 
 async function runReading(slug, config, inputBuf) {
   console.log(`→ ${slug}: running reading prompt...`);
-  const form = new FormData();
-  form.append("model", IMAGE_MODEL);
-  form.append("prompt", config.prompt);
-  form.append("n", "1");
-  form.append("size", config.imageSize);
-  form.append("quality", config.quality);
-  form.append("output_format", "png");
-  form.append("moderation", "low");
 
+  // /v1/images/edits expects multipart/form-data with the input image.
+  // /v1/images/generations expects application/json (no image attachment).
+  // Sending FormData to /generations returns 400 unsupported_content_type.
+  let resp;
   if (config.endpoint === "edits") {
+    const form = new FormData();
+    form.append("model", IMAGE_MODEL);
+    form.append("prompt", config.prompt);
+    form.append("n", "1");
+    form.append("size", config.imageSize);
+    form.append("quality", config.quality);
+    form.append("output_format", "png");
+    form.append("moderation", "low");
     const prepared = await prepareInput(inputBuf, config.preprocessing);
     if (!IMAGE_MODEL.startsWith("gpt-image-2")) {
       form.append("input_fidelity", config.inputFidelity);
@@ -329,24 +337,40 @@ async function runReading(slug, config, inputBuf) {
       new Blob([prepared.buffer], { type: prepared.contentType }),
       prepared.filename,
     );
+    resp = await fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
+    });
+  } else {
+    // generations
+    resp = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: IMAGE_MODEL,
+        prompt: config.prompt,
+        n: 1,
+        size: config.imageSize,
+        quality: config.quality,
+        output_format: "png",
+        moderation: "low",
+      }),
+    });
   }
 
-  const apiUrl =
-    config.endpoint === "generations"
-      ? "https://api.openai.com/v1/images/generations"
-      : "https://api.openai.com/v1/images/edits";
-
-  const resp = await fetch(apiUrl, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: form,
-  });
   if (!resp.ok) {
-    throw new Error(`edits failed for ${slug}: ${resp.status} ${await resp.text()}`);
+    throw new Error(
+      `${config.endpoint} failed for ${slug}: ${resp.status} ${await resp.text()}`,
+    );
   }
   const json = await resp.json();
   const b64 = json?.data?.[0]?.b64_json;
-  if (!b64) throw new Error(`edits returned no b64_json for ${slug}`);
+  if (!b64)
+    throw new Error(`${config.endpoint} returned no b64_json for ${slug}`);
   const pngBuf = Buffer.from(b64, "base64");
 
   const webpBuf = await sharp(pngBuf).webp({ quality: 88 }).toBuffer();

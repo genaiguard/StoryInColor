@@ -229,7 +229,7 @@ function generateWelcomeEmailTemplate(name: string): string {
             <tr>
               <td style="padding:8px 40px 56px; text-align:center;">
                 <p style="margin:0; font-size:12px; color:${MUTED};">
-                  One reading is one purchase. Single Issue $9.99, Three pack $24, Six pack $39.
+                  Pay-as-you-go. Single Issue $9.99, Three pack $24, Six pack $39.
                 </p>
               </td>
             </tr>

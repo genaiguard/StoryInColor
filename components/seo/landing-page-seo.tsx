@@ -27,7 +27,7 @@ const webAppSchema = {
     highPrice: "39.00",
     offerCount: 3,
     description:
-      "One reading is one purchase. Single Issue $9.99, Three pack $24, Six pack $39. No subscription, no expiry.",
+      "Pay-as-you-go. Single Issue $9.99, Three pack $24, Six pack $39. No subscription, no expiry.",
   },
   screenshot: `${SITE_URL}/images/SHARING.webp`,
   // featureList draws from ORDERED_TOOLS so the JSON-LD catalog matches
@@ -46,7 +46,7 @@ const faqSchema = {
       name: "What kinds of photos can I bring?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Each reading takes a different photo: your open palm for palm reading, a clear selfie for face, beauty, aura, and skincare, a close-up of your iris for iridology, your handwriting for graphology, an outfit shot for style audit. JPG, PNG, or WEBP up to 10 MB. The clearer and better-lit, the better the reading.",
+        text: "Each reading takes a different photo: your open palm for palm reading, a clear front-facing selfie for face, beauty, aura, hairstyle, color, and skincare, a close-up of your iris for iridology, your handwriting for graphology, an outfit shot for style audit. JPG, PNG, or WEBP up to 10 MB. The clearer and better-lit, the better the reading.",
       },
     },
     {
@@ -62,7 +62,7 @@ const faqSchema = {
       name: "How does pricing work?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "One reading is one purchase. Single Issue is $9.99 for one reading; Three pack is $24 ($8 each, 20% off); Six pack is $39 ($6.50 each, 35% off). Signing up is free and includes a free coloring page. No subscription, no expiry.",
+        text: "Pay-as-you-go. Single Issue is $9.99 for one reading; Three pack is $24 ($8 each, 20% off); Six pack is $39 ($6.50 each, 35% off). Signing up is free, no card required. No subscription, no expiry.",
       },
     },
     {

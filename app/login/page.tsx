@@ -352,7 +352,7 @@ function LoginForm() {
                     </span>
                   </h1>
                   <p className="mt-2 text-sm text-gray-400">
-                    Sign up to save your readings and start with a free coloring page.
+                    Sign up free — no card required.
                   </p>
 
                   {error && (

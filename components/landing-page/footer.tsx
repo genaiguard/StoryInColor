@@ -16,7 +16,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="max-w-xs text-sm text-gray-400">
-              Editorial readings of the things you photograph.
+              Editorial readings, written from a single photo of you.
             </p>
             <div className="flex gap-3 pt-1">
               <Link
