@@ -41,7 +41,7 @@ const FAQS: FAQ[] = [
     value: "speed",
     question: "How long does a reading take?",
     answer:
-      "Roughly 20 to 40 seconds. You stay on the result page while we work and the finished spread appears as soon as it's ready.",
+      "Roughly 20 to 40 seconds. You stay on the result page while we work and the finished reading appears as soon as it's ready.",
   },
   {
     value: "commercial",

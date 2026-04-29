@@ -229,10 +229,25 @@ const SECTIONS: Array<{ heading: string; body: React.ReactNode }> = [
   },
 ];
 
+const PRIVACY_DESCRIPTION =
+  "How StoryInColor collects, uses, and protects your personal information when you use our editorial AI photo readings.";
+
 export const metadata = {
   title: "Privacy Policy | StoryInColor",
-  description:
-    "How StoryInColor collects, uses, and protects your personal information when you use our service.",
+  description: PRIVACY_DESCRIPTION,
+  alternates: { canonical: "https://storyincolor.com/privacy" },
+  openGraph: {
+    title: "Privacy Policy | StoryInColor",
+    description: PRIVACY_DESCRIPTION,
+    type: "website",
+    url: "https://storyincolor.com/privacy",
+    siteName: "StoryInColor",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Privacy Policy | StoryInColor",
+    description: PRIVACY_DESCRIPTION,
+  },
 };
 
 export default function PrivacyPage() {

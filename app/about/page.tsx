@@ -6,7 +6,7 @@ import Footer from "@/components/landing-page/footer";
 import { CinematicSection } from "@/components/cinematic/cinematic-section";
 
 const SHORT_DESCRIPTION =
-  "StoryInColor turns a single photo into an editorial reading — magazine-quality spreads designed to be saved, shared, and printed.";
+  "StoryInColor turns a single photo into an editorial reading — magazine-quality, designed to be saved, shared, and printed.";
 
 export const metadata: Metadata = {
   title: "About — StoryInColor",
@@ -29,7 +29,7 @@ const PRINCIPLES: Array<{ eyebrow: string; title: string; body: string }> = [
   {
     eyebrow: "01 — Editorial",
     title: "Written like a magazine, not an algorithm.",
-    body: "Each reading is composed as an editorial spread — typeset with intention, paced like a feature, and finished to print quality. The voice is warm and restrained: never breathless, never cold.",
+    body: "Each reading is composed like an editorial feature — typeset with intention, paced for a quiet read, and finished to print quality. The voice is warm and restrained: never breathless, never cold.",
   },
   {
     eyebrow: "02 — Honest",
@@ -58,7 +58,7 @@ export default function AboutPage() {
               <span className="italic font-light text-gray-400">story.</span>
             </>
           }
-          description="StoryInColor is an editorial AI studio that turns a single photo — your palm, your face, your handwriting, your style, your skin — into a magazine-quality reading. One spread, designed to be saved."
+          description="StoryInColor is an editorial AI studio that turns a single photo — your palm, your face, your handwriting, your style, your skin — into a magazine-quality reading. One reading, designed to be saved."
           spotlight
           containerWidth="default"
         >

@@ -522,8 +522,8 @@ export default function DashboardPage() {
                   Your library is empty
                 </h3>
                 <p className="mx-auto mt-2 max-w-md text-sm text-gray-400">
-                  Bring a photo, pick a reading, and the spread will live here
-                  — saved like a magazine.
+                  Bring a photo, pick a reading, and it will live here —
+                  saved like a magazine.
                 </p>
                 <Link
                   href="/readings"

@@ -11,7 +11,7 @@ const SHORT_DESCRIPTION =
 export const metadata: Metadata = {
   title: "The reading room | StoryInColor",
   description:
-    "Every photo experience on StoryInColor, in one place — palm reading, face reading, beauty report, color analysis, hairstyle analysis, aura, iridology, handwriting, style audit, skincare, and coloring pages. One photo, one editorial spread.",
+    "Every photo experience on StoryInColor, in one place — palm reading, face reading, beauty report, color analysis, hairstyle analysis, aura, iridology, handwriting, style audit, skincare, and coloring pages. One photo, one editorial reading.",
   alternates: { canonical: "https://storyincolor.com/readings" },
   openGraph: {
     title: "The reading room | StoryInColor",

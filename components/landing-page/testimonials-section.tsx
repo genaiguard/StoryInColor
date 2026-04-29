@@ -21,7 +21,7 @@ const QUOTES: Testimonial[] = [
   },
   {
     quote:
-      "Showed my stylist the hairstyle spread instead of explaining what I wanted. She said, 'finally — a brief.'",
+      "Showed my stylist the hairstyle reading instead of explaining what I wanted. She said, 'finally — a brief.'",
     attribution: "Jennifer L.",
     reading: "Hairstyle",
   },

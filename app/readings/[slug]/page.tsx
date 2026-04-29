@@ -25,11 +25,15 @@ export async function generateMetadata({
     openGraph: {
       title: tool.seo.metaTitle,
       description: tool.seo.metaDescription,
+      // Cover images are 1024×1536 portrait. Twitter/Facebook will scale
+      // them as a "summary_large_image" card; the dimensions are declared
+      // truthfully so the meta validator doesn't warn.
       images: [
-        { url: tool.coverImage, width: 600, height: 800, alt: tool.name },
+        { url: tool.coverImage, width: 1024, height: 1536, alt: tool.name },
       ],
       type: "website",
       url: `https://storyincolor.com/readings/${tool.slug}`,
+      siteName: "StoryInColor",
     },
     twitter: {
       card: "summary_large_image",

@@ -54,7 +54,7 @@ const faqSchema = {
       name: "How long does a reading take?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Most readings finish in roughly 20 to 40 seconds. You stay on the result page while we work and the finished spread appears as soon as it's ready.",
+        text: "Most readings finish in roughly 20 to 40 seconds. You stay on the result page while we work and the finished reading appears as soon as it's ready.",
       },
     },
     {

@@ -251,10 +251,25 @@ const SECTIONS: Array<{ heading: string; body: React.ReactNode }> = [
   },
 ];
 
+const TERMS_DESCRIPTION =
+  "Terms of Service for StoryInColor — editorial AI photo readings, written from a single photo of you.";
+
 export const metadata = {
   title: "Terms of Service | StoryInColor",
-  description:
-    "Terms of Service for StoryInColor — credit-based AI photo readings and keepsakes.",
+  description: TERMS_DESCRIPTION,
+  alternates: { canonical: "https://storyincolor.com/terms" },
+  openGraph: {
+    title: "Terms of Service | StoryInColor",
+    description: TERMS_DESCRIPTION,
+    type: "website",
+    url: "https://storyincolor.com/terms",
+    siteName: "StoryInColor",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Terms of Service | StoryInColor",
+    description: TERMS_DESCRIPTION,
+  },
 };
 
 export default function TermsPage() {

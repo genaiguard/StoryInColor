@@ -20,11 +20,9 @@ const SITE_TITLE = 'StoryInColor — Editorial AI Photo Readings';
 const SITE_DESCRIPTION =
   'What does your photo know about you? Editorial readings of your palm, your face, your beauty, your handwriting, your style, your skin, and more. Designed to be saved.';
 const SITE_URL = 'https://storyincolor.com';
-// NOTE: the SHARING.webp file currently in /public/images is from the
-// pre-pivot coloring-book era and is on the to-replace list. The metadata
-// below already points at the right URL — once the file is regenerated
-// (cinematic dark composition with brand text), shared cards update with
-// no further code change.
+// 1200×630 cinematic OG card. Generated deterministically by
+// scripts/build-brand-assets.mjs (option 12 — hairline frame plate).
+// Re-run that script if the design ever changes; the URL stays stable.
 const SITE_OG_IMAGE = `${SITE_URL}/images/SHARING.webp`;
 
 export const metadata: Metadata = {

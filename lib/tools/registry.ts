@@ -308,7 +308,7 @@ export const TOOLS: Tool[] = [
     name: "Style Audit",
     tagline: "A magazine-style review of your outfit",
     heroCopy:
-      "Silhouette, palette, fit, layering, and your closest style archetype — laid out like a Vogue spread.",
+      "Silhouette, palette, fit, layering, and your closest style archetype — laid out like a Vogue feature.",
     coverImage: "/images/tools/style-audit.webp",
     creditCost: 1,
     category: "creative",
@@ -317,12 +317,12 @@ export const TOOLS: Tool[] = [
     seo: {
       metaTitle: "AI fashion style audit from your outfit photo | StoryInColor",
       metaDescription:
-        "Upload an outfit photo and get a magazine-style fashion audit — silhouette, palette, fit, and your closest style archetype, laid out like a Vogue spread.",
+        "Upload an outfit photo and get a magazine-style fashion audit — silhouette, palette, fit, and your closest style archetype, laid out like a Vogue feature.",
       whatYouGet: [
         "Silhouette, palette, and fit analysis with annotated callouts",
         "A style archetype label (classic, romantic, edgy, minimal, and more)",
         "Wardrobe-tweak suggestions in a tasteful tone",
-        "A Vogue-style editorial spread of your look",
+        "A Vogue-style editorial reading of your look",
       ],
       faq: [
         {
@@ -359,11 +359,11 @@ export const TOOLS: Tool[] = [
       metaTitle:
         "AI hairstyle analysis from a selfie — side-by-side cut ideas | StoryInColor",
       metaDescription:
-        "Upload a selfie and see multiple hairstyles applied to your face side by side — bob, lob, layered, fringe, pixie, and more — in a clean editorial spread, visual-first with short labels only.",
+        "Upload a selfie and see multiple hairstyles applied to your face side by side — bob, lob, layered, fringe, pixie, and more — in a clean editorial layout, visual-first with short labels only.",
       whatYouGet: [
         "Multiple flattering hairstyles applied to your face, side by side",
         "Short labels per cut — bob, lob, layered, fringe, pixie, and more",
-        "A magazine-quality keepsake spread, no paragraphs of theory",
+        "A magazine-quality keepsake reading, no paragraphs of theory",
         "A clear, visual-first sense of which cuts suit your face shape",
       ],
       faq: [
@@ -401,12 +401,12 @@ export const TOOLS: Tool[] = [
       metaTitle:
         "AI personal color analysis from a selfie — your best palette | StoryInColor",
       metaDescription:
-        "Upload a selfie and see side-by-side comparisons of clothing colors against your skin tone, hair, and eyes — warm, cool, jewel, pastel, neutral — in a clean editorial palette spread, visual-first with short labels only.",
+        "Upload a selfie and see side-by-side comparisons of clothing colors against your skin tone, hair, and eyes — warm, cool, jewel, pastel, neutral — in a clean editorial palette layout, visual-first with short labels only.",
       whatYouGet: [
         "Side-by-side comparisons of you in different clothing colors",
         "Visual swatch chips with short palette labels",
         "An undertone read (warm, cool, neutral) at a glance",
-        "A magazine-quality keepsake spread, no paragraphs of theory",
+        "A magazine-quality keepsake reading, no paragraphs of theory",
       ],
       faq: [
         {

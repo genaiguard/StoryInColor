@@ -6,7 +6,7 @@ export const dynamic = 'force-static'
 // `new Date()` here would write a fresh timestamp on every deploy and confuse
 // crawl signals — Google interprets it as "this page changed" even when the
 // content is identical.
-const SITE_LAST_MODIFIED = new Date('2026-04-28')
+const SITE_LAST_MODIFIED = new Date('2026-04-29')
 
 export default function sitemap() {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://storyincolor.com'
