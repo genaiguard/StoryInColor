@@ -21,7 +21,7 @@ export default function ExamplesSection() {
           <span className="italic font-light text-gray-400">keepsakes.</span>
         </>
       }
-      description="Most are editorial readings. One is a simple coloring-page keepsake. Bring whatever you have a photo of."
+      description="Bring whatever you have a photo of — your palm, your face, your handwriting, your plate, your room — and we'll write you back."
     >
       <ToolGrid showCategoryChips />
     </CinematicSection>

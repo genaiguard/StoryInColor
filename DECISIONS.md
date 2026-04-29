@@ -4,6 +4,29 @@ Short, running log of the calls made during the cinematic redesign + pricing
 reset. Anything not on the **Implemented** list is either **Pending** or
 explicitly **Rejected** below.
 
+## Copy rules — read before editing user-facing text
+
+- **Never name the count of readings.** Not numerically ("12 readings"), not
+  in English ("twelve readings", "eleven readings"), not as ranges. The
+  catalog is allowed to grow or shrink without a copy update. Use phrases
+  like *"many readings, one voice"*, *"every reading we publish"*, or just
+  list a few examples (palm, face, room, plate). The count comes from
+  `ORDERED_TOOLS.length` if you ever truly need it dynamically — but you
+  almost never do.
+- **Don't market the coloring page as free.** It IS free in code
+  (`creditCost: 0`) and shows a "FREE" corner badge to signed-in visitors
+  on `/readings` and `/dashboard`. That contextual signal is enough — copy
+  shouldn't lead with "coloring pages are free!" anywhere.
+- **"Generate" is banned in user-facing copy.** Use "read", "begin", or
+  the relevant editorial verb. Internal field names (`generationId`,
+  `generationCount`, etc.) keep their server names.
+- **"Credits" is banned in user-facing copy.** The internal ledger field
+  is still called `credits` — keep the data model intact — but UI surfaces
+  always read "readings". 1 credit == 1 reading.
+- **Don't claim a free editorial reading on signup.** Every editorial
+  reading is paid. The free entry is the coloring page; signing up is
+  free and the copy can say "Start free" because of that.
+
 ## Implemented
 
 - Cinematic dark theme across landing, `/readings`, `/readings/[slug]`,

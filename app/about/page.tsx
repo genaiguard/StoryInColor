@@ -89,7 +89,7 @@ export default function AboutPage() {
           eyebrow="What we make"
           title={
             <>
-              Twelve readings,{" "}
+              Many readings,{" "}
               <span className="italic font-light text-gray-400">one voice.</span>
             </>
           }

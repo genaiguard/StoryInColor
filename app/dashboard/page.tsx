@@ -25,7 +25,6 @@ import {
 } from "@/app/firebase/credits-helpers";
 import { ToolGrid } from "@/components/tools/tool-grid";
 import { getToolById } from "@/lib/tools/registry";
-import type { ToolCategory } from "@/lib/tools/types";
 import { toast } from "sonner";
 import { trackEvent } from "@/components/tracking/facebook-pixel";
 
@@ -67,12 +66,9 @@ const formatRelative = (timestamp: any): string => {
   });
 };
 
-const CATEGORIES: Array<{ id: ToolCategory | "all"; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "creative", label: "Creative" },
-  { id: "mystical", label: "Mystical" },
-  { id: "analysis", label: "Analysis" },
-];
+// Category filter chips intentionally removed from the dashboard library —
+// it's a chronological shelf, not a browse experience. Filtering by
+// category still lives on /readings via ToolGrid.showCategoryChips.
 
 function DashboardHeader({
   credits,
@@ -172,9 +168,6 @@ export default function DashboardPage() {
   const [isLoadingGenerations, setIsLoadingGenerations] =
     useState<boolean>(true);
   const [generationsError, setGenerationsError] = useState<string>("");
-  const [activeCategory, setActiveCategory] = useState<ToolCategory | "all">(
-    "all",
-  );
 
   const searchParams = useSearchParams();
   const creditPurchaseSuccess =
@@ -359,14 +352,6 @@ export default function DashboardPage() {
     return "there";
   }, [user]);
 
-  const filteredGenerations = useMemo(() => {
-    if (activeCategory === "all") return generations;
-    return generations.filter((g) => {
-      const tool = getToolById(g.toolId);
-      return tool?.category === activeCategory;
-    });
-  }, [generations, activeCategory]);
-
   if (!initialized) {
     return (
       <div className="flex min-h-screen flex-col bg-black text-white">
@@ -511,26 +496,6 @@ export default function DashboardPage() {
               </h2>
             </div>
 
-            <div className="mb-6 flex flex-wrap gap-2">
-              {CATEGORIES.map((c) => {
-                const on = activeCategory === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setActiveCategory(c.id)}
-                    className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
-                      on
-                        ? "bg-white text-black"
-                        : "liquid-glass text-gray-200"
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                );
-              })}
-            </div>
-
             {isLoadingGenerations ? (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
                 {[0, 1, 2, 3].map((i) => (
@@ -548,20 +513,17 @@ export default function DashboardPage() {
                   <p className="mt-1">{generationsError}</p>
                 </div>
               </div>
-            ) : filteredGenerations.length === 0 ? (
+            ) : generations.length === 0 ? (
               <div className="liquid-glass rounded-2xl p-10 text-center">
                 <span className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
                   <Sparkles className="h-5 w-5 text-white" />
                 </span>
                 <h3 className="text-lg font-medium text-white">
-                  {generations.length === 0
-                    ? "Your library is empty"
-                    : "Nothing in this category yet"}
+                  Your library is empty
                 </h3>
                 <p className="mx-auto mt-2 max-w-md text-sm text-gray-400">
-                  {generations.length === 0
-                    ? "Bring a photo, pick a reading, and the spread will live here — saved like a magazine."
-                    : "Try another filter or pick a new reading."}
+                  Bring a photo, pick a reading, and the spread will live here
+                  — saved like a magazine.
                 </p>
                 <Link
                   href="/readings"
@@ -572,7 +534,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
-                {filteredGenerations.map((gen) => {
+                {generations.map((gen) => {
                   const tool = getToolById(gen.toolId);
                   const href = tool
                     ? `/readings/${tool.slug}/result?jobId=${encodeURIComponent(gen.jobId)}`
