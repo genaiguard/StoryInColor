@@ -9,7 +9,7 @@ interface Testimonial {
 const QUOTES: Testimonial[] = [
   {
     quote:
-      "It read my handwriting better than my therapist. I keep the page on my fridge.",
+      "Saw me through my handwriting in a way I wasn't expecting. The page is on my fridge.",
     attribution: "Sarah T.",
     reading: "Handwriting",
   },
