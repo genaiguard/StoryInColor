@@ -215,6 +215,7 @@ export const TOOLS: Tool[] = [
         },
         PHOTO_PRIVACY_FAQ,
       ],
+      inputImage: "/images/tools/aura-reading-input.webp",
       sampleImage: "/images/tools/aura-reading-sample.webp",
     },
   },
