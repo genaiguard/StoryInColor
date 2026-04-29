@@ -148,8 +148,10 @@ export default function MarketingView({ tool }: { tool: Tool }) {
             <div className="liquid-glass overflow-hidden rounded-2xl">
               {/* Upload card: aspect-square because the script generates
                   example inputs at 1024×1024. object-cover so the photo
-                  fills the box edge-to-edge with no letterbox bars. */}
-              <div className="relative mx-auto aspect-square w-full max-w-2xl overflow-hidden border-b border-white/5 bg-black">
+                  fills the box edge-to-edge with no letterbox bars.
+                  Kept compact (max-w-md) so the editorial reading
+                  below it dominates. */}
+              <div className="relative mx-auto aspect-square w-full max-w-md overflow-hidden border-b border-white/5 bg-black">
                 {input ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
