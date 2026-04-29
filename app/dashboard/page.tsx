@@ -187,7 +187,7 @@ export default function DashboardPage() {
         sessionStorage.getItem(acknowledgedSessionKey) === "true";
       if (!alreadyAcknowledged) {
         setIsProcessingCreditPurchase(true);
-        toast.info("Purchase detected! Checking for credits...", {
+        toast.info("Purchase detected! Adding readings to your balance…", {
           duration: 10000,
           position: "top-center",
         });

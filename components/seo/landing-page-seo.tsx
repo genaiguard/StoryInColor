@@ -23,11 +23,11 @@ const webAppSchema = {
   offers: {
     "@type": "AggregateOffer",
     priceCurrency: "USD",
-    lowPrice: "0.45",
-    highPrice: "10.00",
-    offerCount: 4,
+    lowPrice: "9.99",
+    highPrice: "39.00",
+    offerCount: 3,
     description:
-      "Pay-as-you-go credits. Packs start at $3.50. The coloring page uses 1 credit; most readings use 10.",
+      "One reading is one purchase. Single Issue $9.99, Three pack $24, Six pack $39. No subscription, no expiry.",
   },
   screenshot: `${SITE_URL}/images/SHARING.webp`,
   // featureList draws from ORDERED_TOOLS so the JSON-LD catalog matches
@@ -62,7 +62,7 @@ const faqSchema = {
       name: "How does pricing work?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "You buy a small pack of credits and spend them on whichever photo experience you like. The coloring page uses 1 credit. Readings — palm, face, beauty report, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes — use 10 credits each. New accounts start with free credits, no card required.",
+        text: "One reading is one purchase. Single Issue is $9.99 for one reading; Three pack is $24 ($8 each, 20% off); Six pack is $39 ($6.50 each, 35% off). Signing up is free and includes a free coloring page. No subscription, no expiry.",
       },
     },
     {

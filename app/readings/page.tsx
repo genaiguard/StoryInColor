@@ -70,7 +70,7 @@ export default function ToolsCatalogPage() {
           }
           description="Bring whatever you have a photo of — your palm, your handwriting, your plate, your plant, your room — and we'll write you back."
         >
-          <ToolGrid showCategoryChips />
+          <ToolGrid showCategoryChips showFreeBannerForSignedIn />
         </CinematicSection>
       </main>
       <Footer />

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ORDERED_TOOLS } from "@/lib/tools/registry";
 import type { Tool, ToolCategory } from "@/lib/tools/types";
+import { useFirebase } from "@/app/firebase/firebase-provider";
 import { ToolCard } from "./tool-card";
 
 export interface ToolGridProps {
@@ -10,6 +11,13 @@ export interface ToolGridProps {
   /** Whether each tile shows its per-generation credit cost. OFF on
    *  public/marketing surfaces (don't lead with price); ON on dashboard. */
   showCost?: boolean;
+  /**
+   * Show a prominent "FREE" banner on free tools (just the coloring page
+   * for now), but ONLY when the visitor is signed in. Used on /readings
+   * to invite signed-in users into the free entry without leaking that
+   * call-out onto the landing or other pre-login surfaces.
+   */
+  showFreeBannerForSignedIn?: boolean;
 }
 
 const CATEGORIES: Array<{ id: ToolCategory | "all"; label: string }> = [
@@ -19,9 +27,16 @@ const CATEGORIES: Array<{ id: ToolCategory | "all"; label: string }> = [
   { id: "analysis", label: "Analysis" },
 ];
 
-export function ToolGrid({ tools = ORDERED_TOOLS, showCategoryChips = false, showCost = false }: ToolGridProps) {
+export function ToolGrid({
+  tools = ORDERED_TOOLS,
+  showCategoryChips = false,
+  showCost = false,
+  showFreeBannerForSignedIn = false,
+}: ToolGridProps) {
   const [active, setActive] = useState<ToolCategory | "all">("all");
   const filtered = active === "all" ? tools : tools.filter((t) => t.category === active);
+  const { user } = useFirebase();
+  const showFreeBanner = showFreeBannerForSignedIn && !!user;
 
   return (
     <div>
@@ -48,7 +63,12 @@ export function ToolGrid({ tools = ORDERED_TOOLS, showCategoryChips = false, sho
       )}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-6 lg:grid-cols-4">
         {filtered.map((t) => (
-          <ToolCard key={t.id} tool={t} showCost={showCost} />
+          <ToolCard
+            key={t.id}
+            tool={t}
+            showCost={showCost}
+            showFreeBanner={showFreeBanner}
+          />
         ))}
       </div>
     </div>

@@ -2,7 +2,9 @@ import { getFirestore, doc, getDoc, Timestamp } from "firebase/firestore"
 import { getFunctions, httpsCallable } from "firebase/functions"
 
 // Constants
-export const FREE_CREDITS_PER_USER = 2;
+// One credit == one reading. No signup grant — every editorial reading is
+// paid. Mirrors functions/src/ensure-user-credits.ts.
+export const FREE_CREDITS_PER_USER = 0;
 
 // Interface for credit purchase packages
 export interface CreditPackage {
@@ -15,35 +17,32 @@ export interface CreditPackage {
 
 // Credit packages configuration. Mirrors functions/src/credit-packages.ts —
 // keep them in sync by hand (no shared module across the two npm trees).
+//
+// Pricing model: 1 credit == 1 reading. Single-issue is the headline price;
+// trio + set discount per-reading. The coloring page is free (creditCost 0
+// in the registry) and is not represented as a pack.
 export const CREDIT_PACKAGES: CreditPackage[] = [
   {
-    id: 'small',
-    credits: 5,
-    price: 350, // in cents ($3.50)
-    pricePerCredit: 70, // in cents ($0.70)
+    id: 'single',
+    credits: 1,
+    price: 999, // $9.99
+    pricePerCredit: 999,
     discountPercentage: 0,
   },
   {
-    id: 'medium',
-    credits: 10,
-    price: 600, // in cents ($6.00)
-    pricePerCredit: 60, // in cents ($0.60)
-    discountPercentage: 14, // ~14% discount from base price
+    id: 'trio',
+    credits: 3,
+    price: 2400, // $24.00
+    pricePerCredit: 800,
+    discountPercentage: 20,
   },
   {
-    id: 'large',
-    credits: 20,
-    price: 1000, // in cents ($10.00)
-    pricePerCredit: 50, // in cents ($0.50)
-    discountPercentage: 29, // ~29% discount from base price
+    id: 'set',
+    credits: 6,
+    price: 3900, // $39.00
+    pricePerCredit: 650,
+    discountPercentage: 35,
   },
-  {
-    id: 'xlarge',
-    credits: 40,
-    price: 1800, // in cents ($18.00)
-    pricePerCredit: 45, // in cents ($0.45)
-    discountPercentage: 36, // ~36% discount from base price
-  }
 ];
 
 // Interface for user credits. Usage history was migrated out of this doc
@@ -111,7 +110,9 @@ export async function getUserCredits(userId: string): Promise<UserCredits> {
 // Keeping client helpers that wrote the same fields would have created
 // split-brain and let a malicious client forge balance.
 
-// Get formatted credit balance for display
+// Display-formatted user balance. The internal field is named `credits`
+// for backwards compatibility with the ledger, but every user-facing
+// surface presents it as "readings" since 1 credit == 1 reading.
 export function formatCreditBalance(credits: number): string {
-  return credits === 1 ? "1 credit" : `${credits} credits`;
+  return credits === 1 ? "1 reading" : `${credits} readings`;
 }

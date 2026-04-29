@@ -14,16 +14,16 @@ interface FAQ {
 
 const FAQS: FAQ[] = [
   {
-    value: "credits",
-    question: "What are credits?",
-    answer:
-      "Credits are how you pay for readings on StoryInColor. Each reading uses a small number of credits, and new accounts start with free credits to get going.",
-  },
-  {
     value: "cost",
     question: "How much does a reading cost?",
     answer:
-      "The coloring page uses 1 credit. Readings — palm, face, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes — use 10 credits each. Credit packs start at $3.50 for 5 credits.",
+      "One reading is one purchase. Single Issue is $9.99 for one reading. The Three pack is $24 ($8 each, 20% off). The Six pack is $39 ($6.50 each, 35% off). Signing up is free, and you can try a coloring page without spending anything.",
+  },
+  {
+    value: "subscription",
+    question: "Is there a subscription?",
+    answer:
+      "No. Every reading is a single purchase. Your readings never expire, and we don't auto-charge you for anything.",
   },
   {
     value: "photos",
@@ -51,9 +51,9 @@ const FAQS: FAQ[] = [
   },
   {
     value: "refund",
-    question: "What if I don't like the reading?",
+    question: "What if a reading fails?",
     answer:
-      "If a reading fails for technical reasons, your credits are refunded automatically. If you're unhappy with a successful one, contact us — we'll always try to make it right.",
+      "If a reading fails for technical reasons, the reading is automatically refunded to your balance. If you're unhappy with a successful one, contact us — we'll always try to make it right.",
   },
   {
     value: "medical",

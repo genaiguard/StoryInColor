@@ -142,8 +142,8 @@ export default function AboutPage() {
             </p>
             <p>
               Most readings finish in roughly 20 to 40 seconds. If something
-              goes wrong on our end, your credits are refunded automatically —
-              no support ticket required.
+              goes wrong on our end, the reading is refunded to your balance
+              automatically — no support ticket required.
             </p>
           </div>
         </CinematicSection>

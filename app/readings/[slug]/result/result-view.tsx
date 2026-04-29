@@ -41,7 +41,7 @@ function ResultHeader() {
           href="/credits"
           className="text-sm font-medium text-gray-300 transition-colors hover:text-white"
         >
-          Buy credits
+          Top up
         </Link>
       </div>
     </header>
@@ -272,9 +272,9 @@ export default function ResultView({ tool }: Props) {
             </p>
             {job.refunded ? (
               <p className="mt-3 text-sm font-medium text-emerald-300">
-                Credits refunded — your {job.creditCost}{" "}
-                {job.creditCost === 1 ? "credit" : "credits"} have been
-                returned to your balance.
+                {job.creditCost === 0
+                  ? "No charge — this reading is on us anyway."
+                  : `Refunded — ${job.creditCost === 1 ? "1 reading" : `${job.creditCost} readings`} returned to your balance.`}
               </p>
             ) : (
               <p className="mt-3 text-sm text-amber-200/80">

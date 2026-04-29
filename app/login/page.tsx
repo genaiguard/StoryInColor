@@ -243,7 +243,7 @@ function LoginForm() {
                     <span className="italic font-light text-gray-300">back.</span>
                   </h1>
                   <p className="mt-2 text-sm text-gray-400">
-                    Sign in to access your dashboard and credits.
+                    Sign in to access your dashboard and readings.
                   </p>
 
                   {error && (
@@ -352,7 +352,7 @@ function LoginForm() {
                     </span>
                   </h1>
                   <p className="mt-2 text-sm text-gray-400">
-                    Sign up and get free starter credits to try any reading.
+                    Sign up to save your readings and start with a free coloring page.
                   </p>
 
                   {error && (
@@ -474,16 +474,16 @@ function LoginForm() {
             <ul className="mt-8 space-y-4">
               {[
                 {
-                  title: "Free starter credits",
-                  body: "New accounts get free credits to try a reading right away.",
+                  title: "Free to start",
+                  body: "Sign up free, try a coloring page — no card required.",
                 },
                 {
-                  title: "Save your generations",
-                  body: "Every result is saved to your dashboard — re-download any time.",
+                  title: "Saved to your library",
+                  body: "Every reading is saved to your dashboard — re-download any time.",
                 },
                 {
-                  title: "Top up in seconds",
-                  body: "Buy more credits whenever you want to try another reading.",
+                  title: "No subscription",
+                  body: "Top up only when you want another reading. Nothing auto-renews.",
                 },
               ].map((item) => (
                 <li

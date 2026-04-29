@@ -13,13 +13,36 @@ export interface ToolCardProps {
    * Pass true from the dashboard where the signed-in user wants the info.
    */
   showCost?: boolean;
+  /**
+   * Show a prominent "FREE" corner banner on the cover image when this
+   * tool is free (creditCost 0). Used on /readings for signed-in users
+   * to make the coloring-page entry obvious. NEVER pass true on the
+   * landing or any pre-login surface — the free hook is gated to
+   * authenticated visitors so it doesn't leak into pre-login marketing.
+   */
+  showFreeBanner?: boolean;
 }
 
-export function ToolCard({ tool, href, size = "md", showCost = false }: ToolCardProps) {
+export function ToolCard({
+  tool,
+  href,
+  size = "md",
+  showCost = false,
+  showFreeBanner = false,
+}: ToolCardProps) {
   const target = href ?? `/readings/${tool.slug}`;
   const aspect =
     size === "sm" ? "aspect-[4/5]" : "aspect-[2/3]";
-  const costLabel = tool.creditCost === 1 ? "1 credit" : `${tool.creditCost} credits`;
+  // 1 credit == 1 reading on every user-facing surface. coloring-book is
+  // free (creditCost 0) and shows a "Free" pill; everything else is
+  // priced as a single reading.
+  const costLabel =
+    tool.creditCost === 0
+      ? "Free"
+      : tool.creditCost === 1
+        ? "1 reading"
+        : `${tool.creditCost} readings`;
+  const isFree = tool.creditCost === 0;
 
   return (
     <Link
@@ -38,6 +61,11 @@ export function ToolCard({ tool, href, size = "md", showCost = false }: ToolCard
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"
         />
+        {showFreeBanner && isFree && (
+          <span className="absolute left-3 top-3 inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-black shadow-lg">
+            Free
+          </span>
+        )}
       </div>
       <div className="p-5">
         <div className="mb-1 flex items-start justify-between gap-2">

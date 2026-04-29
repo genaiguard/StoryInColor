@@ -252,8 +252,14 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
     }
   }
 
-  const creditLabel =
-    tool.creditCost === 1 ? "1 credit" : `${tool.creditCost} credits`;
+  // Cost label shown to the user. 1 credit == 1 reading on every public
+  // surface; coloring-book is free (creditCost 0).
+  const isFree = tool.creditCost === 0;
+  const creditLabel = isFree
+    ? "Free"
+    : tool.creditCost === 1
+      ? "1 reading"
+      : `${tool.creditCost} readings`;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -284,7 +290,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    aria-label="Credit balance"
+                    aria-label="Reading balance"
                     className="liquid-glass inline-flex cursor-help items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"
                   >
                     <Sparkles className="h-4 w-4" />
@@ -294,14 +300,16 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {`${creditLabel} will be deducted on generate`}
+                  {isFree
+                    ? "This reading is on us — no balance used."
+                    : `${creditLabel} will come off your balance.`}
                 </TooltipContent>
               </Tooltip>
               <Link
                 href="/credits"
                 className="hidden text-sm font-medium text-gray-300 transition-colors hover:text-white sm:inline-block"
               >
-                Buy credits
+                Buy more
               </Link>
             </div>
           </div>
@@ -458,15 +466,14 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
 
                   {insufficientCredits && (
                     <p className="mt-3 text-xs text-amber-300">
-                      You need {creditLabel} to use {tool.name}. You have{" "}
-                      {credits ?? 0}.{" "}
+                      You're out of readings.{" "}
                       <Link
                         href="/credits"
                         className="font-medium underline hover:text-amber-200"
                       >
-                        Buy more credits
-                      </Link>
-                      .
+                        Top up
+                      </Link>{" "}
+                      to start a new {tool.name}.
                     </p>
                   )}
                 </div>
@@ -507,11 +514,10 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
           <DialogContent className="border-white/10 bg-black text-white">
             <DialogHeader>
               <DialogTitle className="text-white">
-                Not enough credits
+                You're out of readings
               </DialogTitle>
               <DialogDescription className="text-gray-400">
-                You need {creditLabel} to use {tool.name}. Your current balance
-                is {credits ?? 0}.
+                Top up to start a new {tool.name}.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:gap-3">
@@ -526,8 +532,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                 href="/credits"
                 className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-sm font-medium text-black transition-colors hover:bg-gray-200"
               >
-                Buy {creditsShort > 0 ? creditsShort : tool.creditCost} more
-                credits
+                See packs
               </Link>
             </DialogFooter>
           </DialogContent>

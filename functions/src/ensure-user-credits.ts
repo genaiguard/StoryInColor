@@ -3,7 +3,10 @@ import * as admin from "firebase-admin";
 
 const db = admin.firestore();
 
-const FREE_CREDITS_PER_USER = 2;
+// One credit == one reading. No signup grant — every editorial reading is
+// paid. The coloring page is the only free tool (creditCost: 0 in
+// tool-prompts.ts) and doesn't count against this balance.
+const FREE_CREDITS_PER_USER = 0;
 
 /**
  * Server-side, idempotent initialiser for the userCredits doc.
@@ -29,18 +32,24 @@ export const ensureUserCredits = onCall(async (request) => {
   }
 
   const now = admin.firestore.Timestamp.now();
+  // Only seed a "welcome" purchaseHistory entry when the signup grant is
+  // greater than zero. With the current 0-grant pricing, the doc starts
+  // empty — purchaseHistory only fills as the user actually buys packs.
   await ref.set({
     balance: FREE_CREDITS_PER_USER,
     used: 0,
-    purchaseHistory: [
-      {
-        packageId: "initial",
-        creditAmount: FREE_CREDITS_PER_USER,
-        pricePaid: 0,
-        purchaseDate: now,
-        isInitialCredits: true,
-      },
-    ],
+    purchaseHistory:
+      FREE_CREDITS_PER_USER > 0
+        ? [
+            {
+              packageId: "initial",
+              creditAmount: FREE_CREDITS_PER_USER,
+              pricePaid: 0,
+              purchaseDate: now,
+              isInitialCredits: true,
+            },
+          ]
+        : [],
     // usageHistory array intentionally omitted — usage events live in the
     // userCredits/{uid}/usageEvents subcollection (see credit-ledger.ts).
     lastUpdated: now,

@@ -59,11 +59,20 @@ function PageHeader() {
   );
 }
 
+// Pack headlines correspond to package ids in CREDIT_PACKAGES.
+// Keep these in sync with credits-helpers.ts.
 const PACK_HEADLINES: Record<string, string> = {
-  small: "Try it",
-  medium: "Most popular",
-  large: "Save 29%",
-  xlarge: "Save 36%",
+  single: "Just one",
+  trio: "Most loved",
+  set: "Save 35%",
+};
+
+// What's actually in each pack, in plain language. Drives the bullet list
+// on every card so the copy stays consistent across surfaces.
+const PACK_BULLETS: Record<string, string> = {
+  single: "One reading of your choice",
+  trio: "Any three readings",
+  set: "Any six readings — make it a gift",
 };
 
 export default function CreditsPage() {
@@ -146,13 +155,13 @@ export default function CreditsPage() {
 
   const handlePurchaseCredits = async (packageId: string) => {
     if (!user) {
-      toast.error("You must be signed in to purchase credits");
+      toast.error("You must be signed in to top up");
       return;
     }
 
     const creditPackage = CREDIT_PACKAGES.find((pkg) => pkg.id === packageId);
     if (!creditPackage) {
-      toast.error("Invalid credit package selected");
+      toast.error("Invalid pack selected");
       return;
     }
 
@@ -223,7 +232,7 @@ export default function CreditsPage() {
         <main className="flex flex-1 items-center justify-center px-4 py-10">
           <div className="flex flex-col items-center gap-3 text-gray-400">
             <Loader2 className="h-8 w-8 animate-spin text-white" />
-            <p className="text-sm">Loading your credits...</p>
+            <p className="text-sm">Loading your readings…</p>
           </div>
         </main>
       </div>
@@ -243,7 +252,7 @@ export default function CreditsPage() {
               Not signed in
             </h2>
             <p className="mt-2 text-sm text-gray-400">
-              Please sign in to purchase credits.
+              Please sign in to top up your readings.
             </p>
             <Link
               href="/login"
@@ -263,8 +272,10 @@ export default function CreditsPage() {
       date: purchase.purchaseDate,
       amount: purchase.creditAmount,
       details: purchase.isInitialCredits
-        ? "Free initial credits"
-        : `Purchased ${purchase.creditAmount} credits`,
+        ? "Welcome reading on us"
+        : purchase.creditAmount === 1
+          ? "Single Issue — 1 reading"
+          : `Pack of ${purchase.creditAmount} readings`,
       isInitialCredits: !!purchase.isInitialCredits,
     })),
     ...usageHistory.map((usage: any) => ({
@@ -288,7 +299,7 @@ export default function CreditsPage() {
           <div className="mb-10 max-w-2xl">
             <div className="mb-4 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
               <span className="h-px w-8 bg-white/20" aria-hidden="true" />
-              Credits
+              Readings
             </div>
             <h1
               className="text-3xl font-normal tracking-[-0.04em] sm:text-4xl md:text-5xl"
@@ -297,8 +308,8 @@ export default function CreditsPage() {
               <span className="italic font-light text-gray-400">balance.</span>
             </h1>
             <p className="mt-3 text-base text-gray-400 md:text-lg">
-              Coloring page uses 1 credit. Readings use 10 credits each. No
-              subscriptions, no expiry.
+              One reading is one purchase — no subscriptions, no expiry, no
+              surprise charges.
             </p>
             <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm">
               <Sparkles className="h-4 w-4 text-white" />
@@ -319,9 +330,10 @@ export default function CreditsPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {CREDIT_PACKAGES.map((pkg) => {
-              const isHighlight = pkg.id === "medium";
+              // The middle pack is the visual anchor / "most loved"
+              const isHighlight = pkg.id === "trio";
               const headline = PACK_HEADLINES[pkg.id] ?? "";
               const isLoading = packageIdLoading === pkg.id;
               return (
@@ -343,7 +355,9 @@ export default function CreditsPage() {
                       isHighlight ? "text-gray-600" : "text-gray-400"
                     }`}
                   >
-                    {pkg.credits} credits
+                    {pkg.credits === 1
+                      ? "1 reading"
+                      : `${pkg.credits} readings`}
                   </div>
                   <div className="mt-1 flex items-baseline gap-2">
                     <span
@@ -358,7 +372,7 @@ export default function CreditsPage() {
                       isHighlight ? "text-gray-600" : "text-gray-400"
                     }`}
                   >
-                    ${(pkg.pricePerCredit / 100).toFixed(2)} / credit
+                    ${(pkg.pricePerCredit / 100).toFixed(2)} / reading
                   </div>
                   {!isHighlight && headline && (
                     <div className="mt-3 text-xs font-medium uppercase tracking-wider text-gray-300">
@@ -377,15 +391,7 @@ export default function CreditsPage() {
                           isHighlight ? "text-black" : "text-white"
                         }`}
                       />
-                      <span>
-                        {pkg.id === "small"
-                          ? "≈ 5 coloring pages — readings need 10 credits"
-                          : pkg.id === "medium"
-                          ? "≈ 10 coloring pages or 1 reading"
-                          : pkg.id === "large"
-                          ? "≈ 20 coloring pages or 2 readings"
-                          : "≈ 40 coloring pages or 4 readings"}
-                      </span>
+                      <span>{PACK_BULLETS[pkg.id]}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle
@@ -393,7 +399,15 @@ export default function CreditsPage() {
                           isHighlight ? "text-black" : "text-white"
                         }`}
                       />
-                      <span>Credits never expire</span>
+                      <span>Editorial quality, print-ready</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle
+                        className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
+                          isHighlight ? "text-black" : "text-white"
+                        }`}
+                      />
+                      <span>Never expire, no subscription</span>
                     </li>
                   </ul>
 
@@ -427,22 +441,20 @@ export default function CreditsPage() {
           <div className="liquid-glass mt-12 rounded-2xl p-6 md:p-8">
             <div className="mb-4 flex items-center gap-3">
               <Shield className="h-5 w-5 text-white" />
-              <h3 className="text-lg font-medium text-white">About credits</h3>
+              <h3 className="text-lg font-medium text-white">
+                How it works
+              </h3>
             </div>
             <div className="space-y-3 text-sm text-gray-300 md:text-base">
               <p>
-                The coloring page uses 1 credit. Readings — palm, face, aura,
+                One reading is one purchase — pick a pack, then spend it on any
+                editorial reading on the site (palm, face, beauty report, aura,
                 iridology, handwriting, style audit, skincare, plate, plant
-                care, room vibes — use 10 credits each.
+                care, room vibes).
               </p>
               <p>
-                New users receive 2 free credits to try the service. After
-                using your free credits, you'll need to purchase more to keep
-                creating.
-              </p>
-              <p className="text-gray-400">
-                Credits never expire and can be used across any reading on the
-                platform.
+                Readings never expire, there's no subscription, and you can
+                come back any time.
               </p>
             </div>
           </div>
@@ -457,8 +469,8 @@ export default function CreditsPage() {
 
             {combinedHistory.length === 0 ? (
               <div className="liquid-glass rounded-2xl p-10 text-center text-sm text-gray-400">
-                No credit history yet. Once you use or purchase credits, your
-                transactions will appear here.
+                Nothing yet. Once you read a photo or top up, your transactions
+                will appear here.
               </div>
             ) : (
               <div className="liquid-glass overflow-hidden rounded-2xl">
@@ -473,7 +485,7 @@ export default function CreditsPage() {
                           Transaction
                         </th>
                         <th className="p-4 text-right text-xs font-medium uppercase tracking-wider text-gray-400">
-                          Credits
+                          Readings
                         </th>
                       </tr>
                     </thead>

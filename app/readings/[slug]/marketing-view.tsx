@@ -281,7 +281,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
               </Link>
             </div>
             <p className="mt-4 text-xs text-gray-500">
-              Free starter credits when you sign up — no card required.
+              One reading is one purchase. No subscription, no expiry.
             </p>
           </div>
         </section>

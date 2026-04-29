@@ -14,7 +14,8 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Family photos, pet portraits, or vacation memories — transformed into one print-ready page you can color in.",
     coverImage: "/images/tools/coloring-book.webp",
-    creditCost: 1,
+    // Free for any signed-in user. Mirrors functions/src/tool-prompts.ts.
+    creditCost: 0,
     category: "creative",
     inputHint: "Upload any photo. JPG, PNG, or WEBP up to 10MB.",
     outputType: "image",
@@ -57,7 +58,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Heart, head, life, and fate lines plus the major mounts, presented as a clean editorial guide with a contour line-art of your palm.",
     coverImage: "/images/tools/palm-reading.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "mystical",
     inputHint: "Upload a clear photo of your open palm in good light.",
     outputType: "image+guide",
@@ -98,7 +99,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Forehead, brows, eyes, nose, cheeks, mouth, and chin mapped to the Twelve Palaces, in a refined editorial chart.",
     coverImage: "/images/tools/face-reading.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "mystical",
     inputHint: "Upload a front-facing selfie in even lighting.",
     outputType: "image+guide",
@@ -140,7 +141,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Overall attractiveness, symmetry, proportions, bone structure, skin, eye area, and smile — scored, summarized, and paired with actionable grooming notes.",
     coverImage: "/images/tools/beauty-report.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "analysis",
     inputHint: "Upload a clear, front-facing selfie in good lighting.",
     outputType: "image+guide",
@@ -183,7 +184,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Soft watercolor halo overlay plus a multi-layer reading of your dominant aura colors and chakras.",
     coverImage: "/images/tools/aura-reading.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "mystical",
     inputHint: "Upload a clear selfie against a plain background.",
     outputType: "image+guide",
@@ -224,7 +225,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Iris zones, the autonomic nerve wreath, and visible markings mapped to a classic iris chart — for entertainment, not diagnosis.",
     coverImage: "/images/tools/iridology.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "analysis",
     inputHint: "Upload a sharp close-up of one eye, well-lit.",
     outputType: "image+guide",
@@ -265,7 +266,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Slant, baseline, pressure, spacing, and signature character translated into a playful personality card.",
     coverImage: "/images/tools/handwriting.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "creative",
     inputHint: "Upload a clear photo of a handwritten sample on plain paper.",
     outputType: "image+guide",
@@ -306,7 +307,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Silhouette, palette, fit, layering, and your closest style archetype — laid out like a Vogue spread.",
     coverImage: "/images/tools/style-audit.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "creative",
     inputHint: "Upload a full-body photo of your outfit.",
     outputType: "image+guide",
@@ -346,7 +347,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "T-zone, cheeks, under-eye, and jawline observations with a luxe AM/PM routine framework. Cosmetic guidance only.",
     coverImage: "/images/tools/skincare-glow.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "analysis",
     inputHint: "Upload a bare-face, well-lit selfie.",
     outputType: "image+guide",
@@ -386,7 +387,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Macro split, plating, color theory, and balance — a beautiful nutrition card from one photo of your plate.",
     coverImage: "/images/tools/plate-analysis.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "analysis",
     inputHint: "Upload a top-down photo of your plate.",
     outputType: "image+guide",
@@ -427,7 +428,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Light, water, soil, and pest guidance plus a botanical contour illustration of your plant.",
     coverImage: "/images/tools/plant-care.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "analysis",
     inputHint: "Upload a clear photo of your plant.",
     outputType: "image+guide",
@@ -468,7 +469,7 @@ export const TOOLS: Tool[] = [
     heroCopy:
       "Palette, materials, era, and design archetype — a shelter-magazine read on your space.",
     coverImage: "/images/tools/room-vibes.webp",
-    creditCost: 10,
+    creditCost: 1,
     category: "analysis",
     inputHint: "Upload a wide shot of your room or bookshelf.",
     outputType: "image+guide",
