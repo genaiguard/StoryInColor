@@ -55,6 +55,17 @@ export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
     inputFidelity: "high",
     preprocessing: "none",
   },
+  "beauty-report": {
+    prompt:
+      "Based on my selfie, create a clean, minimal, high-end Facial Beauty Report. Render it as a single black-on-white editorial spread titled 'FACIAL BEAUTY REPORT' with a subtitle 'Single-photo visual assessment' and a small italic note that lighting, flash, expression, and lens distortion can affect precision. Use thin hairlines, generous whitespace, rounded cards, and refined serif-and-sans typography for a luxury-magazine feel. Lay it out with the original photo on the upper left and a small black-on-white contour line drawing of the face below it. To the right, lead with an Overall Attractiveness card showing a single bold score out of 10 and a one-sentence honest summary. Below that, six smaller score cards in a 2-column grid — Symmetry, Proportions, Bone Structure, Skin Quality, Eye Area, and Smile / Dental — each with its own score out of 10 and a short, honest, two-sentence observation. End with three side-by-side panels — Strengths (4-5 bullets with a star icon), Areas for Improvement (4-5 bullets with an arrow icon), and Actionable Grooming / Style Recommendations (5-7 bullets with a comb icon, covering hair, facial hair or makeup, brows, skin, eye area, smile, and photography tips). Keep the tone honest, data-driven, and visually refined — never overly flattering, never unkind. For entertainment only. Do your best.",
+    creditCost: 10,
+    outputType: "image+guide",
+    imageSize: "1024x1536",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "detail",
+  },
   "aura-reading": {
     // Switched to /v1/images/generations: the aura reading is a stylized halo
     // composite where preserving an exact face hurts the result and risks

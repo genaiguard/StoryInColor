@@ -103,6 +103,8 @@ try {
 const INPUT_PROMPTS = {
   portrait:
     "Editorial fashion-magazine portrait of a mid-40s woman, natural makeup, soft directional daylight, neutral cream paper backdrop, looking three-quarters away from the camera, calm and approachable expression, sharp focus on the face, shallow depth of field, high resolution, no text or logos in frame.",
+  "blonde-portrait":
+    "Editorial fashion-magazine portrait of a mid-40s blonde woman with natural shoulder-length hair, soft daylight from the side window, fresh natural makeup with peachy lip color, neutral cream paper backdrop, front-facing selfie framing from the chest up, relaxed warm half-smile, natural skin texture and subtle freckles visible, sharp focus on the face, fashion-magazine quality, no text or logos in frame.",
   palm:
     "Photograph of an open right palm of an adult, fingers slightly spread, palm facing the camera, taken straight-on under soft natural light against a neutral cream backdrop, sharp focus on the palm lines, all major lines (heart, head, life, fate) clearly visible, fashion-magazine quality, no jewelry, no text or logos in frame.",
   iris:
@@ -151,6 +153,19 @@ const READINGS = {
     quality: "high",
     inputFidelity: "high",
     preprocessing: "none",
+  },
+  "beauty-report": {
+    // Uses its own dedicated input — the marketing sample needs a different
+    // person from the face-reading "portrait" cache so the two reading
+    // pages don't show the same model.
+    inputType: "blonde-portrait",
+    prompt:
+      "Based on my selfie, create a clean, minimal, high-end Facial Beauty Report. Render it as a single black-on-white editorial spread titled 'FACIAL BEAUTY REPORT' with a subtitle 'Single-photo visual assessment' and a small italic note that lighting, flash, expression, and lens distortion can affect precision. Use thin hairlines, generous whitespace, rounded cards, and refined serif-and-sans typography for a luxury-magazine feel. Lay it out with the original photo on the upper left and a small black-on-white contour line drawing of the face below it. To the right, lead with an Overall Attractiveness card showing a single bold score out of 10 and a one-sentence honest summary. Below that, six smaller score cards in a 2-column grid — Symmetry, Proportions, Bone Structure, Skin Quality, Eye Area, and Smile / Dental — each with its own score out of 10 and a short, honest, two-sentence observation. End with three side-by-side panels — Strengths (4-5 bullets with a star icon), Areas for Improvement (4-5 bullets with an arrow icon), and Actionable Grooming / Style Recommendations (5-7 bullets with a comb icon, covering hair, facial hair or makeup, brows, skin, eye area, smile, and photography tips). Keep the tone honest, data-driven, and visually refined — never overly flattering, never unkind. For entertainment only. Do your best.",
+    endpoint: "edits",
+    imageSize: "1024x1536",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "detail",
   },
   "aura-reading": {
     inputType: null,

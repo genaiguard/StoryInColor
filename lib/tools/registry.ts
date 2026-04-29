@@ -133,6 +133,49 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    id: "beauty-report",
+    slug: "beauty-report",
+    name: "Beauty Report",
+    tagline: "An honest, single-photo beauty assessment",
+    heroCopy:
+      "Overall attractiveness, symmetry, proportions, bone structure, skin, eye area, and smile — scored, summarized, and paired with actionable grooming notes.",
+    coverImage: "/images/tools/beauty-report.webp",
+    creditCost: 10,
+    category: "analysis",
+    inputHint: "Upload a clear, front-facing selfie in good lighting.",
+    outputType: "image+guide",
+    seo: {
+      metaTitle:
+        "AI beauty report from a selfie — honest single-photo assessment | StoryInColor",
+      metaDescription:
+        "Upload a selfie and get an honest, data-driven beauty report — overall score plus symmetry, proportions, bone structure, skin, eye area, and smile, with actionable grooming and styling notes.",
+      whatYouGet: [
+        "An overall attractiveness score with a one-line summary",
+        "Six sub-scores — symmetry, proportions, bone structure, skin, eye area, and smile",
+        "Strengths and areas-for-improvement bullets",
+        "Actionable grooming and styling recommendations",
+        "A clean black-on-white contour line-art keepsake of your face",
+      ],
+      faq: [
+        {
+          q: "Is it accurate?",
+          a: "It's a visual read of one photo — lighting, flash, expression, and lens distortion can all shift the scores. Take it as a snapshot, not a verdict.",
+        },
+        {
+          q: "Will it be brutal?",
+          a: "It's honest, not unkind. The scores describe what's visible in this single photo and the recommendations are constructive grooming and styling notes — never personal judgments.",
+        },
+        {
+          q: "What kind of selfie works best?",
+          a: "A front-facing photo in soft, even daylight, hair off the forehead, relaxed expression, and no heavy filters or makeup. Avoid direct flash — it flattens skin and shifts tone.",
+        },
+        PHOTO_PRIVACY_FAQ,
+      ],
+      inputImage: "/images/tools/beauty-report-input.webp",
+      sampleImage: "/images/tools/beauty-report-sample.webp",
+    },
+  },
+  {
     id: "aura-reading",
     slug: "aura-reading",
     name: "Aura Reading",
