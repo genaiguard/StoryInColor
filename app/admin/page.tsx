@@ -90,10 +90,20 @@ interface EnrichedUser {
   attribution: UserAttributionPayload | null;
 }
 
+interface SourceFunnelRow {
+  source: string;
+  signups: number;
+  activatedUsers: number;
+  payingCustomers: number;
+  revenue: number;
+  completedReadings: number;
+}
+
 interface AdminDashboardData {
   success: boolean;
   aggregatedStats?: AggregatedStats;
   users?: EnrichedUser[];
+  sourceBreakdown?: SourceFunnelRow[];
   message?: string;
   error?: string;
 }
@@ -207,6 +217,7 @@ function FullScreenSpinner({ label }: { label: string }) {
 export default function AdminPage() {
   const [stats, setStats] = useState<AggregatedStats | null>(null);
   const [users, setUsers] = useState<EnrichedUser[]>([]);
+  const [sourceBreakdown, setSourceBreakdown] = useState<SourceFunnelRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -253,6 +264,7 @@ export default function AdminPage() {
         if (data.success && data.aggregatedStats && data.users) {
           setStats(data.aggregatedStats);
           setUsers(data.users);
+          setSourceBreakdown(data.sourceBreakdown ?? []);
         } else {
           setError(
             data.message ||
@@ -481,6 +493,13 @@ export default function AdminPage() {
                 icon={AlertCircle}
               />
             </div>
+          )}
+
+          {/* Per-source funnel breakdown — derived server-side from
+              users[].attribution.firstTouch.source. Hidden until at least
+              one user with attribution data exists (legacy-only state). */}
+          {sourceBreakdown.length > 0 && (
+            <SourceBreakdownTable rows={sourceBreakdown} />
           )}
 
           {/* Filters + sort */}
@@ -848,6 +867,121 @@ function UserDetailCard({ userData }: { userData: EnrichedUser }) {
             No readings yet.
           </p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function SourceBreakdownTable({ rows }: { rows: SourceFunnelRow[] }) {
+  // Derive a totals row so the percentages are easy to sanity-check.
+  const totals = rows.reduce(
+    (acc, r) => ({
+      signups: acc.signups + r.signups,
+      activatedUsers: acc.activatedUsers + r.activatedUsers,
+      payingCustomers: acc.payingCustomers + r.payingCustomers,
+      revenue: acc.revenue + r.revenue,
+      completedReadings: acc.completedReadings + r.completedReadings,
+    }),
+    { signups: 0, activatedUsers: 0, payingCustomers: 0, revenue: 0, completedReadings: 0 },
+  );
+  return (
+    <div className="liquid-glass mb-8 overflow-hidden rounded-2xl">
+      <div className="flex items-center justify-between border-b border-white/5 p-5 md:p-6">
+        <div>
+          <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+            Funnel by source
+          </h2>
+          <p className="mt-2 text-base text-white">
+            First-touch attribution rolled up across all signups.
+          </p>
+        </div>
+        <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+          {rows.length} sources
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+              <th className="px-5 py-3 md:px-6">Source</th>
+              <th className="px-3 py-3 text-right">Signups</th>
+              <th className="px-3 py-3 text-right">Activated</th>
+              <th className="px-3 py-3 text-right">Paying</th>
+              <th className="px-3 py-3 text-right">Revenue</th>
+              <th className="px-3 py-3 text-right">Conv. rate</th>
+              <th className="px-3 py-3 text-right">Activation</th>
+              <th className="px-3 py-3 text-right md:px-6">Readings</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {rows.map((r) => {
+              const convRate =
+                r.signups > 0 ? (r.payingCustomers / r.signups) * 100 : 0;
+              const actRate =
+                r.signups > 0 ? (r.activatedUsers / r.signups) * 100 : 0;
+              return (
+                <tr key={r.source} className="text-gray-200">
+                  <td className="px-5 py-3 font-medium text-white md:px-6">
+                    {r.source}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums">
+                    {r.signups.toLocaleString()}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums">
+                    {r.activatedUsers.toLocaleString()}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums">
+                    {r.payingCustomers.toLocaleString()}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums">
+                    ${r.revenue.toFixed(2)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-emerald-300">
+                    {convRate.toFixed(1)}%
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-amber-200">
+                    {actRate.toFixed(1)}%
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums md:px-6">
+                    {r.completedReadings.toLocaleString()}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-white/10 text-sm font-medium text-gray-300">
+              <td className="px-5 py-3 md:px-6">All sources</td>
+              <td className="px-3 py-3 text-right tabular-nums">
+                {totals.signups.toLocaleString()}
+              </td>
+              <td className="px-3 py-3 text-right tabular-nums">
+                {totals.activatedUsers.toLocaleString()}
+              </td>
+              <td className="px-3 py-3 text-right tabular-nums">
+                {totals.payingCustomers.toLocaleString()}
+              </td>
+              <td className="px-3 py-3 text-right tabular-nums">
+                ${totals.revenue.toFixed(2)}
+              </td>
+              <td className="px-3 py-3 text-right tabular-nums">
+                {totals.signups > 0
+                  ? ((totals.payingCustomers / totals.signups) * 100).toFixed(1)
+                  : "0.0"}
+                %
+              </td>
+              <td className="px-3 py-3 text-right tabular-nums">
+                {totals.signups > 0
+                  ? ((totals.activatedUsers / totals.signups) * 100).toFixed(1)
+                  : "0.0"}
+                %
+              </td>
+              <td className="px-3 py-3 text-right tabular-nums md:px-6">
+                {totals.completedReadings.toLocaleString()}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
     </div>
   );

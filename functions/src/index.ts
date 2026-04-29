@@ -558,10 +558,30 @@ interface EnrichedUser {
   attribution: UserAttributionPayload | null;
 }
 
+/** Per-source funnel breakdown surfaced on the admin page. Computed by
+ *  rolling up enrichedUsers in getAdminDashboardData. Only first-touch
+ *  source is rolled up (last-touch is per-user noise; first-touch is what
+ *  acquisition reports want). */
+interface SourceFunnelRow {
+  /** First-touch source label. "(unknown)" for users with no attribution. */
+  source: string;
+  /** Number of users whose first-touch source matches. */
+  signups: number;
+  /** Subset of signups who completed at least one reading. */
+  activatedUsers: number;
+  /** Subset of signups who paid at least once. */
+  payingCustomers: number;
+  /** Sum of totalSpent across users in this bucket (in dollars). */
+  revenue: number;
+  /** Sum of completed readings across users in this bucket. */
+  completedReadings: number;
+}
+
 interface AdminDashboardData {
   success: boolean;
   aggregatedStats: AggregatedStats;
   users: EnrichedUser[];
+  sourceBreakdown: SourceFunnelRow[];
 }
 
 // --- Admin Dashboard Data Function (getAdminDashboardData - Enhanced) ---
@@ -727,7 +747,33 @@ export const getAdminDashboardData = onCall(
         };
       });
       console.log(`[Admin Dashboard] Constructed enriched list for ${enrichedUsers.length} users.`);
-      
+
+      // --- Roll up per-source funnel rows ---
+      // Iterates enrichedUsers and accumulates into a Map keyed by
+      // first-touch source. "(unknown)" buckets users without attribution.
+      const sourceMap = new Map<string, SourceFunnelRow>();
+      for (const u of enrichedUsers) {
+        const src = u.attribution?.firstTouch?.source;
+        const key = src && src.length > 0 ? src : "(unknown)";
+        const row = sourceMap.get(key) ?? {
+          source: key,
+          signups: 0,
+          activatedUsers: 0,
+          payingCustomers: 0,
+          revenue: 0,
+          completedReadings: 0,
+        };
+        row.signups += 1;
+        if (u.generationCount > 0) row.activatedUsers += 1;
+        if (u.totalSpent > 0) row.payingCustomers += 1;
+        row.revenue += u.totalSpent;
+        row.completedReadings += u.generationCount - u.failedGenerationCount;
+        sourceMap.set(key, row);
+      }
+      const sourceBreakdown = Array.from(sourceMap.values()).sort(
+        (a, b) => b.revenue - a.revenue || b.signups - a.signups,
+      );
+
       console.log("[Admin Dashboard] Aggregation and data preparation complete.");
 
       // 4. Return Data
@@ -742,6 +788,7 @@ export const getAdminDashboardData = onCall(
           failedGenerations,
         },
         users: enrichedUsers,
+        sourceBreakdown,
       };
 
     } catch (error: any) {
