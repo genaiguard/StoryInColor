@@ -2,7 +2,7 @@ import type { Tool } from "./types";
 
 const PHOTO_PRIVACY_FAQ = {
   q: "Will my photo be saved?",
-  a: "Your upload is processed immediately to generate your result and is retained for your generation history so you can re-download it. Photos are sent to our AI processing provider (OpenAI) for the generation step only; we do not share them for training. You can delete your account and the associated uploads at any time from your account settings.",
+  a: "Your upload is used only to generate your reading, kept on your account so you can re-download, and stored where only you can see it. We don't sell your photos. You can delete your account and uploads at any time from your settings.",
 };
 
 export const TOOLS: Tool[] = [
@@ -126,7 +126,7 @@ export const TOOLS: Tool[] = [
         },
         {
           q: "Is it safe?",
-          a: "Photos are sent over HTTPS and shared only with our AI processing provider (OpenAI) for the generation step. Reports are stored on your account and visible only to you.",
+          a: "Photos are sent over HTTPS, used only to generate your reading, and stored on your account where only you can see them.",
         },
         PHOTO_PRIVACY_FAQ,
       ],

@@ -35,7 +35,7 @@ const FAQS: FAQ[] = [
     value: "privacy",
     question: "Are my photos private?",
     answer:
-      "Yes. Your photos are used to generate your reading and are kept on your account so you can re-download. We don't sell your data and don't use your photos to train models. You can delete your account and uploads at any time from your settings.",
+      "Yes. Your photos are used only to generate your reading and are kept on your account so you can re-download. We don't sell your data. You can delete your account and uploads at any time from your settings.",
   },
   {
     value: "speed",

@@ -127,18 +127,16 @@ export default function AboutPage() {
         >
           <div className="space-y-5 text-base leading-relaxed text-gray-300 md:text-lg">
             <p>
-              StoryInColor is built on top of OpenAI's image models, with each
-              reading composed by a long-form prompt tuned for editorial layout
-              — thin hairlines, generous whitespace, refined typography. The
-              prompts were written by hand, not by an LLM, and are revised the
+              Each reading is composed by a long-form prompt tuned for
+              editorial layout — thin hairlines, generous whitespace, refined
+              typography. The prompts were written by hand and are revised the
               same way magazine art direction is revised: print, look, edit,
               repeat.
             </p>
             <p>
-              We don't sell your photos and we don't use them to train models.
-              Uploads stay on your account so you can re-download a spread you
-              loved, and you can delete everything from your settings at any
-              time.
+              We don't sell your photos. Uploads stay on your account so you
+              can re-download a reading you loved, and you can delete
+              everything from your settings at any time.
             </p>
             <p>
               Most readings finish in roughly 20 to 40 seconds. If something

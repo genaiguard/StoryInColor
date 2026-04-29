@@ -107,7 +107,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
           title={
             <>
               In your{" "}
-              <span className="italic font-light text-gray-400">spread.</span>
+              <span className="italic font-light text-gray-400">reading.</span>
             </>
           }
           topBorder
@@ -146,7 +146,10 @@ export default function MarketingView({ tool }: { tool: Tool }) {
               Reads top-to-bottom like a print magazine spread. */}
           <div className="flex flex-col items-stretch gap-6 md:gap-8">
             <div className="liquid-glass overflow-hidden rounded-2xl">
-              <div className="relative mx-auto flex aspect-[3/2] w-full max-w-3xl items-center justify-center overflow-hidden border-b border-white/5 bg-black">
+              {/* Upload card: aspect-square because the script generates
+                  example inputs at 1024×1024. object-cover so the photo
+                  fills the box edge-to-edge with no letterbox bars. */}
+              <div className="relative mx-auto aspect-square w-full max-w-2xl overflow-hidden border-b border-white/5 bg-black">
                 {input ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -154,10 +157,10 @@ export default function MarketingView({ tool }: { tool: Tool }) {
                     alt={`${tool.name} upload example`}
                     loading="lazy"
                     decoding="async"
-                    className="h-full w-full object-contain"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="text-xs uppercase tracking-[0.18em] text-gray-500">
+                  <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-[0.18em] text-gray-500">
                     Your photo
                   </div>
                 )}
