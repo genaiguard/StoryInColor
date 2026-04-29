@@ -131,6 +131,10 @@ const READINGS = {
     quality: "medium",
     inputFidelity: "high",
     preprocessing: "none",
+    // Coloring-book pins gpt-image-1 — the line-art conversion is sharper
+    // there. Mirror the same override on the production server in
+    // functions/src/tool-prompts.ts under coloring-book.model.
+    model: "gpt-image-1",
   },
   "palm-reading": {
     inputType: "palm",
@@ -313,7 +317,11 @@ async function prepareInput(inputBuf, preprocessing) {
 }
 
 async function runReading(slug, config, inputBuf) {
-  console.log(`→ ${slug}: running reading prompt...`);
+  // Per-reading model override (config.model) wins over the IMAGE_MODEL
+  // default. Keep the override list aligned with functions/src/tool-prompts.ts
+  // so script-generated marketing samples match what production renders.
+  const modelForRequest = config.model || IMAGE_MODEL;
+  console.log(`→ ${slug}: running reading prompt (${modelForRequest})...`);
 
   // /v1/images/edits expects multipart/form-data with the input image.
   // /v1/images/generations expects application/json (no image attachment).
@@ -321,7 +329,7 @@ async function runReading(slug, config, inputBuf) {
   let resp;
   if (config.endpoint === "edits") {
     const form = new FormData();
-    form.append("model", IMAGE_MODEL);
+    form.append("model", modelForRequest);
     form.append("prompt", config.prompt);
     form.append("n", "1");
     form.append("size", config.imageSize);
@@ -329,7 +337,7 @@ async function runReading(slug, config, inputBuf) {
     form.append("output_format", "png");
     form.append("moderation", "low");
     const prepared = await prepareInput(inputBuf, config.preprocessing);
-    if (!IMAGE_MODEL.startsWith("gpt-image-2")) {
+    if (!modelForRequest.startsWith("gpt-image-2")) {
       form.append("input_fidelity", config.inputFidelity);
     }
     form.append(
@@ -351,7 +359,7 @@ async function runReading(slug, config, inputBuf) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: IMAGE_MODEL,
+        model: modelForRequest,
         prompt: config.prompt,
         n: 1,
         size: config.imageSize,

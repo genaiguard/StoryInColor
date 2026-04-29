@@ -12,6 +12,18 @@ import { refundCreditsTx } from "./credit-ledger";
 // safe even though `index.ts` already defines the same secret.
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 
+// Default to gpt-image-2 to match scripts/generate-sample.mjs — the script
+// renders the marketing samples shown on every /readings/<slug> page, so prod
+// MUST use the same model or signed-in users get a different aesthetic than
+// the catalog promised. Override via `OPENAI_IMAGE_MODEL` Cloud Functions env
+// var (no redeploy of code needed; just `firebase functions:config:set` or a
+// .env entry) if we ever need to pin a specific dated snapshot.
+//
+// Per-tool overrides live on `ServerToolConfig.model` in tool-prompts.ts —
+// coloring-book pins gpt-image-1 because its line-art conversion is sharper
+// there. Resolution order is: tool override → env var → "gpt-image-2".
+const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
+
 // `admin.initializeApp()` is invoked in `index.ts`, so we just grab handles.
 const db = admin.firestore();
 const bucket = admin.storage().bucket();
@@ -192,8 +204,9 @@ export const generateForTool = onCall(
     try {
       // Per-tool input preprocessing — `detail` tools get a 1536px high-quality
       // input, `contrast` boosts ink/paper for handwriting, `exif-rotate` fixes
-      // sideways meal photos. Output_format/moderation params follow Agent C's
-      // gpt-image-1 research recommendations.
+      // sideways meal photos. Output_format/moderation params follow our
+      // gpt-image research recommendations and apply to both gpt-image-1 and
+      // gpt-image-2.
       let inputBuffer: Buffer | null = null;
       let inputContentType = "image/jpeg";
       let inputFilename = "image.jpg";
@@ -234,20 +247,29 @@ export const generateForTool = onCall(
       // the script + this handler had until 2026-04-29; aura-reading
       // (the only generations-endpoint tool today) was unable to render
       // for any signed-in user.
+      //
+      // input_fidelity is a gpt-image-1 parameter and is rejected/ignored on
+      // gpt-image-2 (the new model handles fidelity differently). Mirror
+      // scripts/generate-sample.mjs and only send it on gpt-image-1.
+      // Per-tool model override (config.model) wins over the env default.
+      const modelForRequest = config.model || IMAGE_MODEL;
+      const isGptImage2 = modelForRequest.startsWith("gpt-image-2");
       let resp: Response;
       if (config.endpoint === "edits") {
         if (!inputBuffer) {
           throw new Error("Internal: input buffer missing for edits endpoint");
         }
         const formData = new FormData();
-        formData.append("model", "gpt-image-1");
+        formData.append("model", modelForRequest);
         formData.append("prompt", config.prompt);
         formData.append("n", "1");
         formData.append("size", config.imageSize);
         formData.append("quality", config.quality);
         formData.append("output_format", "png");
         formData.append("moderation", "low");
-        formData.append("input_fidelity", config.inputFidelity);
+        if (!isGptImage2) {
+          formData.append("input_fidelity", config.inputFidelity);
+        }
         formData.append("image", inputBuffer, {
           filename: inputFilename,
           contentType: inputContentType,
@@ -269,7 +291,7 @@ export const generateForTool = onCall(
             Authorization: `Bearer ${OPENAI_API_KEY.value()}`,
           },
           body: JSON.stringify({
-            model: "gpt-image-1",
+            model: modelForRequest,
             prompt: config.prompt,
             n: 1,
             size: config.imageSize,

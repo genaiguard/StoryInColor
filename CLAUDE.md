@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project at a glance
 
-StoryInColor (repo name `aibooks`, deployed at https://storyincolor.com) — a static-exported Next.js marketing site plus a set of Firebase Cloud Functions that turn user-uploaded photos into editorial AI "readings" (palm, face, aura, iridology, handwriting, plate, plant, room, style, skincare, plus a coloring-book line-art generator). Users buy credits via Stripe and spend them per generation; image generation uses OpenAI `gpt-image-1`.
+StoryInColor (repo name `aibooks`, deployed at https://storyincolor.com) — a static-exported Next.js marketing site plus a set of Firebase Cloud Functions that turn user-uploaded photos into editorial AI "readings" (palm, face, aura, iridology, handwriting, style, hairstyle, color, beauty, skincare, plus a coloring-book line-art generator). Users buy credits via Stripe and spend them per generation. Image generation defaults to OpenAI `gpt-image-2`; per-tool overrides live on `ServerToolConfig.model` in `functions/src/tool-prompts.ts` (today only `coloring-book` overrides back to `gpt-image-1` because the line-art conversion is sharper there). The script `scripts/generate-sample.mjs` MUST stay aligned with these per-tool model picks — if it drifts, the marketing samples on `/readings/<slug>` will look different from what signed-in users get.
 
 There are two npm trees: the root (Next.js app) and `functions/` (Cloud Functions). They share no code — anything used on both sides (credit packages, tool list) is duplicated and must be kept in sync by hand.
 

@@ -17,8 +17,13 @@ export type ServerToolConfig = {
   imageSize: string; // "1024x1024" | "1024x1536" | "1536x1024"
   endpoint: ToolEndpoint; // edits (input photo conditioned) vs generations (text-only)
   quality: ToolQuality;
-  inputFidelity: "high" | "low"; // only applied to edits
+  inputFidelity: "high" | "low"; // only applied to edits on gpt-image-1
   preprocessing: ToolPreprocessing;
+  // Per-tool model override. Production defaults to gpt-image-2 (the editorial
+  // reading aesthetic our marketing samples use); coloring-book overrides back
+  // to gpt-image-1 because its line-art conversion looks cleaner there.
+  // Keep this field aligned with scripts/generate-sample.mjs READINGS[].model.
+  model?: string;
 };
 
 export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
@@ -36,6 +41,9 @@ export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
     quality: "medium",
     inputFidelity: "high",
     preprocessing: "none",
+    // Coloring-book line-art conversion is sharper on gpt-image-1 than on
+    // gpt-image-2. Every other reading uses the IMAGE_MODEL default (gpt-image-2).
+    model: "gpt-image-1",
   },
   "palm-reading": {
     prompt:
