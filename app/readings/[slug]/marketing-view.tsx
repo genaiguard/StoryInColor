@@ -145,37 +145,31 @@ export default function MarketingView({ tool }: { tool: Tool }) {
               card at native 2:3 portrait, much larger than a thumbnail.
               Reads top-to-bottom like a print magazine spread. */}
           <div className="flex flex-col items-stretch gap-6 md:gap-8">
-            <div className="liquid-glass overflow-hidden rounded-2xl">
-              {/* Upload card: aspect-square because the script generates
-                  example inputs at 1024×1024. Padded inside (p-8) so the
-                  photo has breathing room — without it the subject's
-                  head sits flush against the box edge, which reads as
-                  cropped. object-contain inside the padded area keeps
-                  the photo's full frame visible. Kept compact
-                  (max-w-md) so the editorial reading below it
-                  dominates. */}
-              <div className="relative mx-auto aspect-square w-full max-w-md overflow-hidden border-b border-white/5 bg-black p-8 md:p-10">
-                {input ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={input}
-                    alt={`${tool.name} upload example`}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full rounded-md object-contain"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-[0.18em] text-gray-500">
-                    Your photo
-                  </div>
-                )}
-              </div>
-              <div className="p-5 md:p-6">
-                <h3 className="text-lg font-medium text-white md:text-xl">
-                  Upload your photo
-                </h3>
-                <p className="mt-2 text-sm text-gray-400">{tool.inputHint}</p>
-              </div>
+            {/* Upload preview — no card frame at all. The photo sits free
+                on the page so its own backdrop doesn't have to fight a
+                liquid-glass rim, and the text beneath it reads as a
+                caption rather than a card body. */}
+            <div className="mx-auto w-full max-w-md text-center">
+              {input ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={input}
+                  alt={`${tool.name} upload example`}
+                  loading="lazy"
+                  decoding="async"
+                  className="mx-auto block aspect-square w-full rounded-2xl border border-white/5 object-cover"
+                />
+              ) : (
+                <div className="mx-auto flex aspect-square w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.02] text-xs uppercase tracking-[0.18em] text-gray-500">
+                  Your photo
+                </div>
+              )}
+              <h3 className="mt-5 text-lg font-medium text-white md:text-xl">
+                Upload your photo
+              </h3>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">
+                {tool.inputHint}
+              </p>
             </div>
 
             {/* Horizontal transition between the two cards */}
