@@ -487,7 +487,11 @@ export default function DashboardPage() {
                 See all →
               </Link>
             </div>
-            <ToolGrid showCategoryChips={false} showCost />
+            <ToolGrid
+              showCategoryChips={false}
+              showCost
+              showFreeBannerForSignedIn
+            />
           </section>
 
           <section className="mb-8">
