@@ -135,64 +135,175 @@ export const sendContactFormEmail = async (
   }
 };
 
-// Email template generators
-// Force redeploy - Updated 2025-05-25
+// ---------------------------------------------------------------------------
+// Email templates
+// ---------------------------------------------------------------------------
+//
+// Design choice: the WEBSITE is cinematic dark, but emails render against a
+// LIGHT cream/white background. Three reasons:
+//   1) Most email clients still default to light-mode rendering, and a dark
+//      template inverted by Apple Mail/Gmail's auto-darkening looks worse than
+//      a light template that those clients leave alone.
+//   2) The actual readings the product delivers ARE printed black-on-cream
+//      editorial spreads — so the email mirrors the product's deliverable.
+//   3) Light + tight typography + restrained color reads as a magazine, which
+//      is the brand promise.
+//
+// Constraints:
+//   - Inline CSS only (Gmail strips <style>).
+//   - Table-based layout for legacy clients.
+//   - System font stack — Google Fonts in email is unreliable.
+//   - No external images (better deliverability + spam scoring).
+// ---------------------------------------------------------------------------
+
+const FONT_STACK =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
+const PAGE_BG = "#f5f3ee"; // outer cream
+const CARD_BG = "#ffffff";
+const RULE = "#eae6dc";
+const INK = "#111111";
+const INK_2 = "#444444";
+const MUTED = "#888888";
+const MUTED_2 = "#aaaaaa";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function generateWelcomeEmailTemplate(name: string): string {
-  return `
-    <html>
-      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #f97316;">Welcome to StoryInColor, ${name}!</h1>
-        </div>
-        
-        <p>Thank you for joining StoryInColor! We're excited to help you turn your favorite photos into beautiful custom coloring pages.</p>
-        
-        <p>With StoryInColor, you can:</p>
-        <ul>
-          <li>Upload your vacation, family, or pet photos</li>
-          <li>Instantly create unique coloring pages from your images</li>
-          <li>Download and print your creations at home</li>
-          <li>Share your coloring pages with friends and family</li>
-        </ul>
-        
-        <div style="background-color: #f8f4e6; padding: 15px; border-radius: 5px; margin: 20px 0; text-align: center;">
-          <p style="margin: 0;"><strong>Ready to get started?</strong></p>
-        </div>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="https://storyincolor.com/dashboard" 
-             style="display: inline-block; background-color: #f97316; color: #fff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-size: 18px; font-weight: bold;">
-            Go to Your Dashboard
-          </a>
-        </div>
-        <p>If you have any questions, please don't hesitate to contact our support team.</p>
-        
-        <p>Happy coloring!<br/>The StoryInColor Team</p>
-      </body>
-    </html>
-  `;
+  const safeName = escapeHtml(name);
+  const greeting = name && name !== "there" ? `Hi ${safeName} —` : "Welcome —";
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Welcome to StoryInColor</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:${PAGE_BG}; font-family:${FONT_STACK};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${PAGE_BG};">
+      <tr>
+        <td align="center" style="padding:48px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px; background-color:${CARD_BG}; border:1px solid ${RULE};">
+            <!-- Brand bar -->
+            <tr>
+              <td style="padding:22px 32px; border-bottom:1px solid ${RULE}; text-align:center;">
+                <span style="font-size:11px; font-weight:500; letter-spacing:0.18em; color:${MUTED}; text-transform:uppercase;">Story In Color</span>
+              </td>
+            </tr>
+            <!-- Headline -->
+            <tr>
+              <td style="padding:56px 40px 8px;">
+                <p style="margin:0; font-size:11px; font-weight:500; letter-spacing:0.18em; color:${MUTED_2}; text-transform:uppercase;">Welcome</p>
+                <h1 style="margin:18px 0 0; font-size:36px; line-height:1.05; font-weight:400; letter-spacing:-0.04em; color:${INK};">
+                  ${greeting}<br />
+                  <span style="font-style:italic; font-weight:300; color:${MUTED};">we've saved you a seat.</span>
+                </h1>
+              </td>
+            </tr>
+            <!-- Body -->
+            <tr>
+              <td style="padding:24px 40px 0;">
+                <p style="margin:0 0 16px; font-size:16px; line-height:1.6; color:${INK_2};">
+                  StoryInColor turns one photo into an editorial reading — palm, face, beauty, aura, iridology, handwriting, style, skincare, plate, plant, room. Each one is a magazine-quality spread, designed to be saved.
+                </p>
+                <p style="margin:0; font-size:16px; line-height:1.6; color:${INK_2};">
+                  Bring whatever you have a photo of and we'll write you back in about 30 seconds.
+                </p>
+              </td>
+            </tr>
+            <!-- CTA -->
+            <tr>
+              <td align="center" style="padding:36px 40px 12px;">
+                <a href="https://storyincolor.com/readings" style="display:inline-block; padding:14px 28px; background-color:${INK}; color:#ffffff; text-decoration:none; font-size:14px; font-weight:500; letter-spacing:-0.005em; border-radius:999px;">
+                  See the reading room
+                </a>
+              </td>
+            </tr>
+            <!-- Pricing footnote -->
+            <tr>
+              <td style="padding:8px 40px 56px; text-align:center;">
+                <p style="margin:0; font-size:12px; color:${MUTED};">
+                  One reading is one purchase. Single Issue $9.99, Three pack $24, Six pack $39.
+                </p>
+              </td>
+            </tr>
+            <!-- Footer -->
+            <tr>
+              <td style="padding:22px 32px; border-top:1px solid ${RULE}; text-align:center;">
+                <p style="margin:0 0 4px; font-size:12px; color:${MUTED};">
+                  Questions? Just reply to this email.
+                </p>
+                <p style="margin:0; font-size:11px; color:${MUTED_2};">
+                  © ${new Date().getFullYear()} Story In Color · <a href="https://storyincolor.com" style="color:${MUTED_2}; text-decoration:underline;">storyincolor.com</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }
 
-// Generate contact form email template
-function generateContactFormTemplate(name: string, email: string, subject: string, message: string): string {
-  return `
-    <html>
-      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #f97316;">New Contact Form Submission</h1>
-        </div>
-        
-        <p><strong>From:</strong> ${name} (${email})</p>
-        <p><strong>Subject:</strong> ${subject}</p>
-        
-        <div style="background-color: #f8f4e6; padding: 15px; border-radius: 5px; margin: 20px 0;">
-          <h2 style="margin-top: 0; color: #f97316;">Message:</h2>
-          <p>${message.replace(/\n/g, '<br/>')}</p>
-        </div>
-        
-        <p>You can reply directly to this email to respond to the sender.</p>
-      </body>
-    </html>
-  `;
+function generateContactFormTemplate(
+  name: string,
+  email: string,
+  subject: string,
+  message: string,
+): string {
+  const safeName = escapeHtml(name);
+  const safeEmail = escapeHtml(email);
+  const safeSubject = escapeHtml(subject);
+  const safeMessage = escapeHtml(message).replace(/\n/g, "<br />");
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Contact form: ${safeSubject}</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:${PAGE_BG}; font-family:${FONT_STACK};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${PAGE_BG};">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px; background-color:${CARD_BG}; border:1px solid ${RULE};">
+            <tr>
+              <td style="padding:22px 32px; border-bottom:1px solid ${RULE};">
+                <span style="font-size:11px; font-weight:500; letter-spacing:0.18em; color:${MUTED}; text-transform:uppercase;">Story In Color · Contact form</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px 32px 8px;">
+                <h1 style="margin:0; font-size:22px; line-height:1.2; font-weight:500; letter-spacing:-0.02em; color:${INK};">
+                  ${safeSubject}
+                </h1>
+                <p style="margin:10px 0 0; font-size:13px; color:${MUTED};">
+                  From <strong style="color:${INK_2}; font-weight:500;">${safeName}</strong> &lt;<a href="mailto:${safeEmail}" style="color:${INK_2}; text-decoration:underline;">${safeEmail}</a>&gt;
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 32px 32px;">
+                <div style="background-color:${PAGE_BG}; border:1px solid ${RULE}; padding:18px 20px; font-size:15px; line-height:1.6; color:${INK_2};">
+                  ${safeMessage}
+                </div>
+                <p style="margin:18px 0 0; font-size:12px; color:${MUTED};">
+                  Reply directly to this email to reach the sender.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }
 
-// Helper function formatProductName block REMOVED 
+// Helper function formatProductName block REMOVED

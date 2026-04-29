@@ -1,4 +1,4 @@
-import { TOOLS } from '@/lib/tools/registry'
+import { ORDERED_TOOLS } from '@/lib/tools/registry'
 
 export const dynamic = 'force-static'
 
@@ -13,6 +13,7 @@ export default function sitemap() {
 
   const staticPages = [
     { url: baseUrl, lastModified: SITE_LAST_MODIFIED, changeFrequency: 'weekly' as const, priority: 1.0 },
+    { url: `${baseUrl}/about`, lastModified: SITE_LAST_MODIFIED, changeFrequency: 'monthly' as const, priority: 0.7 },
     { url: `${baseUrl}/contact`, lastModified: SITE_LAST_MODIFIED, changeFrequency: 'monthly' as const, priority: 0.8 },
     { url: `${baseUrl}/privacy`, lastModified: SITE_LAST_MODIFIED, changeFrequency: 'monthly' as const, priority: 0.5 },
     { url: `${baseUrl}/terms`, lastModified: SITE_LAST_MODIFIED, changeFrequency: 'monthly' as const, priority: 0.5 },
@@ -21,7 +22,7 @@ export default function sitemap() {
 
   // Reading pages share the site's lastModified — content only changes when
   // the registry is re-deployed.
-  const readingPages = TOOLS.map((t) => ({
+  const readingPages = ORDERED_TOOLS.map((t) => ({
     url: `${baseUrl}/readings/${t.slug}`,
     lastModified: SITE_LAST_MODIFIED,
     changeFrequency: 'weekly' as const,

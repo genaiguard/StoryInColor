@@ -222,10 +222,11 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
       router.push(`/readings/${tool.slug}/result?jobId=${jobId}`);
 
       // Fast-fail bounce-back for client-detectable rejections (quota,
-      // insufficient credits, etc.) — see comment in original implementation
-      // for the rationale.
+      // insufficient credits, daily-free-cap, etc.) — see comment in original
+      // implementation for the rationale.
       generatePromise.catch((err: any) => {
         const code = String(err?.code ?? "");
+        const message: string = err?.message ?? "";
         const fastFailCodes = [
           "resource-exhausted",
           "failed-precondition",
@@ -234,7 +235,12 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
           "unauthenticated",
         ];
         if (fastFailCodes.some((c) => code.endsWith(c))) {
-          toast.error(err?.message ?? "Couldn't start generation");
+          // Friendly message for the daily free cap on coloring pages.
+          // Server emits 'DAILY_FREE_LIMIT_REACHED — 3 free per day.'
+          const friendly = message.includes("DAILY_FREE_LIMIT_REACHED")
+            ? `You've used today's free ${tool.name.toLowerCase()} pages. Try again tomorrow.`
+            : message || "Couldn't start generation";
+          toast.error(friendly);
           router.replace(`/readings/${tool.slug}`);
           return;
         }

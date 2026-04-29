@@ -494,10 +494,20 @@ export default function DashboardPage() {
             />
           </section>
 
+          {/* Library — saved readings displayed as magazine spreads on a
+              shelf. The grid uses aspect-[2/3] + object-contain so each
+              card shows the full editorial spread (1024×1536 native), not
+              a center-cropped square. Reduced max columns to 4 so each
+              "magazine" has breathing room like a print shelf. */}
           <section className="mb-8">
-            <div className="mb-5">
+            <div className="mb-5 flex items-baseline justify-between gap-3">
               <h2 className="text-xl font-medium text-white">
-                Recent readings
+                Your library
+                {!isLoadingGenerations && generations.length > 0 && (
+                  <span className="ml-3 text-sm font-normal text-gray-500">
+                    · {generations.length}
+                  </span>
+                )}
               </h2>
             </div>
 
@@ -522,11 +532,11 @@ export default function DashboardPage() {
             </div>
 
             {isLoadingGenerations ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
                 {[0, 1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="aspect-square animate-pulse rounded-xl bg-white/[0.04]"
+                    className="aspect-[2/3] animate-pulse rounded-xl bg-white/[0.04]"
                   />
                 ))}
               </div>
@@ -544,12 +554,14 @@ export default function DashboardPage() {
                   <Sparkles className="h-5 w-5 text-white" />
                 </span>
                 <h3 className="text-lg font-medium text-white">
-                  Your readings will appear here
+                  {generations.length === 0
+                    ? "Your library is empty"
+                    : "Nothing in this category yet"}
                 </h3>
                 <p className="mx-auto mt-2 max-w-md text-sm text-gray-400">
                   {generations.length === 0
-                    ? "Pick a reading above and bring a photo to see it here."
-                    : "Nothing yet in this category — try another filter or a new reading."}
+                    ? "Bring a photo, pick a reading, and the spread will live here — saved like a magazine."
+                    : "Try another filter or pick a new reading."}
                 </p>
                 <Link
                   href="/readings"
@@ -559,7 +571,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
                 {filteredGenerations.map((gen) => {
                   const tool = getToolById(gen.toolId);
                   const href = tool
@@ -571,15 +583,19 @@ export default function DashboardPage() {
                     <Link
                       key={gen.jobId}
                       href={href}
-                      className="group block overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.04]"
+                      className="group block overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)] transition-all hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.04] hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
                     >
-                      <div className="relative aspect-square overflow-hidden bg-black">
+                      {/* Magazine spread in its native 2:3 portrait — full
+                          spread visible (object-contain) so the card
+                          reads as a saved magazine cover, not a cropped
+                          thumbnail. */}
+                      <div className="relative aspect-[2/3] overflow-hidden bg-black">
                         {gen.outputDownloadUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={gen.outputDownloadUrl}
-                            alt={tool?.name || "Generation"}
-                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                            alt={tool?.name || "Reading"}
+                            className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
                             loading="lazy"
                           />
                         ) : isProcessing ? (
@@ -590,7 +606,7 @@ export default function DashboardPage() {
                             </span>
                           </div>
                         ) : isFailed ? (
-                          <div className="flex h-full w-full items-center justify-center px-2 text-center text-xs text-amber-300">
+                          <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-amber-300">
                             Failed{gen.refunded ? " — refunded" : ""}
                           </div>
                         ) : (
@@ -599,11 +615,11 @@ export default function DashboardPage() {
                           </div>
                         )}
                       </div>
-                      <div className="p-3">
+                      <div className="p-4">
                         <div className="truncate text-sm font-medium text-white">
                           {tool?.name || "Unknown reading"}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="mt-0.5 text-xs text-gray-500">
                           {formatRelative(gen.createdAt)}
                         </div>
                       </div>

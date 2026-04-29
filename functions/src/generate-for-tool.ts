@@ -98,6 +98,36 @@ export const generateForTool = onCall(
       );
     }
 
+    // 0b) Daily cap on free tools (e.g. the coloring page). The coloring
+    // page has creditCost: 0 so the credit-balance check below doesn't
+    // gate it. Without this, an authenticated user could submit hundreds
+    // of free generations per day at ~$0.06 each. Counted from the
+    // userCredits/{uid}/usageEvents subcollection — every call (free or
+    // paid) writes a deduct event with `cost`, so today's cost-0 deducts
+    // are the running total of free usage. The error code
+    // DAILY_FREE_LIMIT_REACHED is what the client looks for.
+    const FREE_DAILY_CAP = 3;
+    if (config.creditCost === 0) {
+      const startOfDay = new Date();
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const eventsToday = await db
+        .collection("userCredits")
+        .doc(userId)
+        .collection("usageEvents")
+        .where("date", ">=", admin.firestore.Timestamp.fromDate(startOfDay))
+        .get();
+      const freeToday = eventsToday.docs.filter((d) => {
+        const data = d.data();
+        return data.type === "deduct" && (data.cost ?? 0) === 0;
+      }).length;
+      if (freeToday >= FREE_DAILY_CAP) {
+        throw new HttpsError(
+          "resource-exhausted",
+          `DAILY_FREE_LIMIT_REACHED — ${FREE_DAILY_CAP} free per day.`,
+        );
+      }
+    }
+
     // 1) Pre-create job + deduct credits in one transactional motion.
     // This runs OUTSIDE the try/catch below — a deduction failure (e.g.,
     // insufficient credits) propagates straight to the caller and must NOT
