@@ -133,18 +133,6 @@ export default function Header({ activeSection, scrollToSection }: HeaderProps) 
               )}
             </div>
 
-            {/* User profile circle — visible sm+ when signed in */}
-            {initialized && user && (
-              <Link
-                href="/dashboard"
-                className="liquid-glass animate-blur-fade-up hidden h-10 w-10 items-center justify-center rounded-full sm:inline-flex"
-                style={{ animationDelay: "400ms" }}
-                aria-label="Account"
-              >
-                <User size={18} />
-              </Link>
-            )}
-
             {/* Hamburger — visible only below lg */}
             <button
               type="button"
