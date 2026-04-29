@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TOOLS } from "@/lib/tools/registry";
+import { ORDERED_TOOLS } from "@/lib/tools/registry";
 
 export default function Footer() {
   return (
@@ -43,7 +43,7 @@ export default function Footer() {
               Readings
             </h3>
             <ul className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {TOOLS.map((tool) => (
+              {ORDERED_TOOLS.map((tool) => (
                 <li key={tool.id}>
                   <Link
                     href={`/readings/${tool.slug}`}
@@ -64,7 +64,7 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
-                  href="/#about"
+                  href="/about"
                   className="text-sm text-gray-400 transition-colors hover:text-white"
                 >
                   About

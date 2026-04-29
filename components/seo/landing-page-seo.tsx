@@ -7,11 +7,11 @@
 // (app/layout.tsx). next/head no-ops in App Router and was the reason
 // this file's previous output never reached the static HTML.
 
-import { TOOLS } from "@/lib/tools/registry";
+import { ORDERED_TOOLS } from "@/lib/tools/registry";
 
 const SITE_URL = "https://storyincolor.com";
 const DESCRIPTION =
-  "What does your photo know about you? Editorial readings of your palm, your face, your handwriting, your plate, your room, and more. Designed to be saved.";
+  "What does your photo know about you? Editorial readings of your palm, your face, your beauty, your handwriting, your plate, your room, and more. Designed to be saved.";
 
 const webAppSchema = {
   "@context": "https://schema.org",
@@ -30,7 +30,10 @@ const webAppSchema = {
       "Pay-as-you-go credits. Packs start at $3.50. The coloring page uses 1 credit; most readings use 10.",
   },
   screenshot: `${SITE_URL}/images/SHARING.webp`,
-  featureList: TOOLS.map((t) => t.name).join(", "),
+  // featureList draws from ORDERED_TOOLS so the JSON-LD catalog matches
+  // what visitors see on /readings and the landing section. Adding a new
+  // reading to the registry updates the schema automatically.
+  featureList: ORDERED_TOOLS.map((t) => t.name).join(", "),
   operatingSystem: "Any modern web browser",
 };
 
@@ -59,7 +62,7 @@ const faqSchema = {
       name: "How does pricing work?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "You buy a small pack of credits and spend them on whichever photo experience you like. The coloring page uses 1 credit. Readings — palm, face, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes — use 10 credits each. New accounts start with free credits, no card required.",
+        text: "You buy a small pack of credits and spend them on whichever photo experience you like. The coloring page uses 1 credit. Readings — palm, face, beauty report, aura, iridology, handwriting, style audit, skincare, plate, plant care, room vibes — use 10 credits each. New accounts start with free credits, no card required.",
       },
     },
     {

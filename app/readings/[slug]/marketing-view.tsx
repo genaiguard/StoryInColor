@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Wand2, Play, AlertTriangle } from "lucide-react";
+import { Check, Wand2, Play, AlertTriangle, ArrowRight } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -141,9 +141,14 @@ export default function MarketingView({ tool }: { tool: Tool }) {
           topBorder
           containerWidth="default"
         >
-          <ol className="grid gap-5 md:grid-cols-3">
-            <li className="liquid-glass overflow-hidden rounded-2xl">
-              <div className="relative flex h-48 items-center justify-center overflow-hidden border-b border-white/5 bg-black">
+          {/* Two cards (Upload → Download) with a centered visual transition
+              between them. The transition is a small icon + label on
+              desktop, and a flow arrow on mobile, replacing the old "Step 2:
+              Generate" card so the editorial spread reads as the
+              destination, not a third equal step. */}
+          <div className="grid items-center gap-5 md:grid-cols-[1fr_auto_1fr] md:gap-4">
+            <div className="liquid-glass overflow-hidden rounded-2xl">
+              <div className="relative flex h-56 items-center justify-center overflow-hidden border-b border-white/5 bg-black">
                 {input ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -160,34 +165,31 @@ export default function MarketingView({ tool }: { tool: Tool }) {
                 )}
               </div>
               <div className="p-5">
-                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
-                  Step 1
-                </div>
-                <h3 className="mt-1 text-lg font-medium text-white">
-                  Upload photo
+                <h3 className="text-lg font-medium text-white">
+                  Upload your photo
                 </h3>
                 <p className="mt-2 text-sm text-gray-400">{tool.inputHint}</p>
               </div>
-            </li>
-            <li className="liquid-glass overflow-hidden rounded-2xl">
-              <div className="relative flex h-48 items-center justify-center overflow-hidden border-b border-white/5 bg-black">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/5">
-                  <Wand2 className="h-6 w-6 text-white" aria-hidden="true" />
-                </span>
-              </div>
-              <div className="p-5">
-                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
-                  Step 2
-                </div>
-                <h3 className="mt-1 text-lg font-medium text-white">Generate</h3>
-                <p className="mt-2 text-sm text-gray-400">
-                  We process your photo and craft your{" "}
-                  {tool.name.toLowerCase()} in roughly 20 to 40 seconds.
-                </p>
-              </div>
-            </li>
-            <li className="liquid-glass overflow-hidden rounded-2xl">
-              <div className="relative flex h-48 items-center justify-center overflow-hidden border-b border-white/5 bg-black">
+            </div>
+
+            {/* Transition visual — vertical (mobile) and horizontal (desktop) */}
+            <div
+              aria-hidden="true"
+              className="flex flex-row items-center justify-center gap-3 py-2 md:flex-col md:px-2 md:py-0"
+            >
+              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent md:h-12 md:w-px md:flex-none md:bg-gradient-to-b" />
+              <span className="liquid-glass flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full">
+                <Wand2 className="h-5 w-5 text-white" />
+              </span>
+              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent md:h-12 md:w-px md:flex-none md:bg-gradient-to-b" />
+              <ArrowRight
+                className="h-4 w-4 text-white/40 md:hidden"
+                aria-hidden="true"
+              />
+            </div>
+
+            <div className="liquid-glass overflow-hidden rounded-2xl">
+              <div className="relative flex h-56 items-center justify-center overflow-hidden border-b border-white/5 bg-black">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={sample}
@@ -203,17 +205,16 @@ export default function MarketingView({ tool }: { tool: Tool }) {
                 )}
               </div>
               <div className="p-5">
-                <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
-                  Step 3
-                </div>
-                <h3 className="mt-1 text-lg font-medium text-white">Download</h3>
+                <h3 className="text-lg font-medium text-white">
+                  Save your spread
+                </h3>
                 <p className="mt-2 text-sm text-gray-400">
-                  Save the high-resolution image, share the link, or generate
-                  another.
+                  A high-resolution editorial spread, ready to download, share,
+                  or print.
                 </p>
               </div>
-            </li>
-          </ol>
+            </div>
+          </div>
         </CinematicSection>
 
         <CinematicSection

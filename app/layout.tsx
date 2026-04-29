@@ -14,11 +14,47 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
+// One canonical site description used by every social card and the SEO
+// JSON-LD. Updating this in one place keeps every share preview in sync.
+const SITE_TITLE = 'StoryInColor — Editorial AI Photo Readings';
+const SITE_DESCRIPTION =
+  'What does your photo know about you? Editorial readings of your palm, your face, your beauty, your handwriting, your plate, your room, and more. Designed to be saved.';
+const SITE_URL = 'https://storyincolor.com';
+// NOTE: the SHARING.webp file currently in /public/images is from the
+// pre-pivot coloring-book era and is on the to-replace list. The metadata
+// below already points at the right URL — once the file is regenerated
+// (cinematic dark composition with brand text), shared cards update with
+// no further code change.
+const SITE_OG_IMAGE = `${SITE_URL}/images/SHARING.webp`;
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://storyincolor.com'),
-  title: 'StoryInColor — Editorial AI Photo Readings',
-  description: 'What does your photo know about you? Editorial readings of your palm, your face, your handwriting, your plate, your room, and more. Designed to be saved.',
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  applicationName: 'StoryInColor',
   manifest: '/site.webmanifest',
+  alternates: { canonical: SITE_URL },
+  openGraph: {
+    type: 'website',
+    siteName: 'StoryInColor',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    images: [
+      {
+        url: SITE_OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: 'StoryInColor — Editorial AI Photo Readings',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [SITE_OG_IMAGE],
+  },
   icons: [
     { rel: 'icon', url: '/favicon.ico', type: 'image/x-icon' },
     { rel: 'icon', url: '/favicon.svg', type: 'image/svg+xml' },
