@@ -7,10 +7,50 @@ import FormData from "form-data";
 import { v4 as uuidv4 } from "uuid";
 import { getServerToolConfig } from "./tool-prompts";
 import { refundCreditsTx } from "./credit-ledger";
+import { dispatchServerConversion } from "./conversions/dispatch";
+import type { ServerUserData } from "./conversions/types";
 
 // Cloud Functions deduplicates secret bindings by name, so re-declaring here is
 // safe even though `index.ts` already defines the same secret.
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
+// Phase 4 — bound so the env exposes the values to dispatchServerConversion.
+// Setting the values is a separate `firebase functions:secrets:set` step.
+const META_CAPI_TOKEN = defineSecret("META_CAPI_TOKEN");
+const GA4_MP_API_SECRET = defineSecret("GA4_MP_API_SECRET");
+
+/** Helper: build ServerUserData from the caller's auth token + the
+ *  attribution block on /users/{uid}. Used by both reading_started and
+ *  reading_completed dispatches in this file. */
+async function loadUserDataForConversions(
+  userId: string,
+  email: string | undefined,
+  request: { rawRequest?: { ip?: string; get?: (h: string) => string | undefined } },
+): Promise<ServerUserData> {
+  let userData: ServerUserData = {
+    uid: userId,
+    email,
+    ip: request.rawRequest?.ip,
+    userAgent: request.rawRequest?.get?.("user-agent"),
+  };
+  try {
+    const userDoc = await db.collection("users").doc(userId).get();
+    const attribution = userDoc.data()?.attribution as
+      | { fbp?: string; fbc?: string; gaClientId?: string }
+      | undefined;
+    if (attribution) {
+      userData = {
+        ...userData,
+        fbp: attribution.fbp || undefined,
+        fbc: attribution.fbc || undefined,
+        gaClientId: attribution.gaClientId || undefined,
+      };
+    }
+  } catch {
+    /* attribution doc missing for legacy users — server still fires with
+       UID + email + ip + UA, just lower match quality */
+  }
+  return userData;
+}
 
 // Default to gpt-image-2 to match scripts/generate-sample.mjs — the script
 // renders the marketing samples shown on every /readings/<slug> page, so prod
@@ -30,7 +70,7 @@ const bucket = admin.storage().bucket();
 
 export const generateForTool = onCall(
   {
-    secrets: [OPENAI_API_KEY],
+    secrets: [OPENAI_API_KEY, META_CAPI_TOKEN, GA4_MP_API_SECRET],
     timeoutSeconds: 300,
     memory: "4GiB",
   },
@@ -200,6 +240,35 @@ export const generateForTool = onCall(
       return { success: true, jobId, alreadyStarted: true };
     }
 
+    // Phase 4 conversion: ReadingStarted. Fires AFTER the credit transaction
+    // commits so we never report a started event for a refused dispatch.
+    // Wrapped + awaited briefly so we don't lose events when the function
+    // exits, but bounded so a slow CAPI call can't extend the timeout.
+    const conversionUserData = await loadUserDataForConversions(
+      userId,
+      request.auth?.token?.email ?? undefined,
+      request,
+    );
+    try {
+      await dispatchServerConversion(
+        {
+          name: "ReadingStarted",
+          eventId: `srv-readstart-${jobId}`,
+          customData: {
+            content_type: "reading",
+            content_ids: [toolId],
+            content_category: "reading_dispatch",
+            tool_id: toolId,
+            credit_cost: config.creditCost,
+            job_id: jobId,
+          },
+        },
+        conversionUserData,
+      );
+    } catch (convErr) {
+      console.warn("[Conversions] ReadingStarted dispatch failed (non-fatal):", convErr);
+    }
+
     // 2) Run generation; on ANY failure, refund and mark failed.
     try {
       // Per-tool input preprocessing — `detail` tools get a 1536px high-quality
@@ -344,6 +413,33 @@ export const generateForTool = onCall(
         generationId,
         completedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+
+      // Phase 4 conversion: ReadingCompleted (the activation event). Fires
+      // after the job + generation docs have committed so a downstream
+      // crash doesn't double-count. Non-fatal — we've already collected
+      // payment and produced the output, so a tracker miss is just lost
+      // visibility, not a user-facing failure.
+      try {
+        await dispatchServerConversion(
+          {
+            name: "ReadingCompleted",
+            eventId: `srv-readdone-${jobId}`,
+            customData: {
+              content_type: "reading",
+              content_ids: [toolId],
+              content_category: "reading_completion",
+              tool_id: toolId,
+              credit_cost: config.creditCost,
+              job_id: jobId,
+              generation_id: generationId,
+            },
+          },
+          conversionUserData,
+        );
+      } catch (convErr) {
+        console.warn("[Conversions] ReadingCompleted dispatch failed (non-fatal):", convErr);
+      }
+
       return {
         success: true,
         jobId,

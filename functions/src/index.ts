@@ -4,6 +4,8 @@ import Stripe from 'stripe';
 import { defineSecret } from 'firebase-functions/params';
 import { sendWelcomeEmail, sendContactFormEmail } from './email-service';
 import { CREDIT_PACKAGES } from './credit-packages';
+import { dispatchServerConversion } from './conversions/dispatch';
+import type { ServerUserData } from './conversions/types';
 
 // Version log - update this to verify deployments
 console.log('Cloud Functions initializing - OpenAI Integration Version');
@@ -15,6 +17,13 @@ const AWS_ACCESS_KEY_ID = defineSecret('AWS_ACCESS_KEY_ID');
 const AWS_SECRET_ACCESS_KEY = defineSecret('AWS_SECRET_ACCESS_KEY');
 const AWS_REGION = defineSecret('AWS_REGION');
 const SENDER_EMAIL_ADDRESS = defineSecret('SENDER_EMAIL_ADDRESS');
+// Server-side conversion forwarding (Phase 4). Only consumed by the
+// dispatchServerConversion helper, which reads them via process.env at
+// call time. Marking them as Firebase secrets here ensures they're injected
+// into the function runtime; setting their values is a separate
+// `firebase functions:secrets:set <NAME>` step.
+const META_CAPI_TOKEN = defineSecret('META_CAPI_TOKEN');
+const GA4_MP_API_SECRET = defineSecret('GA4_MP_API_SECRET');
 // Initialize Firebase Admin
 admin.initializeApp();
 const db = admin.firestore(); // Initialize Firestore globally here
@@ -26,13 +35,17 @@ const auth = admin.auth();    // Initialize Auth globally here
 export const stripeWebhook = onRequest(
   {
     secrets: [
-      STRIPE_SECRET_KEY, 
+      STRIPE_SECRET_KEY,
       STRIPE_WEBHOOK_SECRET,
       // AWS secrets for email services
-      AWS_ACCESS_KEY_ID, 
-      AWS_SECRET_ACCESS_KEY, 
-      AWS_REGION, 
-      SENDER_EMAIL_ADDRESS 
+      AWS_ACCESS_KEY_ID,
+      AWS_SECRET_ACCESS_KEY,
+      AWS_REGION,
+      SENDER_EMAIL_ADDRESS,
+      // Server-side conversion mirroring (Phase 4). Bound here so the
+      // runtime env exposes them to dispatchServerConversion.
+      META_CAPI_TOKEN,
+      GA4_MP_API_SECRET,
     ],
     invoker: 'public'
   },
@@ -151,6 +164,58 @@ export const stripeWebhook = onRequest(
                           }
                           
                           console.log(`[Credits] Successfully added ${creditAmount} credits for user ${userId}`);
+
+                          // Phase 4: server-side Purchase mirror to Meta CAPI + GA4 MP.
+                          // Wrapped in its own try/catch so a tracker failure doesn't
+                          // 500 the webhook (Stripe would then retry the credit grant).
+                          try {
+                              const fbEventIdFromMeta = session.metadata?.fbEventId;
+                              const eventId =
+                                  (typeof fbEventIdFromMeta === 'string' && fbEventIdFromMeta.length > 0)
+                                      ? fbEventIdFromMeta
+                                      : `srv-purchase-${session.id}`;
+                              // Pull cookies + GA client_id from users/{uid}.attribution
+                              // (set by lib/attribution/persist.ts at signup time).
+                              let userData: ServerUserData = {
+                                  email: session.customer_details?.email || session.customer_email || undefined,
+                                  uid: userId,
+                              };
+                              try {
+                                  const userDoc = await db.collection('users').doc(userId).get();
+                                  const attribution = userDoc.data()?.attribution as
+                                      | { fbp?: string; fbc?: string; gaClientId?: string }
+                                      | undefined;
+                                  if (attribution) {
+                                      userData = {
+                                          ...userData,
+                                          fbp: attribution.fbp || undefined,
+                                          fbc: attribution.fbc || undefined,
+                                          gaClientId: attribution.gaClientId || undefined,
+                                      };
+                                  }
+                              } catch (attrErr) {
+                                  console.warn('[Conversions] Could not load user attribution; proceeding with reduced match quality:', attrErr);
+                              }
+                              const dispatched = await dispatchServerConversion(
+                                  {
+                                      name: 'Purchase',
+                                      eventId,
+                                      customData: {
+                                          currency: 'USD',
+                                          value: priceInCents / 100,
+                                          content_ids: [packageId],
+                                          content_name: 'Credit Purchase',
+                                          content_category: 'credits',
+                                          num_items: creditAmount,
+                                          transaction_id: session.id,
+                                      },
+                                  },
+                                  userData,
+                              );
+                              console.log('[Conversions] Purchase dispatch result:', JSON.stringify(dispatched));
+                          } catch (convErr) {
+                              console.error('[Conversions] Server-side Purchase mirror failed (non-fatal):', convErr);
+                          }
                       } catch (error) {
                           console.error(`[Credits Error] Failed to add credits: ${error}`);
                           // Still return success to Stripe but log the error
