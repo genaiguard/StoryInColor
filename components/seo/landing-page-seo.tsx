@@ -11,7 +11,7 @@ import { ORDERED_TOOLS } from "@/lib/tools/registry";
 
 const SITE_URL = "https://storyincolor.com";
 const DESCRIPTION =
-  "What does your photo know about you? Editorial readings of your palm, your face, your beauty, your handwriting, your plate, your room, and more. Designed to be saved.";
+  "What does your photo know about you? Editorial readings of your palm, your face, your beauty, your handwriting, your style, and more. Designed to be saved.";
 
 const webAppSchema = {
   "@context": "https://schema.org",
@@ -46,7 +46,7 @@ const faqSchema = {
       name: "What kinds of photos can I bring?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Each reading takes a different photo: your open palm for palm reading, a clear selfie for face or aura, a top-down meal for plate, a wide shot of your room for room vibes, your handwriting for graphology, and so on. JPG, PNG, or WEBP up to 10 MB. The clearer and better-lit, the better the reading.",
+        text: "Each reading takes a different photo: your open palm for palm reading, a clear selfie for face, beauty, aura, and skincare, a close-up of your iris for iridology, your handwriting for graphology, an outfit shot for style audit. JPG, PNG, or WEBP up to 10 MB. The clearer and better-lit, the better the reading.",
       },
     },
     {
@@ -70,7 +70,7 @@ const faqSchema = {
       name: "Are wellness-style readings medical advice?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "No. Iridology, skincare, and plate readings are intended for entertainment and gentle wellness reflection only — not medical advice, diagnosis, or treatment. Consult a qualified professional for any health concern.",
+        text: "No. Iridology and skincare readings are intended for entertainment and gentle wellness reflection only — not medical advice, diagnosis, or treatment. Consult a qualified professional for any health concern.",
       },
     },
   ],

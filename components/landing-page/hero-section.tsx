@@ -7,10 +7,10 @@ import { CinematicHero } from "@/components/cinematic/cinematic-hero";
 const FEATURED_IDS = [
   "palm-reading",
   "face-reading",
+  "beauty-report",
   "aura-reading",
   "handwriting",
   "style-audit",
-  "room-vibes",
 ] as const;
 
 const FEATURED = FEATURED_IDS.map((id) => {

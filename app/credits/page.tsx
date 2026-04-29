@@ -449,8 +449,7 @@ export default function CreditsPage() {
               <p>
                 One reading is one purchase — pick a pack, then spend it on any
                 editorial reading on the site (palm, face, beauty report, aura,
-                iridology, handwriting, style audit, skincare, plate, plant
-                care, room vibes).
+                iridology, handwriting, style audit, skincare).
               </p>
               <p>
                 Readings never expire, there's no subscription, and you can

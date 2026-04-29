@@ -22,8 +22,6 @@ const WELLNESS_DISCLAIMER: Record<string, string> = {
     "For entertainment only. This is not medical or diagnostic advice. Consult a qualified healthcare professional for any health concern.",
   "skincare-glow":
     "For entertainment only. Cosmetic guidance — not medical advice, diagnosis, or treatment. See a dermatologist for any skin concern.",
-  "plate-analysis":
-    "For entertainment only. General wellness reflection — not medical or prescriptive nutrition advice. See a registered dietitian for personalized guidance.",
 };
 
 /**

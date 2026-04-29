@@ -210,7 +210,7 @@ function generateWelcomeEmailTemplate(name: string): string {
             <tr>
               <td style="padding:24px 40px 0;">
                 <p style="margin:0 0 16px; font-size:16px; line-height:1.6; color:${INK_2};">
-                  StoryInColor turns one photo into an editorial reading — palm, face, beauty, aura, iridology, handwriting, style, skincare, plate, plant, room. Each one is a magazine-quality spread, designed to be saved.
+                  StoryInColor turns one photo into an editorial reading — palm, face, beauty, aura, iridology, handwriting, style, skincare. Each one is a magazine-quality spread, designed to be saved.
                 </p>
                 <p style="margin:0; font-size:16px; line-height:1.6; color:${INK_2};">
                   Bring whatever you have a photo of and we'll write you back in about 30 seconds.

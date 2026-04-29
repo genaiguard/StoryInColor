@@ -29,7 +29,7 @@ const FAQS: FAQ[] = [
     value: "photos",
     question: "What kind of photo should I bring?",
     answer:
-      "It depends on the reading. The palm reading wants a clear photo of your open palm. The plate reading wants a top-down meal photo. Each reading page tells you exactly what to upload — and the clearer the photo, the better the result.",
+      "It depends on the reading. The palm reading wants a clear photo of your open palm. The face reading wants a front-facing selfie. The handwriting reading wants a written sample. Each reading page tells you exactly what to upload — and the clearer the photo, the better the result.",
   },
   {
     value: "privacy",
@@ -59,7 +59,7 @@ const FAQS: FAQ[] = [
     value: "medical",
     question: "Is this medical or diagnostic?",
     answer:
-      "No. StoryInColor's readings — including iridology, skincare, and plate analysis — are intended for entertainment and gentle wellness reflection only. They are not a substitute for medical, psychological, or professional advice.",
+      "No. StoryInColor's readings — including iridology and skincare — are intended for entertainment and gentle wellness reflection only. They are not a substitute for medical, psychological, or professional advice.",
   },
 ];
 

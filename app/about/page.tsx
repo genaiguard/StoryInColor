@@ -34,7 +34,7 @@ const PRINCIPLES: Array<{ eyebrow: string; title: string; body: string }> = [
   {
     eyebrow: "02 — Honest",
     title: "Reflective, not predictive.",
-    body: "We frame readings as cultural and lifestyle reflections — palmistry as tradition, beauty as observation, room vibes as styling. Where wellness brushes the edges of medicine, we say so plainly.",
+    body: "We frame readings as cultural and lifestyle reflections — palmistry as tradition, beauty as observation, style as expression. Where wellness brushes the edges of medicine, we say so plainly.",
   },
   {
     eyebrow: "03 — Saveable",
@@ -58,7 +58,7 @@ export default function AboutPage() {
               <span className="italic font-light text-gray-400">story.</span>
             </>
           }
-          description="StoryInColor is an editorial AI studio that turns a single photo — your palm, your face, your handwriting, your plate, your room — into a magazine-quality reading. One spread, designed to be saved."
+          description="StoryInColor is an editorial AI studio that turns a single photo — your palm, your face, your handwriting, your style, your skin — into a magazine-quality reading. One spread, designed to be saved."
           spotlight
           containerWidth="default"
         >
@@ -93,7 +93,7 @@ export default function AboutPage() {
               <span className="italic font-light text-gray-400">one voice.</span>
             </>
           }
-          description="From mystical traditions like palmistry and Mian Xiang face reading, to data-driven reports like the beauty report and skincare glow, to lifestyle reflections like room vibes and plate analysis — every reading is finished in the same editorial register."
+          description="From mystical traditions like palmistry and Mian Xiang face reading, to data-driven reports like the beauty report and skincare glow, to lifestyle reflections like style audit and graphology — every reading is finished in the same editorial register."
           topBorder
           containerWidth="default"
         >

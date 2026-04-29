@@ -85,6 +85,21 @@ explicitly **Rejected** below.
   most input prompts are now cached.
 - **Branded receipt / pixel events / analytics audit** — not started.
 
+## Removed
+
+- **`plate-analysis`, `plant-care`, `room-vibes`.** The three lifestyle
+  / utility readings sat outside the editorial-self-reflection direction
+  the brand has settled on (palm, face, beauty, aura, iridology,
+  handwriting, style, skincare). Removed from `lib/tools/registry.ts`,
+  `functions/src/tool-prompts.ts`, `scripts/generate-sample.mjs`,
+  cover images deleted from `public/images/tools/`, and every literal
+  copy mention swept (FAQ, /about, /credits, /readings page meta,
+  landing-page-seo, welcome email body, marketing-view wellness
+  disclaimer for plate-analysis). Hero carousel rotated featured set
+  too — beauty-report rotated in to keep the carousel at six items.
+  Static-export will return 404 for any `/readings/<old-slug>` URL —
+  that's the desired behaviour, those pages no longer exist.
+
 ## Explicitly rejected
 
 - **Free signup grant** of any size (5 / 10 / 15 readings). Every

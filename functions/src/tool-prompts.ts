@@ -129,39 +129,6 @@ export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
     inputFidelity: "high",
     preprocessing: "detail",
   },
-  "plate-analysis": {
-    prompt:
-      "Based on my plate photo, give a dietitian-style infographic breakdown estimating the macro split (protein, carbohydrate, fat), portion balance, fiber and produce coverage, plating composition, and color theory of the food. Lay it out as a clean, minimal editorial nutrition card with thin lines, rounded panels per macro and observation, a small donut chart for the macro ratio, and a refined cookbook-magazine feel that looks expensive. Include a small black-on-white contour line-art of the plate from above as a decorative emblem. Frame it as general wellness reflection and balanced-eating inspiration, not medical or prescriptive nutrition advice. Do your best.",
-    creditCost: 1,
-    outputType: "image+guide",
-    imageSize: "1024x1024",
-    endpoint: "edits",
-    quality: "high",
-    inputFidelity: "high",
-    preprocessing: "exif-rotate",
-  },
-  "plant-care": {
-    prompt:
-      "Based on my plant photo, give a plant-ID-style care card identifying likely species cues from leaf shape, venation, and color, then advising on light needs (low, bright indirect, full sun), watering cadence, humidity, soil and drainage, fertilizing rhythm, and common pests (spider mites, mealybugs, fungus gnats, scale). Lay it out as a clean, minimal editorial care card with thin lines, rounded panels per topic, small icons, a botanical-journal palette, and an expensive nursery-boutique feel. Add a small black-on-white contour line-art of the plant's silhouette as a decorative botanical illustration. Frame it as friendly care guidance, not a guaranteed diagnosis of the specimen. Do your best.",
-    creditCost: 1,
-    outputType: "image+guide",
-    imageSize: "1024x1536",
-    endpoint: "edits",
-    quality: "medium",
-    inputFidelity: "high",
-    preprocessing: "none",
-  },
-  "room-vibes": {
-    prompt:
-      'Based on my room photo, give an interior-styling read covering palette, materials and textures, lighting, furniture silhouettes, era cues, and the closest design archetype (mid-century modern, Scandinavian, Japandi, minimalist, maximalist, industrial, coastal, or eclectic), plus a "shelf-as-personality" note on objects on display. Lay it out as a clean, minimal editorial interiors spread in landscape orientation with thin lines, rounded cards per category, swatch chips for the palette, refined serif-and-sans typography, and an expensive shelter-magazine feel. Include a small black-on-white contour line-art of the room\'s key silhouette as a decorative vignette. Frame everything as styling inspiration, not a verdict on taste. Do your best.',
-    creditCost: 1,
-    outputType: "image+guide",
-    imageSize: "1536x1024",
-    endpoint: "edits",
-    quality: "high",
-    inputFidelity: "high",
-    preprocessing: "none",
-  },
 };
 
 export function getServerToolConfig(toolId: string): ServerToolConfig | undefined {
