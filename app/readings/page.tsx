@@ -11,7 +11,7 @@ const SHORT_DESCRIPTION =
 export const metadata: Metadata = {
   title: "The reading room | StoryInColor",
   description:
-    "Every photo experience on StoryInColor, in one place — palm reading, face reading, beauty report, color analysis, hairstyle analysis, aura, iridology, handwriting, style audit, skincare, and coloring pages. Bring whatever you have a photo of.",
+    "Every photo experience on StoryInColor, in one place — palm reading, face reading, beauty report, color analysis, hairstyle analysis, aura, iridology, handwriting, style audit, skincare, and coloring pages. One photo, one editorial spread.",
   alternates: { canonical: "https://storyincolor.com/readings" },
   openGraph: {
     title: "The reading room | StoryInColor",
@@ -68,7 +68,7 @@ export default function ToolsCatalogPage() {
               </span>
             </>
           }
-          description="Bring whatever you have a photo of — your palm, your face, your handwriting, your style, your skin — and we'll write you back."
+          description="Send a photo — your palm, your face, your handwriting, your style, your skin — and we'll write you back."
         >
           <ToolGrid showCategoryChips showFreeBannerForSignedIn />
         </CinematicSection>

@@ -21,7 +21,7 @@ export default function ExamplesSection() {
           <span className="italic font-light text-gray-400">keepsakes.</span>
         </>
       }
-      description="Bring whatever you have a photo of — your palm, your face, your handwriting, your style, your skin — and we'll write you back."
+      description="Send a photo — your palm, your face, your handwriting, your style, your skin — and we'll write you back."
     >
       <ToolGrid showCategoryChips />
     </CinematicSection>
