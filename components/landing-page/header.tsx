@@ -103,24 +103,29 @@ export default function Header({ activeSection, scrollToSection }: HeaderProps) 
             {NAV_ITEMS.map((item, i) => renderNavLink(item, 100 + i * 50))}
           </nav>
 
-          {/* Right side actions */}
+          {/* Right side actions — sm+ only. Signed-out shows the
+              text "Sign in" pill (it's a verb-y first-time CTA, so a
+              circle wouldn't communicate the action). Signed-in shows
+              the user-icon circle as the single account affordance —
+              no redundant "Dashboard" text pill alongside it. */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Sign in / Dashboard pill — visible sm+ */}
             <div
               className="hidden animate-blur-fade-up sm:block"
               style={{ animationDelay: "350ms" }}
             >
               {!initialized ? (
                 <div
-                  className="liquid-glass h-10 w-28 rounded-full"
+                  className="liquid-glass h-10 w-10 rounded-full"
                   aria-hidden="true"
                 />
               ) : user ? (
                 <Link
                   href="/dashboard"
-                  className="liquid-glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium md:px-6"
+                  className="liquid-glass inline-flex h-10 w-10 items-center justify-center rounded-full"
+                  aria-label="Account"
+                  title="Account"
                 >
-                  Dashboard
+                  <User size={18} />
                 </Link>
               ) : (
                 <Link

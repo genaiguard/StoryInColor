@@ -92,38 +92,34 @@ const SECTIONS: Array<{ heading: string; body: React.ReactNode }> = [
     ),
   },
   {
-    heading: "5. Payment and credits",
+    heading: "5. Payment and readings",
     body: (
       <>
         <p>
-          Our service operates on a credit-based system. All payments for
-          credits are processed securely through our payment processors. By
-          purchasing credits, you agree to pay all charges at the prices
-          listed at the time of your purchase.
+          Each editorial reading is a single purchase. All payments are
+          processed securely through our payment processors. By purchasing a
+          reading or a pack, you agree to pay all charges at the prices listed
+          at the time of your purchase.
         </p>
         <p className="mt-3">
-          Each credit allows you to generate one result from your uploaded
-          photo. Once used, credits cannot be refunded except in the
-          following circumstances:
+          One reading entitles you to one result from one uploaded photo.
+          Once used, readings cannot be refunded except in the following
+          circumstances:
         </p>
         <ul className="mt-3 list-disc space-y-2 pl-5">
           <li>
-            Technical failure where the generation process was not completed
-            despite credit deduction
+            Technical failure where the reading was not delivered despite the
+            reading being deducted from your balance
           </li>
           <li>
-            Service outage preventing delivery of purchased credits to your
-            account
+            Service outage preventing delivery of a reading you have purchased
           </li>
         </ul>
         <p className="mt-3">We do not offer refunds for:</p>
         <ul className="mt-3 list-disc space-y-2 pl-5">
-          <li>
-            Stylistic or artistic preferences regarding the AI conversion
-            results
-          </li>
-          <li>Credits that have been successfully used to generate results</li>
-          <li>Unused credits in your account after purchase</li>
+          <li>Stylistic or artistic preferences regarding the result</li>
+          <li>Readings that have been successfully delivered</li>
+          <li>Unused readings remaining on your balance after purchase</li>
         </ul>
       </>
     ),
