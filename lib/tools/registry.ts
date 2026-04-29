@@ -128,7 +128,8 @@ export const TOOLS: Tool[] = [
         },
         PHOTO_PRIVACY_FAQ,
       ],
-      sampleImage: "/images/tools/face-reading.webp",
+      inputImage: "/images/tools/face-reading-input.webp",
+      sampleImage: "/images/tools/face-reading-sample.webp",
     },
   },
   {
