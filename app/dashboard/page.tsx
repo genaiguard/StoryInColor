@@ -213,17 +213,22 @@ export default function DashboardPage() {
           );
           const mostRecentPurchase = sortedPurchases[0];
           if (mostRecentPurchase) {
-            const purchaseDate = new Date(
-              mostRecentPurchase.purchaseDate.seconds * 1000,
-            );
-            const today = new Date();
-            const isToday =
-              purchaseDate.getDate() === today.getDate() &&
-              purchaseDate.getMonth() === today.getMonth() &&
-              purchaseDate.getFullYear() === today.getFullYear();
             const isPaidPurchase = mostRecentPurchase.pricePaid > 0;
 
-            if (isToday && isPaidPurchase) {
+            // Three independent gates already prevent re-firing this Pixel
+            // emit on stray dashboard loads:
+            //   1. creditPurchaseSuccess — the URL ?credit_purchase=success
+            //      query param is set ONLY by Stripe's success_url redirect
+            //   2. !recentPurchaseDetected — local React state, prevents
+            //      double-fire within the same render cycle
+            //   3. acknowledgedSessionKey in sessionStorage — set below,
+            //      survives reloads within the tab so refresh-loops don't
+            //      re-fire
+            // (We previously also gated on isToday-in-local-tz, which was
+            // racy near UTC midnight for users in extreme time zones —
+            // dropped because the gates above are sufficient and the CAPI
+            // server emit is the source of truth either way.)
+            if (isPaidPurchase) {
               setRecentPurchaseDetected(true);
               setIsProcessingCreditPurchase(false);
               sessionStorage.setItem(acknowledgedSessionKey, "true");
