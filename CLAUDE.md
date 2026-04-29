@@ -72,6 +72,7 @@ This means the source repo is private, the served repo is public, and `out/` in 
 
 ## Local dev caveats
 
+- **Never run `npm run build` while `npm run dev` is up.** The production build writes to the same `.next/` directory the dev server is serving SSR chunks from, and the chunk hashes don't match. The dev server will then 500 with `ENOENT: ... _ssr_components_...` and 404 every CSS/JS asset. Recovery: stop the dev server, `rm -rf .next`, restart. If you need a build verification, stop the dev server first.
 - `app/firebase/firebase-provider.tsx` has emulator connections **commented out** — local dev currently hits production Firebase. If you uncomment, also run `firebase emulators:start`.
 - The two npm trees do not share a `node_modules`; install deps in both root and `functions/` when first cloning.
 - `tsconfig.json` has `strict: false` and `noImplicitAny: false`. The build won't catch type errors anyway (`ignoreBuildErrors: true`). For real type-checking run `tsc --noEmit` (root) or `npm run build` inside `functions/`.
