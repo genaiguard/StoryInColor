@@ -6,6 +6,7 @@ import Script from 'next/script'
 import StructuredData from '@/components/seo/structured-data'
 import FacebookPixel from '@/components/tracking/facebook-pixel'
 import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
+import AttributionCapture from '@/components/tracking/attribution-capture'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -126,6 +127,11 @@ export default function RootLayout({
       </head>
       <body className="bg-black text-white antialiased">
         <FirebaseProvider>
+          {/* Side-effect-only client component. Reads UTMs / referrer /
+              click-ids on every route change and persists first-touch +
+              last-touch to localStorage and a 365d first-party cookie.
+              Read by lib/attribution/persist.ts on signup completion. */}
+          <AttributionCapture />
           {children}
         </FirebaseProvider>
       </body>

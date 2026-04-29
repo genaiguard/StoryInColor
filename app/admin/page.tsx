@@ -48,6 +48,32 @@ interface UserGenerationSummary {
   createdAt: string | null;
 }
 
+// Mirror of UserAttributionPayload + AttributionTouch in functions/src/index.ts.
+// Kept in sync by hand because the two npm trees don't share modules.
+interface AttributionTouch {
+  source: string | null;
+  medium: string | null;
+  campaign: string | null;
+  term: string | null;
+  content: string | null;
+  referrer: string | null;
+  landingPath: string;
+  gclid: string | null;
+  fbclid: string | null;
+  msclkid: string | null;
+  capturedAt: string;
+}
+
+interface UserAttributionPayload {
+  firstTouch: AttributionTouch | null;
+  lastTouch: AttributionTouch | null;
+  anonId: string | null;
+  gaClientId: string | null;
+  fbp: string | null;
+  fbc: string | null;
+  clarityCustomId: string | null;
+}
+
 interface EnrichedUser {
   id: string;
   email: string | null;
@@ -61,6 +87,7 @@ interface EnrichedUser {
   failedGenerationCount: number;
   latestGenerationCreatedAt: string | null;
   generations: UserGenerationSummary[];
+  attribution: UserAttributionPayload | null;
 }
 
 interface AdminDashboardData {
@@ -186,6 +213,7 @@ export default function AdminPage() {
   const [showOnlyUsersWithReadings, setShowOnlyUsersWithReadings] =
     useState(false);
   const [showOnlyPaidUsers, setShowOnlyPaidUsers] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortKey>("userCreatedAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -250,6 +278,18 @@ export default function AdminPage() {
     };
   }, [initialized, user, isAdmin, refreshKey]);
 
+  // Distinct first-touch sources observed across all users — used to populate
+  // the Source filter dropdown. "(unknown)" lumps users with no attribution
+  // record together so legacy users don't disappear when the admin filters.
+  const availableSources = useMemo(() => {
+    const seen = new Set<string>();
+    for (const u of users) {
+      const s = u.attribution?.firstTouch?.source;
+      seen.add(s && s.length > 0 ? s : "(unknown)");
+    }
+    return Array.from(seen).sort();
+  }, [users]);
+
   const processedUsers = useMemo(() => {
     let processed = users;
 
@@ -259,6 +299,13 @@ export default function AdminPage() {
     if (showOnlyPaidUsers) {
       processed = processed.filter((u) => u.totalSpent > 0);
     }
+    if (sourceFilter !== "all") {
+      processed = processed.filter((u) => {
+        const src = u.attribution?.firstTouch?.source;
+        const labeled = src && src.length > 0 ? src : "(unknown)";
+        return labeled === sourceFilter;
+      });
+    }
 
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
@@ -267,6 +314,12 @@ export default function AdminPage() {
           (u.email && u.email.toLowerCase().includes(q)) ||
           (u.displayName && u.displayName.toLowerCase().includes(q)) ||
           u.id.toLowerCase().includes(q) ||
+          // Search also matches first-touch / last-touch source + campaign so
+          // typing "facebook" or "summer-launch" narrows the user list.
+          (u.attribution?.firstTouch?.source ?? "").toLowerCase().includes(q) ||
+          (u.attribution?.firstTouch?.campaign ?? "").toLowerCase().includes(q) ||
+          (u.attribution?.lastTouch?.source ?? "").toLowerCase().includes(q) ||
+          (u.attribution?.lastTouch?.campaign ?? "").toLowerCase().includes(q) ||
           u.generations.some(
             (g) =>
               g.id.toLowerCase().includes(q) ||
@@ -309,6 +362,7 @@ export default function AdminPage() {
     users,
     showOnlyUsersWithReadings,
     showOnlyPaidUsers,
+    sourceFilter,
     searchTerm,
     sortBy,
     sortDirection,
@@ -436,7 +490,7 @@ export default function AdminPage() {
                 <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
                   Filters
                 </h2>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   <FilterChip
                     on={showOnlyUsersWithReadings}
                     onClick={() =>
@@ -449,6 +503,22 @@ export default function AdminPage() {
                     onClick={() => setShowOnlyPaidUsers((v) => !v)}
                     label="Paying users"
                   />
+                  <Select
+                    value={sourceFilter}
+                    onValueChange={(v) => setSourceFilter(v)}
+                  >
+                    <SelectTrigger className="h-9 w-[200px] rounded-full border-white/10 bg-white/[0.04] text-sm text-white">
+                      <SelectValue placeholder="Source" />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-black text-white">
+                      <SelectItem value="all">All sources</SelectItem>
+                      {availableSources.map((src) => (
+                        <SelectItem key={src} value={src}>
+                          {src}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div>
@@ -692,6 +762,53 @@ function UserDetailCard({ userData }: { userData: EnrichedUser }) {
         </div>
       </div>
 
+      {/* Attribution — first-touch + last-touch + linked tracker IDs.
+          Hidden when the user has no attribution record at all (legacy
+          accounts created before capture was deployed). */}
+      {userData.attribution &&
+        (userData.attribution.firstTouch ||
+          userData.attribution.lastTouch ||
+          userData.attribution.gaClientId ||
+          userData.attribution.fbp) && (
+          <div className="border-b border-white/5 p-5">
+            <h4 className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+              Attribution
+            </h4>
+            <div className="grid gap-3 md:grid-cols-2">
+              <AttributionTouchBlock
+                label="First touch"
+                touch={userData.attribution.firstTouch}
+              />
+              <AttributionTouchBlock
+                label="Last touch"
+                touch={userData.attribution.lastTouch}
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500">
+              {userData.attribution.gaClientId && (
+                <span title="GA4 client_id (from _ga cookie)">
+                  GA: <span className="font-mono">{userData.attribution.gaClientId}</span>
+                </span>
+              )}
+              {userData.attribution.fbp && (
+                <span title="Meta browser id (_fbp cookie)">
+                  fbp: <span className="font-mono">{userData.attribution.fbp.slice(0, 24)}…</span>
+                </span>
+              )}
+              {userData.attribution.clarityCustomId && (
+                <span title="Clarity custom-id (we send the Firebase UID; Clarity hashes server-side)">
+                  Clarity: <span className="font-mono">{userData.attribution.clarityCustomId.slice(0, 12)}…</span>
+                </span>
+              )}
+              {userData.attribution.anonId && (
+                <span title="Pre-auth anon-id stored in localStorage / cookie">
+                  anon: <span className="font-mono">{userData.attribution.anonId.slice(0, 8)}…</span>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
       {/* Recent readings */}
       <div className="p-5">
         <h4 className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
@@ -732,6 +849,68 @@ function UserDetailCard({ userData }: { userData: EnrichedUser }) {
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function AttributionTouchBlock({
+  label,
+  touch,
+}: {
+  label: string;
+  touch: AttributionTouch | null;
+}) {
+  if (!touch) {
+    return (
+      <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-xs text-gray-500">
+        <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.18em] text-gray-500">
+          {label}
+        </div>
+        <p className="text-gray-500">— no record —</p>
+      </div>
+    );
+  }
+  const detailRows: Array<[string, string | null]> = [
+    ["medium", touch.medium],
+    ["campaign", touch.campaign],
+    ["term", touch.term],
+    ["content", touch.content],
+    ["referrer", touch.referrer],
+    ["landing", touch.landingPath],
+  ];
+  return (
+    <div className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+      <div className="mb-1 flex items-center justify-between text-[10px] font-medium uppercase tracking-[0.18em] text-gray-500">
+        <span>{label}</span>
+        <span>{formatDateTime(touch.capturedAt)}</span>
+      </div>
+      <p className="text-sm font-medium text-white">
+        {touch.source ?? "—"}
+      </p>
+      <dl className="mt-1.5 space-y-0.5 text-[11px] text-gray-400">
+        {detailRows
+          .filter(([, v]) => v && v.length > 0)
+          .map(([k, v]) => (
+            <div key={k} className="flex gap-2">
+              <dt className="w-16 flex-shrink-0 text-gray-500">{k}</dt>
+              <dd className="truncate" title={v ?? ""}>
+                {v}
+              </dd>
+            </div>
+          ))}
+        {(touch.gclid || touch.fbclid || touch.msclkid) && (
+          <div className="flex gap-2">
+            <dt className="w-16 flex-shrink-0 text-gray-500">click-id</dt>
+            <dd className="truncate font-mono">
+              {touch.gclid
+                ? `gclid:${touch.gclid.slice(0, 18)}…`
+                : touch.fbclid
+                  ? `fbclid:${touch.fbclid.slice(0, 18)}…`
+                  : `msclkid:${touch.msclkid?.slice(0, 18)}…`}
+            </dd>
+          </div>
+        )}
+      </dl>
     </div>
   );
 }

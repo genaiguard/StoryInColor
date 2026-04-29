@@ -436,6 +436,33 @@ interface UserGenerationSummary {
   createdAt: string | null;
 }
 
+// Mirrors lib/attribution/types.ts on the client side. The two npm trees
+// don't share modules (see CLAUDE.md), so this is duplicated by hand. Keep
+// field names + shape identical or the admin payload will desync.
+interface AttributionTouch {
+  source: string | null;
+  medium: string | null;
+  campaign: string | null;
+  term: string | null;
+  content: string | null;
+  referrer: string | null;
+  landingPath: string;
+  gclid: string | null;
+  fbclid: string | null;
+  msclkid: string | null;
+  capturedAt: string;
+}
+
+interface UserAttributionPayload {
+  firstTouch: AttributionTouch | null;
+  lastTouch: AttributionTouch | null;
+  anonId: string | null;
+  gaClientId: string | null;
+  fbp: string | null;
+  fbc: string | null;
+  clarityCustomId: string | null;
+}
+
 interface EnrichedUser {
   id: string; // Firebase Auth UID
   email: string | null;
@@ -449,6 +476,11 @@ interface EnrichedUser {
   failedGenerationCount: number;
   latestGenerationCreatedAt: string | null;
   generations: UserGenerationSummary[];
+  // Attribution data persisted on signup by lib/attribution/persist.ts.
+  // Null when the user signed up before attribution capture was deployed
+  // (legacy users), or when localStorage + cookies were both empty (rare —
+  // private mode + first-touch-only landing on a denylisted page).
+  attribution: UserAttributionPayload | null;
 }
 
 interface AdminDashboardData {
@@ -488,7 +520,7 @@ export const getAdminDashboardData = onCall(
       latestGenerationTimestamp: admin.firestore.Timestamp | null;
       generations: UserGenerationSummary[]; 
     }>();
-    const userFirestoreData = new Map<string, { deleted: boolean }>(); // Map to store Firestore deleted status
+    const userFirestoreData = new Map<string, { deleted: boolean; attribution: UserAttributionPayload | null }>(); // deleted flag + attribution from users/{uid}
 
     try {
       // 2. Aggregate Data & Build Summaries
@@ -505,13 +537,17 @@ export const getAdminDashboardData = onCall(
       } while (pageToken);
       console.log(`[Admin Dashboard] Fetched total ${totalUsers} users from Auth.`);
 
-      // --- Fetch Firestore User Deleted Status ---
-      console.log("[Admin Dashboard] Fetching Firestore user deleted status...");
+      // --- Fetch Firestore /users/{uid} docs (deleted flag + attribution) ---
+      console.log("[Admin Dashboard] Fetching Firestore user docs (deleted + attribution)...");
       const usersSnapshot = await db.collection('users').get();
       usersSnapshot.forEach(doc => {
-          userFirestoreData.set(doc.id, { deleted: doc.data()?.deleted || false });
+          const data = doc.data() || {};
+          userFirestoreData.set(doc.id, {
+            deleted: data.deleted || false,
+            attribution: (data.attribution as UserAttributionPayload | undefined) ?? null,
+          });
       });
-      console.log(`[Admin Dashboard] Fetched deleted status for ${userFirestoreData.size} users from Firestore.`);
+      console.log(`[Admin Dashboard] Fetched user docs for ${userFirestoreData.size} users from Firestore.`);
 
       // --- Aggregate from userCredits & Build Summaries ---
       console.log("[Admin Dashboard] Aggregating from userCredits...");
@@ -597,8 +633,8 @@ export const getAdminDashboardData = onCall(
       const enrichedUsers: EnrichedUser[] = allAuthUsers.map(authUser => {
         const creditSummary = userCreditSummaries.get(authUser.uid) || { balance: 0, totalSpentCents: 0 };
         const generationSummary = userGenerationSummaries.get(authUser.uid) || { generationCount: 0, failedGenerationCount: 0, latestGenerationTimestamp: null, generations: [] };
-        const firestoreUser = userFirestoreData.get(authUser.uid) || { deleted: false }; // Get deleted status
-        
+        const firestoreUser = userFirestoreData.get(authUser.uid) || { deleted: false, attribution: null };
+
         return {
           id: authUser.uid,
           email: authUser.email || null,
@@ -612,6 +648,7 @@ export const getAdminDashboardData = onCall(
           failedGenerationCount: generationSummary.failedGenerationCount,
           latestGenerationCreatedAt: generationSummary.latestGenerationTimestamp?.toDate().toISOString() || null,
           generations: generationSummary.generations,
+          attribution: firestoreUser.attribution,
         };
       });
       console.log(`[Admin Dashboard] Constructed enriched list for ${enrichedUsers.length} users.`);

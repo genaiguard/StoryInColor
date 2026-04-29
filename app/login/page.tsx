@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { getAuth } from "firebase/auth";
 import { trackEvent, trackSignUp } from "@/components/tracking/facebook-pixel";
+import { persistUserProfileAndAttribution } from "@/lib/attribution/persist";
 import { toast } from "sonner";
 
 const INPUT_CLASS =
@@ -73,6 +75,27 @@ function LoginForm() {
     try {
       await signUp(email, password);
 
+      // Persist profile + attribution to users/{uid} so the admin dashboard
+      // and downstream analytics can see what brought this user. Awaited (not
+      // fire-and-forget) so the redirect to /dashboard isn't racy with an
+      // un-persisted firstTouch — but we swallow errors because attribution
+      // failure must NEVER block account creation.
+      const newUser = getAuth().currentUser;
+      if (newUser) {
+        try {
+          await persistUserProfileAndAttribution({
+            uid: newUser.uid,
+            email: newUser.email,
+            displayName: newUser.displayName ?? email.split("@")[0],
+            providerId: "password",
+            createdAtIso:
+              newUser.metadata.creationTime ?? new Date().toISOString(),
+          });
+        } catch (attrError) {
+          console.error("Failed to persist attribution on email signup:", attrError);
+        }
+      }
+
       trackSignUp();
       trackEvent("CompleteRegistration", {
         content_name: "User Registration",
@@ -112,6 +135,27 @@ function LoginForm() {
       const isNewUser = result.additionalUserInfo?.isNewUser || false;
 
       if (isNewUser) {
+        // Persist profile + attribution before any other side-effect so the
+        // welcome email + tracking calls have a populated users/{uid} doc.
+        // Same swallow-errors policy as the email path.
+        if (result.user) {
+          try {
+            await persistUserProfileAndAttribution({
+              uid: result.user.uid,
+              email: result.user.email,
+              displayName: result.user.displayName,
+              providerId: "google.com",
+              createdAtIso:
+                result.user.metadata?.creationTime ?? new Date().toISOString(),
+            });
+          } catch (attrError) {
+            console.error(
+              "Failed to persist attribution on Google signup:",
+              attrError,
+            );
+          }
+        }
+
         trackSignUp();
         trackEvent("CompleteRegistration", {
           content_name: "User Registration",
