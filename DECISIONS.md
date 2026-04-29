@@ -69,14 +69,15 @@ explicitly **Rejected** below.
   appear automatically.
 - Cinematic admin console (`/admin`) — KPI tiles, liquid-glass user
   cards, reading-aligned terminology.
+- **Brand mark + social card** — Option 12 "hairline frame plate"
+  selected. Italic serif "S" inside a hairline square = the brand mark
+  used for the favicon at every size + the OG `SHARING.webp` (1200×630,
+  black, frame, italic Playfair-fallback wordmark, "VOL · 01" serial
+  language). Generated deterministically by
+  `scripts/build-brand-assets.mjs` — no AI image cost. Re-run that
+  script if the design ever changes.
 
 ## Pending
-
-- **`SHARING.webp` regeneration.** Today's image is the pre-pivot
-  coloring-book era family + pencils composition. Metadata already
-  points at the right URL; once the file is replaced, social cards
-  refresh with no further code change. Estimated cost: ~$0.20 against
-  OpenAI key, or zero if composed deterministically with `sharp`.
 - **Generate the remaining 8 placeholder reading samples** (aura,
   iridology, handwriting, style-audit, skincare-glow, plate-analysis,
   plant-care, room-vibes). Currently only palm-reading, face-reading,

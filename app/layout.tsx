@@ -58,6 +58,8 @@ export const metadata: Metadata = {
   icons: [
     { rel: 'icon', url: '/favicon.ico', type: 'image/x-icon' },
     { rel: 'icon', url: '/favicon.svg', type: 'image/svg+xml' },
+    { rel: 'icon', type: 'image/png', sizes: '16x16', url: '/favicon-16x16.png' },
+    { rel: 'icon', type: 'image/png', sizes: '32x32', url: '/favicon-32x32.png' },
     { rel: 'icon', type: 'image/png', sizes: '96x96', url: '/favicon-96x96.png' },
     { rel: 'icon', type: 'image/png', sizes: '192x192', url: '/web-app-manifest-192x192.png' },
     { rel: 'icon', type: 'image/png', sizes: '512x512', url: '/web-app-manifest-512x512.png' },
