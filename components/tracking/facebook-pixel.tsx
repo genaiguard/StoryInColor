@@ -2,12 +2,8 @@
 
 import { useEffect } from 'react'
 import Script from 'next/script'
-
-declare global {
-  interface Window {
-    fbq: any
-  }
-}
+// window.fbq is declared in lib/analytics/globals.d.ts so every tracking
+// component shares the same typing. No local declare global block here.
 
 interface FacebookPixelProps {
   pixelId: string

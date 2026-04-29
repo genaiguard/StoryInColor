@@ -7,6 +7,9 @@ import StructuredData from '@/components/seo/structured-data'
 import FacebookPixel from '@/components/tracking/facebook-pixel'
 import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
 import AttributionCapture from '@/components/tracking/attribution-capture'
+import RouteTracker from '@/components/tracking/route-tracker'
+import AuthBridge from '@/components/tracking/auth-bridge'
+import GoogleAnalytics from '@/components/tracking/google-analytics'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -124,14 +127,29 @@ export default function RootLayout({
         {FACEBOOK_PIXEL_CONFIG.ENABLED && (
           <FacebookPixel pixelId={FACEBOOK_PIXEL_CONFIG.PIXEL_ID} />
         )}
+        {/* GA4 (gtag.js). Loads only when NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+            is set AND analytics are master-switch enabled. Configured with
+            send_page_view: false — RouteTracker handles every pageview so
+            SPA navs are counted. */}
+        <GoogleAnalytics />
       </head>
       <body className="bg-black text-white antialiased">
         <FirebaseProvider>
-          {/* Side-effect-only client component. Reads UTMs / referrer /
-              click-ids on every route change and persists first-touch +
-              last-touch to localStorage and a 365d first-party cookie.
-              Read by lib/attribution/persist.ts on signup completion. */}
+          {/* Side-effect-only client components. Order doesn't matter — each
+              listens on independent events. They live INSIDE FirebaseProvider
+              because AuthBridge calls useFirebase().
+                AttributionCapture: writes UTM / referrer / click-ids to
+                  localStorage + a 365d first-party cookie. Read by
+                  lib/attribution/persist.ts on signup completion.
+                RouteTracker:       fires PageView on every route change for
+                  Pixel + GA4 + Clarity (each tracker fires exactly once
+                  per nav).
+                AuthBridge:         pushes the Firebase UID into Pixel
+                  (external_id), GA4 (user_id), and Clarity (custom-id) on
+                  every auth state change. */}
           <AttributionCapture />
+          <RouteTracker />
+          <AuthBridge />
           {children}
         </FirebaseProvider>
       </body>
