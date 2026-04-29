@@ -21,7 +21,7 @@ const FEATURED = FEATURED_IDS.map((id) => {
   return tool;
 });
 
-const ROTATE_MS = 5500;
+const ROTATE_MS = 3850;
 
 export default function HeroSection() {
   const [idx, setIdx] = useState(0);
