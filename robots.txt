@@ -1,23 +1,25 @@
-# Allow all crawlers
+# StoryInColor — robots.txt
+# https://storyincolor.com
+
 User-agent: *
 Allow: /
 
-# Sitemap location
 Sitemap: https://storyincolor.com/sitemap.xml
 
-# Prevent crawling of admin and authed areas
+# Auth-gated user surfaces — keep crawlers out
 Disallow: /admin/
+Disallow: /admin
 Disallow: /dashboard/
-Disallow: /_next/
-Disallow: /static/
+Disallow: /dashboard
 Disallow: /login/
+Disallow: /login
+Disallow: /credits/
+Disallow: /credits
 
-# Allow crawling of important content
-Allow: /contact/
-Allow: /privacy/
-Allow: /terms/
-Allow: /tools/
+# Per-job result pages are user-private; the page also sets
+# noindex meta as a belt-and-braces measure
+Disallow: /readings/*/result
+Disallow: /readings/*/result/
 
-# /create is a 0-second meta-refresh redirect with canonical pointing at
-# /tools/coloring-book. It must be crawlable so the redirect/canonical
-# signals can pass authority from old backlinks.
+# Next.js internals — never index these
+Disallow: /_next/
