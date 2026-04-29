@@ -84,6 +84,28 @@ explicitly **Rejected** below.
   and beauty-report have real samples. Estimated cost: ~$2.40 since
   most input prompts are now cached.
 - **Branded receipt / pixel events / analytics audit** — not started.
+- **Decide whether to keep Meta CAPI + GA4 Measurement Protocol
+  server-side mirroring, or revert to Pixel-only.** The previous
+  StoryInColor build successfully reported Purchase conversions to
+  Meta with Pixel-only — no `META_CAPI_TOKEN` / `GA4_MP_API_SECRET`
+  secrets, no `STORYINCOLOR_ENABLE_SERVER_CONVERSIONS` env flag, no
+  Cloud Function dispatch path. The Phase-4 build (commit `f5f3c40`)
+  added a server-side CAPI + MP mirror that fires the same conversion
+  with a shared `event_id` from `stripeWebhook` — the upside is
+  recovery of ~10–30 % of Purchase signal lost to ad-blockers / iOS
+  Safari ITP, plus higher Meta match-quality scores for ad
+  optimisation. The downside is operational complexity: the deploy
+  now requires those secrets to exist in Firebase Secret Manager
+  (because `defineSecret` is bound on `stripeWebhook` and
+  `generateForTool`) and the env flag has to be flipped to "true" for
+  CAPI to actually fire. For a low-spend campaign Pixel-only is
+  enough; for higher-spend or iOS-heavy audiences CAPI pays for
+  itself. Revert path if we drop CAPI: remove the two `defineSecret`
+  bindings and the `dispatchServerConversion` call sites — ~30 lines
+  in `functions/src/index.ts` + `functions/src/generate-for-tool.ts`.
+  All the other Phase-1/2/3/5 work (attribution capture, Firestore
+  persistence, identity linking, SPA route tracking, admin per-source
+  funnel) is independent and stays valuable either way.
 
 ## Added
 
