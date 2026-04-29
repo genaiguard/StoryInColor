@@ -190,18 +190,27 @@ export default function CreditsPage() {
       // Result: Pixel + CAPI dedupe end-to-end on a single event_id.
       const checkoutEventId = newEventId();
       try {
-        // Slot is read + cleared by app/dashboard/page.tsx when the
-        // ?credit_purchase=success param is processed. We keep packageId
-        // alongside so the dashboard can confirm the latest stashed id
-        // matches the just-completed purchase before reusing it.
-        window.localStorage.setItem(
-          "sic_pending_fb_event_id",
-          JSON.stringify({
-            id: checkoutEventId,
-            packageId: creditPackage.id,
-            createdAt: Date.now(),
-          }),
-        );
+        // Map keyed by packageId — supports two-tab checkouts where the
+        // user dispatches different packs from different tabs. The dashboard
+        // looks up the entry that matches the just-completed purchase's
+        // packageId, so a stale entry for a different pack doesn't get
+        // mis-applied. Bounded to 3 entries (one per pack id), so growth is
+        // not a concern. Per-entry TTL is 1h.
+        const SLOT_KEY = "sic_pending_fb_event_ids";
+        let slot: Record<string, { id: string; createdAt: number }> = {};
+        try {
+          const raw = window.localStorage.getItem(SLOT_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === "object") {
+              slot = parsed as Record<string, { id: string; createdAt: number }>;
+            }
+          }
+        } catch {
+          /* corrupt slot — overwrite below */
+        }
+        slot[creditPackage.id] = { id: checkoutEventId, createdAt: Date.now() };
+        window.localStorage.setItem(SLOT_KEY, JSON.stringify(slot));
       } catch {
         /* private mode — Phase-4 CAPI will still dedupe on its end via
            session.metadata.fbEventId; client-side will fire a fresh id and

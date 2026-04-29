@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import { FB_PIXEL_ID, GA_MEASUREMENT_ID } from "@/lib/analytics/config";
+import { persistAttributionRefresh } from "@/lib/attribution/persist";
 
 /** SHA-256 hex helper. Used to hash the Firebase UID before sending it to
  *  Meta as `external_id`. Per Meta's advanced-matching docs, non-PII unique
@@ -41,6 +42,18 @@ async function sha256Hex(text: string): Promise<string> {
 export default function AuthBridge() {
   const { user } = useFirebase();
   const uid = user?.uid;
+  // We refresh users/{uid}.attribution exactly once per uid per session.
+  // Two reasons:
+  //   1. _fbp / _fbc / _ga cookies are written by Pixel and gtag scripts
+  //      with strategy="afterInteractive" — on a fast email signup the
+  //      cookies may not exist yet when persistUserProfileAndAttribution
+  //      runs. A 3-second delayed refresh on the next authenticated mount
+  //      backfills them.
+  //   2. Returning users from a NEW campaign would otherwise have stale
+  //      lastTouch in Firestore (capture.ts updates localStorage but only
+  //      signup writes to /users/{uid}). The refresh propagates lastTouch
+  //      so per-source admin rollups reflect re-engagement.
+  const refreshedForUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!uid || typeof window === "undefined") return;
@@ -72,12 +85,16 @@ export default function AuthBridge() {
     // We only send when GA_MEASUREMENT_ID is configured, otherwise gtag
     // is a no-op stub.
     if (typeof window.gtag === "function" && GA_MEASUREMENT_ID) {
-      window.gtag("config", GA_MEASUREMENT_ID, {
-        user_id: uid,
-      });
-      window.gtag("set", "user_properties", {
-        signup_provider: user?.providerData?.[0]?.providerId ?? "unknown",
-      });
+      try {
+        window.gtag("config", GA_MEASUREMENT_ID, {
+          user_id: uid,
+        });
+        window.gtag("set", "user_properties", {
+          signup_provider: user?.providerData?.[0]?.providerId ?? "unknown",
+        });
+      } catch (e) {
+        console.warn("[AuthBridge] gtag config/set failed:", e);
+      }
     }
 
     // Pixel — hash UID, then re-init for advanced matching. The hash promise
@@ -87,14 +104,32 @@ export default function AuthBridge() {
       sha256Hex(uid)
         .then((hashed) => {
           if (typeof window.fbq === "function") {
-            window.fbq("init", FB_PIXEL_ID, { external_id: hashed });
+            try {
+              window.fbq("init", FB_PIXEL_ID, { external_id: hashed });
+            } catch (e) {
+              console.warn("[AuthBridge] fbq advanced-match init failed:", e);
+            }
           }
         })
         .catch(() => {
           /* swallow — analytics must never break the app */
         });
     }
-  }, [uid, user?.displayName, user?.email]);
+
+    // Once-per-uid attribution refresh. Delayed 3s so Pixel + gtag have
+    // had time to write the _fbp / _fbc / _ga cookies that persist.ts
+    // reads. Failure is non-fatal — the user's signup-time write was
+    // already persisted; this is a best-effort backfill.
+    if (refreshedForUidRef.current !== uid) {
+      refreshedForUidRef.current = uid;
+      const t = setTimeout(() => {
+        persistAttributionRefresh(uid).catch((e) => {
+          console.warn("[AuthBridge] attribution refresh failed:", e);
+        });
+      }, 3000);
+      return () => clearTimeout(t);
+    }
+  }, [uid, user?.displayName, user?.email, user?.providerData]);
 
   return null;
 }

@@ -229,33 +229,41 @@ export default function DashboardPage() {
               sessionStorage.setItem(acknowledgedSessionKey, "true");
 
               // Look for the event_id that credits/page.tsx stashed when
-              // it dispatched the Stripe redirect. If the packageId matches,
-              // re-use it so this Pixel emit dedupes with the Phase-4 CAPI
-              // mirror coming from stripeWebhook. Stale slots (different
-              // packageId, or older than 1h) are ignored — the user must
-              // have abandoned and started a new flow.
+              // it dispatched the Stripe redirect. The slot is a
+              // Record<packageId, {id, createdAt}> so two-tab checkouts
+              // don't clobber each other. We pull the entry for THIS
+              // purchase's packageId, age-check it (1h TTL), and only then
+              // reuse it as the Pixel event_id. Stale or missing entries
+              // mean a fresh UUID — the CAPI mirror will use the
+              // session.metadata.fbEventId regardless, so the worst case is
+              // a no-dedup pair (Meta double-counts that one Purchase).
               let stashedEventId: string | undefined;
+              const SLOT_KEY = "sic_pending_fb_event_ids";
               try {
-                const raw = window.localStorage.getItem(
-                  "sic_pending_fb_event_id",
-                );
+                const raw = window.localStorage.getItem(SLOT_KEY);
                 if (raw) {
-                  const parsed = JSON.parse(raw) as {
-                    id?: string;
-                    packageId?: string;
-                    createdAt?: number;
-                  };
-                  const ageMs = Date.now() - (parsed.createdAt ?? 0);
-                  if (
-                    parsed.id &&
-                    parsed.packageId === mostRecentPurchase.packageId &&
-                    ageMs < 1000 * 60 * 60
-                  ) {
-                    stashedEventId = parsed.id;
+                  const slot = JSON.parse(raw) as Record<
+                    string,
+                    { id?: string; createdAt?: number }
+                  >;
+                  const entry = slot?.[mostRecentPurchase.packageId];
+                  if (entry?.id) {
+                    const ageMs = Date.now() - (entry.createdAt ?? 0);
+                    if (ageMs < 1000 * 60 * 60) {
+                      stashedEventId = entry.id;
+                    }
                   }
-                  // Clear the slot regardless — stale entries shouldn't
-                  // outlive a single completed purchase flow.
-                  window.localStorage.removeItem("sic_pending_fb_event_id");
+                  // Drop the matched entry but keep any other in-flight
+                  // pack entries (a second tab's stash for a different
+                  // pack id should NOT be erased here).
+                  if (slot && mostRecentPurchase.packageId in slot) {
+                    delete slot[mostRecentPurchase.packageId];
+                    if (Object.keys(slot).length === 0) {
+                      window.localStorage.removeItem(SLOT_KEY);
+                    } else {
+                      window.localStorage.setItem(SLOT_KEY, JSON.stringify(slot));
+                    }
+                  }
                 }
               } catch {
                 /* localStorage may be unavailable — fall through to a

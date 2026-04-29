@@ -92,14 +92,32 @@ export async function sendGa4MpEvent(
       event.eventTimeSeconds * 1_000_000;
   }
 
+  // Bound the request at 5s — same rationale as in meta-capi.ts. GA4's
+  // /mp/collect endpoint typically responds in <100ms; the timeout exists
+  // to protect against partial outages.
   const path = opts.debug ? "/debug/mp/collect" : "/mp/collect";
   const url = `https://www.google-analytics.com${path}?measurement_id=${encodeURIComponent(opts.measurementId)}&api_secret=${encodeURIComponent(opts.apiSecret)}`;
 
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  let resp;
+  try {
+    resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal as unknown as AbortSignal,
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    const aborted = e instanceof Error && (e.name === "AbortError" || /aborted/i.test(e.message));
+    return {
+      ok: false,
+      status: aborted ? 408 : 0,
+      body: { error: aborted ? "timeout" : (e instanceof Error ? e.message : String(e)) },
+    };
+  }
+  clearTimeout(timeoutId);
   // GA4 production endpoint returns 204 with no body on success; debug
   // endpoint returns JSON with a validationMessages array.
   let parsed: unknown = null;

@@ -37,13 +37,18 @@ export default function RouteTracker() {
     // GA4: tell gtag to record a pageview against the new path. We always
     // send this (including on first run) because gtag was init'd with
     // send_page_view: false and otherwise wouldn't see the landing page.
+    // Wrapped in try/catch — analytics failures must never crash the route.
     if (typeof window.gtag === "function" && GA_MEASUREMENT_ID) {
-      window.gtag("event", "page_view", {
-        page_location: pageLocation,
-        page_path: pathname,
-        page_title: pageTitle,
-        send_to: GA_MEASUREMENT_ID,
-      });
+      try {
+        window.gtag("event", "page_view", {
+          page_location: pageLocation,
+          page_path: pathname,
+          page_title: pageTitle,
+          send_to: GA_MEASUREMENT_ID,
+        });
+      } catch (e) {
+        console.warn("[RouteTracker] gtag page_view failed:", e);
+      }
     }
 
     // Clarity: per Microsoft docs, identify should be called on every page
@@ -59,15 +64,19 @@ export default function RouteTracker() {
     if (typeof window.clarity === "function") {
       try {
         window.clarity("set", "page", pathname);
-      } catch {
-        /* clarity may not be ready yet on the very first run */
+      } catch (e) {
+        console.warn("[RouteTracker] clarity set page failed:", e);
       }
     }
 
     // Meta Pixel: skip the first run because the init script already fires
     // PageView. Subsequent route changes need a manual track.
     if (!firstRunRef.current && typeof window.fbq === "function") {
-      window.fbq("track", "PageView");
+      try {
+        window.fbq("track", "PageView");
+      } catch (e) {
+        console.warn("[RouteTracker] fbq PageView failed:", e);
+      }
     }
 
     firstRunRef.current = false;

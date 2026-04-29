@@ -242,32 +242,40 @@ export const generateForTool = onCall(
 
     // Phase 4 conversion: ReadingStarted. Fires AFTER the credit transaction
     // commits so we never report a started event for a refused dispatch.
-    // Wrapped + awaited briefly so we don't lose events when the function
-    // exits, but bounded so a slow CAPI call can't extend the timeout.
+    // Kicked off in PARALLEL with the OpenAI call below — the OpenAI work
+    // takes ~30s so the dispatch (bounded at 5s by the fetch timeout in
+    // conversions/meta-capi.ts + ga4-mp.ts) completes free of charge against
+    // the user-perceived latency. We hold a handle and await it before
+    // returning so the Cloud Functions runtime doesn't CPU-freeze the
+    // background work after our return value resolves.
+    //
+    // Note on dedup: ReadingStarted has no client-side counterpart by
+    // design; the deterministic event_id `srv-readstart-${jobId}` exists
+    // only to make repeat dispatches (e.g. from a Stripe-style webhook
+    // retry, which doesn't apply here but mirrors the pattern) idempotent.
     const conversionUserData = await loadUserDataForConversions(
       userId,
       request.auth?.token?.email ?? undefined,
       request,
     );
-    try {
-      await dispatchServerConversion(
-        {
-          name: "ReadingStarted",
-          eventId: `srv-readstart-${jobId}`,
-          customData: {
-            content_type: "reading",
-            content_ids: [toolId],
-            content_category: "reading_dispatch",
-            tool_id: toolId,
-            credit_cost: config.creditCost,
-            job_id: jobId,
-          },
+    const readingStartedDispatch = dispatchServerConversion(
+      {
+        name: "ReadingStarted",
+        eventId: `srv-readstart-${jobId}`,
+        customData: {
+          content_type: "reading",
+          content_ids: [toolId],
+          content_category: "reading_dispatch",
+          tool_id: toolId,
+          credit_cost: config.creditCost,
+          job_id: jobId,
         },
-        conversionUserData,
-      );
-    } catch (convErr) {
+      },
+      conversionUserData,
+    ).catch((convErr) => {
       console.warn("[Conversions] ReadingStarted dispatch failed (non-fatal):", convErr);
-    }
+      return null;
+    });
 
     // 2) Run generation; on ANY failure, refund and mark failed.
     try {
@@ -416,7 +424,8 @@ export const generateForTool = onCall(
 
       // Phase 4 conversion: ReadingCompleted (the activation event). Fires
       // after the job + generation docs have committed so a downstream
-      // crash doesn't double-count. Non-fatal — we've already collected
+      // crash doesn't double-count. Bounded at 5s by the per-fetch timeouts
+      // in meta-capi.ts + ga4-mp.ts. Non-fatal — we've already collected
       // payment and produced the output, so a tracker miss is just lost
       // visibility, not a user-facing failure.
       try {
@@ -439,6 +448,12 @@ export const generateForTool = onCall(
       } catch (convErr) {
         console.warn("[Conversions] ReadingCompleted dispatch failed (non-fatal):", convErr);
       }
+
+      // Drain the ReadingStarted dispatch we kicked off in parallel BEFORE
+      // returning. If it's still in-flight, the runtime would CPU-freeze
+      // the promise after our return value resolves. Bounded by the same
+      // 5s fetch timeout in the helpers.
+      await readingStartedDispatch;
 
       return {
         success: true,
@@ -483,6 +498,36 @@ export const generateForTool = onCall(
       } catch (refundErr) {
         console.error("CRITICAL: refund failed for job", { jobId, refundErr });
       }
+
+      // Phase 4 conversion: ReadingFailed. Funnel-completion telemetry —
+      // without this, the per-source admin breakdown shows ReadingStarted
+      // events with no terminal counterpart (looks like in-flight forever).
+      // Custom event in Meta CAPI; standard custom event in GA4 MP.
+      try {
+        await dispatchServerConversion(
+          {
+            name: "ReadingFailed",
+            eventId: `srv-readfail-${jobId}`,
+            customData: {
+              content_type: "reading",
+              content_ids: [toolId],
+              content_category: "reading_failure",
+              tool_id: toolId,
+              credit_cost: config.creditCost,
+              job_id: jobId,
+              failure_reason: reason.slice(0, 200),
+            },
+          },
+          conversionUserData,
+        );
+      } catch (convErr) {
+        console.warn("[Conversions] ReadingFailed dispatch failed (non-fatal):", convErr);
+      }
+
+      // Drain the parallel ReadingStarted dispatch even on failure path —
+      // same lifetime concern as the success path.
+      await readingStartedDispatch;
+
       throw new HttpsError("internal", `Generation failed: ${reason}`);
     }
   },

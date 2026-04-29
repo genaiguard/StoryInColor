@@ -94,12 +94,33 @@ export async function sendMetaCapiEvent(
     body.test_event_code = opts.testEventCode;
   }
 
+  // Bound the request at 5 seconds. Cloud Functions docs warn that work
+  // running after the response is sent may be CPU-frozen by the runtime, so
+  // we cannot safely fire-and-forget — the dispatch must complete inside
+  // the function's lifetime. 5s comfortably covers Meta's 99th-percentile
+  // and stays well inside Stripe's 30s webhook timeout and inside our
+  // 300s generation budget.
   const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${opts.pixelId}/events`;
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  let resp;
+  try {
+    resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal as unknown as AbortSignal,
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    const aborted = e instanceof Error && (e.name === "AbortError" || /aborted/i.test(e.message));
+    return {
+      ok: false,
+      status: aborted ? 408 : 0,
+      body: { error: aborted ? "timeout" : (e instanceof Error ? e.message : String(e)) },
+    };
+  }
+  clearTimeout(timeoutId);
   let parsed: unknown = null;
   try {
     parsed = await resp.json();

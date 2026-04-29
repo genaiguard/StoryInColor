@@ -1,18 +1,27 @@
-// Funnel event API. Every funnel event in the app should go through one of
-// the helpers below — each one fires to all three trackers (Meta Pixel, GA4,
-// Microsoft Clarity) with a shared `event_id` so:
+// Funnel event API. Every CLIENT-SIDE funnel event in the app should go
+// through one of the helpers below — each one fires to all three trackers
+// (Meta Pixel, GA4, Microsoft Clarity) with a shared `event_id`.
 //
-//   1. Pixel and the Phase-4 server-side CAPI mirror dedupe on event_id
-//      (Meta keeps one record per event_name + event_id within 48h).
-//   2. GA4 sees the same id as a custom param so we can join browser events
-//      to server-side Measurement Protocol events.
-//   3. Clarity records the event for session filtering.
+// What the shared event_id does (and doesn't):
+//   - For events that ALSO have a server-side mirror in
+//     functions/src/conversions/* (Purchase, CompleteRegistration when
+//     wired), Pixel + CAPI dedupe on event_name + event_id within Meta's
+//     48h window. Same plumbing applies to GA4 client + Measurement
+//     Protocol via the event_id custom param.
+//   - For client-only events (ViewContent, Lead, InitiateCheckout —
+//     unless paired with a checkout webhook), event_id is just a unique
+//     correlation id; nothing dedupes against it server-side.
+//   - For server-only events (ReadingStarted / ReadingCompleted /
+//     ReadingFailed in functions/src/generate-for-tool.ts), no client
+//     emit exists at all — those events use deterministic ids like
+//     `srv-readstart-${jobId}` purely for retry idempotency.
 //
 // Why a single API instead of calling each tracker manually:
 //   - Adds the `event_id` plumbing once, in one place.
 //   - Makes adding/removing a tracker a one-file change.
 //   - Forces consistent event_name + parameters across all trackers, which
-//     is required for Meta deduplication to work at all.
+//     is required for Meta deduplication to work at all when a server
+//     mirror is present.
 
 "use client";
 

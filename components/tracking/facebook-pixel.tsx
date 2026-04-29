@@ -50,34 +50,9 @@ export default function FacebookPixel({ pixelId }: FacebookPixelProps) {
   )
 }
 
-// Helper function to track events
-export const trackEvent = (eventName: string, parameters?: Record<string, any>) => {
-  if (typeof window !== 'undefined' && window.fbq) {
-    window.fbq('track', eventName, parameters)
-  }
-}
-
-// Common event tracking functions
-export const trackSignUp = () => {
-  trackEvent('CompleteRegistration')
-}
-
-export const trackAddToCart = (value?: number, currency = 'USD') => {
-  trackEvent('AddToCart', { value, currency })
-}
-
-export const trackPurchase = (value: number, currency = 'USD') => {
-  trackEvent('Purchase', { value, currency })
-}
-
-export const trackInitiateCheckout = () => {
-  trackEvent('InitiateCheckout')
-}
-
-export const trackViewContent = (contentName?: string) => {
-  trackEvent('ViewContent', { content_name: contentName })
-}
-
-export const trackLead = () => {
-  trackEvent('Lead')
-} 
+// Note: legacy trackEvent / trackSignUp / trackAddToCart / trackPurchase /
+// trackInitiateCheckout / trackViewContent / trackLead helpers were
+// removed when the typed funnel API in lib/analytics/events.ts replaced
+// every call site. Use those helpers — they fan out to Pixel + GA4 +
+// Clarity with a shared event_id so the Phase-4 server-side CAPI mirror
+// can deduplicate against the browser emit.
