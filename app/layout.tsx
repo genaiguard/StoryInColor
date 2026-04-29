@@ -18,7 +18,7 @@ const inter = Inter({
 // JSON-LD. Updating this in one place keeps every share preview in sync.
 const SITE_TITLE = 'StoryInColor — Editorial AI Photo Readings';
 const SITE_DESCRIPTION =
-  'What does your photo know about you? Editorial readings of your palm, your face, your beauty, your handwriting, your plate, your room, and more. Designed to be saved.';
+  'What does your photo know about you? Editorial readings of your palm, your face, your beauty, your handwriting, your style, your skin, and more. Designed to be saved.';
 const SITE_URL = 'https://storyincolor.com';
 // NOTE: the SHARING.webp file currently in /public/images is from the
 // pre-pivot coloring-book era and is on the to-replace list. The metadata

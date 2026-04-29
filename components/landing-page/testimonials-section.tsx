@@ -21,9 +21,9 @@ const QUOTES: Testimonial[] = [
   },
   {
     quote:
-      "Pulled my plate out at brunch and we all read each other's. Better than a personality test.",
+      "Showed my stylist the hairstyle spread instead of explaining what I wanted. She said, 'finally — a brief.'",
     attribution: "Jennifer L.",
-    reading: "Plate",
+    reading: "Hairstyle",
   },
 ];
 

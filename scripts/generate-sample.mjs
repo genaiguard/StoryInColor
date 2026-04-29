@@ -201,6 +201,26 @@ const READINGS = {
     inputFidelity: "high",
     preprocessing: "none",
   },
+  "hairstyle-analysis": {
+    inputType: "portrait",
+    prompt:
+      "Based on my portrait, create a hairstyle analysis graphic. Render multiple flattering hairstyles applied to my face side by side — for example bob, lob, layered, fringe, pixie, long-wavy, sleek-low-pony, bun — so I can see at a glance which cuts suit my face shape. Lay it out as a clean, minimal editorial spread with thin hairlines, generous whitespace, refined serif-and-sans typography, and a magazine-quality feel. Use short labels only — name each style in two or three words — and absolutely no paragraphs of theory. Keep it visual-first. Frame everything as a styling suggestion for entertainment, never a verdict on appearance. Do your best.",
+    endpoint: "edits",
+    imageSize: "1536x1024",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "detail",
+  },
+  "color-analysis": {
+    inputType: "portrait",
+    prompt:
+      "Based on my portrait, create a personal color analysis graphic. Render side-by-side comparisons of me wearing different clothing colors — for example warm tones, cool tones, jewel tones, pastels, neutrals — so I can see at a glance which palettes suit my skin tone, hair, and eyes. Lay it out as a clean, minimal editorial spread with thin hairlines, generous whitespace, swatch chips for each palette, refined serif-and-sans typography, and a magazine-quality feel. Use short labels only — name each palette in one or two words — and absolutely no paragraphs of theory. Keep it visual-first. Frame everything as a styling suggestion for entertainment, never a verdict on appearance. Do your best.",
+    endpoint: "edits",
+    imageSize: "1536x1024",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "none",
+  },
   "skincare-glow": {
     inputType: "portrait",
     prompt:

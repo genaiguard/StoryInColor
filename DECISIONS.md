@@ -85,6 +85,19 @@ explicitly **Rejected** below.
   most input prompts are now cached.
 - **Branded receipt / pixel events / analytics audit** — not started.
 
+## Added
+
+- **`hairstyle-analysis`, `color-analysis`** — two visual-first style
+  reads added in the same spirit as Beauty Report. Both take a portrait
+  selfie, render the result as a landscape (1536×1024) editorial spread
+  of side-by-side comparisons with short labels and no paragraphs of
+  theory. Hairstyle compares cuts (bob / lob / fringe / pixie / etc);
+  Color compares clothing palettes (warm / cool / jewel / pastel /
+  neutral / etc). Slotted in `analysis` category between style-audit
+  and skincare-glow. Same brand-voice prompt structure as the existing
+  per-tool prompts (Vogue/GQ tone, magazine-quality, "for entertainment
+  only" framing).
+
 ## Removed
 
 - **`plate-analysis`, `plant-care`, `room-vibes`.** The three lifestyle

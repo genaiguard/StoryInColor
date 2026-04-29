@@ -6,12 +6,12 @@ import { TOOLS } from "@/lib/tools/registry";
 import { CinematicSection } from "@/components/cinematic/cinematic-section";
 
 const SHORT_DESCRIPTION =
-  "Editorial AI photo readings — palm reading, face reading, style audit, plant care, plate analysis, and more. Each one designed to be saved.";
+  "Editorial AI photo readings — palm reading, face reading, beauty report, color analysis, hairstyle analysis, style audit, and more. Each one designed to be saved.";
 
 export const metadata: Metadata = {
   title: "The reading room | StoryInColor",
   description:
-    "Every photo experience on StoryInColor, in one place — palm reading, face reading, beauty report, aura, iridology, handwriting, style audit, skincare, and coloring pages. Bring whatever you have a photo of.",
+    "Every photo experience on StoryInColor, in one place — palm reading, face reading, beauty report, color analysis, hairstyle analysis, aura, iridology, handwriting, style audit, skincare, and coloring pages. Bring whatever you have a photo of.",
   alternates: { canonical: "https://storyincolor.com/readings" },
   openGraph: {
     title: "The reading room | StoryInColor",

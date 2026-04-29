@@ -118,6 +118,28 @@ export const TOOL_PROMPTS: Record<string, ServerToolConfig> = {
     inputFidelity: "high",
     preprocessing: "none",
   },
+  "hairstyle-analysis": {
+    prompt:
+      "Based on my portrait, create a hairstyle analysis graphic. Render multiple flattering hairstyles applied to my face side by side — for example bob, lob, layered, fringe, pixie, long-wavy, sleek-low-pony, bun — so I can see at a glance which cuts suit my face shape. Lay it out as a clean, minimal editorial spread with thin hairlines, generous whitespace, refined serif-and-sans typography, and a magazine-quality feel. Use short labels only — name each style in two or three words — and absolutely no paragraphs of theory. Keep it visual-first. Frame everything as a styling suggestion for entertainment, never a verdict on appearance. Do your best.",
+    creditCost: 1,
+    outputType: "image+guide",
+    imageSize: "1536x1024",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "detail",
+  },
+  "color-analysis": {
+    prompt:
+      "Based on my portrait, create a personal color analysis graphic. Render side-by-side comparisons of me wearing different clothing colors — for example warm tones, cool tones, jewel tones, pastels, neutrals — so I can see at a glance which palettes suit my skin tone, hair, and eyes. Lay it out as a clean, minimal editorial spread with thin hairlines, generous whitespace, swatch chips for each palette, refined serif-and-sans typography, and a magazine-quality feel. Use short labels only — name each palette in one or two words — and absolutely no paragraphs of theory. Keep it visual-first. Frame everything as a styling suggestion for entertainment, never a verdict on appearance. Do your best.",
+    creditCost: 1,
+    outputType: "image+guide",
+    imageSize: "1536x1024",
+    endpoint: "edits",
+    quality: "high",
+    inputFidelity: "high",
+    preprocessing: "none",
+  },
   "skincare-glow": {
     prompt:
       "Based on my selfie, give a cosmetic skincare-glow reflection mapping the T-zone, cheeks, under-eye, and jawline, with gentle observations on apparent texture, tone, hydration, and luminosity, plus a suggested AM and PM routine framework (cleanse, treat, moisturize, SPF in AM; cleanse, treat, hydrate, occlusive in PM). Compose it as a clean, minimal editorial beauty card with thin lines, rounded panels per zone and routine step, soft neutral tones, and a luxe glossy-magazine feel. Add a small black-on-white contour line-art of the face with the skincare zones lightly outlined as a decorative element. This is cosmetic guidance for entertainment only — no medical claims, no diagnosis, no treatment promises. Do your best.",

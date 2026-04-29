@@ -340,6 +340,88 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    id: "hairstyle-analysis",
+    slug: "hairstyle-analysis",
+    name: "Hairstyle Analysis",
+    tagline: "Side-by-side hairstyle ideas that suit your face",
+    heroCopy:
+      "A visual hairstyle reading — multiple cuts compared at a glance, with short labels and no paragraphs of theory.",
+    coverImage: "/images/tools/hairstyle-analysis.webp",
+    creditCost: 1,
+    category: "analysis",
+    inputHint: "Upload a clear, front-facing selfie with your hair in its natural fall.",
+    outputType: "image+guide",
+    seo: {
+      metaTitle:
+        "AI hairstyle analysis from a selfie — side-by-side cut ideas | StoryInColor",
+      metaDescription:
+        "Upload a selfie and see multiple hairstyles applied to your face side by side — bob, lob, layered, fringe, pixie, and more — in a clean editorial spread, visual-first with short labels only.",
+      whatYouGet: [
+        "Multiple flattering hairstyles applied to your face, side by side",
+        "Short labels per cut — bob, lob, layered, fringe, pixie, and more",
+        "A magazine-quality keepsake spread, no paragraphs of theory",
+        "A clear, visual-first sense of which cuts suit your face shape",
+      ],
+      faq: [
+        {
+          q: "Is this a guarantee my hair will look like that?",
+          a: "No. The graphic gives a visual sense of how different cuts read on your face shape — actual results depend on your stylist, hair texture, and growth patterns.",
+        },
+        {
+          q: "What kind of selfie works best?",
+          a: "A front-facing photo in even, soft daylight with your hair pulled back from the face or in its natural fall. Avoid heavy filters.",
+        },
+        {
+          q: "Will it suggest hair colors too?",
+          a: "Hairstyle Analysis focuses on cuts and shapes. For palette work, run Color Analysis on the same photo.",
+        },
+        PHOTO_PRIVACY_FAQ,
+      ],
+      sampleImage: "/images/tools/hairstyle-analysis-sample.webp",
+    },
+  },
+  {
+    id: "color-analysis",
+    slug: "color-analysis",
+    name: "Color Analysis",
+    tagline: "Your best clothing colors, side by side",
+    heroCopy:
+      "A personal color reading — palette comparisons that show which colors suit you, visual-first with short labels only.",
+    coverImage: "/images/tools/color-analysis.webp",
+    creditCost: 1,
+    category: "analysis",
+    inputHint: "Upload a clear, front-facing selfie in natural light, no heavy filters.",
+    outputType: "image+guide",
+    seo: {
+      metaTitle:
+        "AI personal color analysis from a selfie — your best palette | StoryInColor",
+      metaDescription:
+        "Upload a selfie and see side-by-side comparisons of clothing colors against your skin tone, hair, and eyes — warm, cool, jewel, pastel, neutral — in a clean editorial palette spread, visual-first with short labels only.",
+      whatYouGet: [
+        "Side-by-side comparisons of you in different clothing colors",
+        "Visual swatch chips with short palette labels",
+        "An undertone read (warm, cool, neutral) at a glance",
+        "A magazine-quality keepsake spread, no paragraphs of theory",
+      ],
+      faq: [
+        {
+          q: "Is this a real seasonal-color analysis?",
+          a: "It draws on the same warm/cool/neutral undertone conventions, but it's an AI visual sketch — take it as a starting point, not a final verdict.",
+        },
+        {
+          q: "What kind of selfie works best?",
+          a: "A front-facing photo in soft, even natural daylight, hair pulled back from the face, no makeup or filters that shift skin tone.",
+        },
+        {
+          q: "Does the lighting really matter?",
+          a: "Yes — color analysis is sensitive to the light you photographed in. Daylight gives the most accurate read; warm indoor light shifts the result.",
+        },
+        PHOTO_PRIVACY_FAQ,
+      ],
+      sampleImage: "/images/tools/color-analysis-sample.webp",
+    },
+  },
+  {
     id: "skincare-glow",
     slug: "skincare-glow",
     name: "Skincare Glow",
