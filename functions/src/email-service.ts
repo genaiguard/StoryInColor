@@ -48,16 +48,9 @@ export const sendWelcomeEmail = async (email: string, name?: string) => {
     
     // Generate the email template
     const emailTemplate = generateWelcomeEmailTemplate(name || 'there');
-    
-    // Log comprehensive debugging information
-    console.log(`[AWS SES] Email template preview (first 300 chars): ${emailTemplate.substring(0, 300)}...`);
-    console.log(`[AWS SES] Template contains button: ${emailTemplate.includes('Go to Your Dashboard')}`);
-    console.log(`[AWS SES] Template contains old text 'Order printed copies': ${emailTemplate.includes('Order printed copies')}`);
-    console.log(`[AWS SES] Template contains old text 'our platform': ${emailTemplate.includes('our platform')}`);
-    console.log(`[AWS SES] Template contains old text 'book formats': ${emailTemplate.includes('book formats')}`);
-    console.log(`[AWS SES] Template contains new text 'StoryInColor!': ${emailTemplate.includes('StoryInColor!')}`);
-    console.log(`[AWS SES] Full template length: ${emailTemplate.length} characters`);
-    
+    console.log(`[AWS SES] Welcome email template ready (${emailTemplate.length} chars)`);
+
+
     // Log AWS configuration being used. NOTE: never log a prefix of the
     // access key — even 8 chars correlate against rotated/leaked credentials.
     console.log(`[AWS SES] Using AWS Region: ${awsRegion()}`);
@@ -104,8 +97,6 @@ export const sendWelcomeEmail = async (email: string, name?: string) => {
     return false;
   }
 };
-
-// Send project submission email function REMOVED
 
 // Send contact form email
 export const sendContactFormEmail = async (
@@ -329,4 +320,3 @@ function generateContactFormTemplate(
 </html>`;
 }
 
-// Helper function formatProductName block REMOVED

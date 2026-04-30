@@ -24,11 +24,10 @@ export function PathImg({
   priority = false,
   ...props
 }: PathImgProps) {
-  // Determine if this is likely an above-the-fold image that should be eager loaded
-  const isAboveTheFold = priority || 
-                         src.includes('best-6') || 
-                         src.includes('hero') || 
-                         src.includes('dog-coloring-hero');
+  // Determine if this is likely an above-the-fold image that should be eager loaded.
+  // Caller can force via priority={true}; otherwise we infer from filename patterns
+  // common to hero/landing imagery.
+  const isAboveTheFold = priority || src.includes('hero');
   
   return (
     <Image

@@ -1,61 +1,6 @@
 {
   "indexes": [
     {
-      "collectionGroup": "projects",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "deleted", "order": "ASCENDING" },
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "projects",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "updatedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "projects",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "updatedAt",
-          "order": "DESCENDING"
-        },
-        {
-          "fieldPath": "deleted",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "projects",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "paymentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "orderDate",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "jobs",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
