@@ -236,7 +236,7 @@ export default function SettingsPage() {
             ]);
             return true;
           } catch (err) {
-            console.error("Folder processing error");
+            console.error("Folder processing error:", err);
             return false;
           }
         };

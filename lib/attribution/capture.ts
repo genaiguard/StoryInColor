@@ -30,7 +30,6 @@ const ANON_COOKIE = "sic_anon_id";
 // document.cookie writes from script at 7 days — we accept the loss there.
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
-const QUALIFYING_LANDING_PREFIXES = ["/", "/readings"];
 const QUALIFYING_LANDING_DENYLIST = ["/dashboard", "/admin", "/login", "/credits", "/privacy", "/terms", "/contact"];
 
 /** True if the given pathname counts as a "meaningful" first-touch landing.

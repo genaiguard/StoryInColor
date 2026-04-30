@@ -15,7 +15,8 @@ const STRIPE_SECRET_KEY = defineSecret('STRIPE_SECRET_KEY');
 const STRIPE_WEBHOOK_SECRET = defineSecret('STRIPE_WEBHOOK_SECRET');
 const AWS_ACCESS_KEY_ID = defineSecret('AWS_ACCESS_KEY_ID');
 const AWS_SECRET_ACCESS_KEY = defineSecret('AWS_SECRET_ACCESS_KEY');
-const AWS_REGION = defineSecret('AWS_REGION');
+// AWS_REGION is NOT a secret — region strings are public. Lives in
+// functions/.env and is read via process.env.AWS_REGION inside email-service.ts.
 const SENDER_EMAIL_ADDRESS = defineSecret('SENDER_EMAIL_ADDRESS');
 // Server-side conversion forwarding (Phase 4). Only consumed by the
 // dispatchServerConversion helper, which reads them via process.env at
@@ -37,10 +38,9 @@ export const stripeWebhook = onRequest(
     secrets: [
       STRIPE_SECRET_KEY,
       STRIPE_WEBHOOK_SECRET,
-      // AWS secrets for email services
+      // AWS secrets for email services (region is now in functions/.env, not a secret)
       AWS_ACCESS_KEY_ID,
       AWS_SECRET_ACCESS_KEY,
-      AWS_REGION,
       SENDER_EMAIL_ADDRESS,
       // Server-side conversion mirroring (Phase 4). Bound here so the
       // runtime env exposes them to dispatchServerConversion.
@@ -285,10 +285,9 @@ export const stripeWebhook = onRequest(
 // Callable function to send welcome email (to be called after user registration)
 export const sendWelcomeEmailNotification = onCall({
   secrets: [
-    AWS_ACCESS_KEY_ID, // Use updated variable name
-    AWS_SECRET_ACCESS_KEY, // Use updated variable name
-    AWS_REGION, // Use updated variable name
-    SENDER_EMAIL_ADDRESS // Use updated variable name
+    AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY,
+    SENDER_EMAIL_ADDRESS,
   ],
 }, async (request) => {
   // Verbose logging for debugging
@@ -341,10 +340,9 @@ export const sendWelcomeEmailNotification = onCall({
 // Callable function to submit contact form
 export const submitContactForm = onCall({
   secrets: [
-    AWS_ACCESS_KEY_ID, // Use updated variable name
-    AWS_SECRET_ACCESS_KEY, // Use updated variable name
-    AWS_REGION, // Use updated variable name
-    SENDER_EMAIL_ADDRESS // Use updated variable name
+    AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY,
+    SENDER_EMAIL_ADDRESS,
   ],
 }, async (request) => {
   // Extract data from request

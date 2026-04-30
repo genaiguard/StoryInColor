@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { FirebaseProvider } from './firebase/firebase-provider'
 import Script from 'next/script'
-import StructuredData from '@/components/seo/structured-data'
 import FacebookPixel from '@/components/tracking/facebook-pixel'
 import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
 import AttributionCapture from '@/components/tracking/attribution-capture'
@@ -95,32 +94,6 @@ export default function RootLayout({
             })(window, document, "clarity", "script", "qxtkvqson7");
             
             clarity("set", "iframeSelector", "iframe[src*='firebaseapp.com'], iframe[src*='web.app']");
-          `}
-        </Script>
-        <Script id="fix-image-paths" strategy="afterInteractive">
-          {`
-            (function() {
-              if (typeof window === 'undefined') return;
-              
-              if (window.location.hostname.includes('github.io')) {
-                setTimeout(function() {
-                  document.querySelectorAll('img').forEach(function(img) {
-                    if (img.src && img.src.startsWith(window.location.origin + '/') && 
-                        !img.src.includes('/StoryInColor/')) {
-                      img.src = img.src.replace(window.location.origin + '/', window.location.origin + '/StoryInColor/');
-                    }
-                  });
-                  
-                  document.querySelectorAll('[style*="background-image"]').forEach(function(el) {
-                    if (el.style.backgroundImage && 
-                        el.style.backgroundImage.startsWith('url("/') && 
-                        !el.style.backgroundImage.includes('/StoryInColor/')) {
-                      el.style.backgroundImage = el.style.backgroundImage.replace('url("/', 'url("/StoryInColor/');
-                    }
-                  });
-                }, 300);
-              }
-            })();
           `}
         </Script>
         {/* Facebook Pixel - Only load in production or when explicitly enabled */}

@@ -292,7 +292,7 @@ export default function DashboardPage() {
           }
         }
       } catch (error) {
-        console.error("Error loading credits");
+        console.error("Error loading credits:", error);
       } finally {
         setIsLoadingCredits(false);
       }

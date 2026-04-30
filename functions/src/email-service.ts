@@ -1,11 +1,16 @@
 import * as AWS from 'aws-sdk';
 import { defineSecret } from 'firebase-functions/params';
 
-// Define AWS secrets
+// AWS credentials are real secrets and stay in Secret Manager. AWS_REGION
+// is just a region string (us-east-1) — moved to functions/.env to avoid
+// burning a secret-fetch slot + cold-start time on a non-secret value.
 const awsAccessKeyId = defineSecret('AWS_ACCESS_KEY_ID');
 const awsSecretAccessKey = defineSecret('AWS_SECRET_ACCESS_KEY');
-const awsRegion = defineSecret('AWS_REGION');
 const senderEmail = defineSecret('SENDER_EMAIL_ADDRESS');
+
+// Read AWS_REGION from process.env (populated from functions/.env at deploy time).
+// Default to us-east-1 if missing to avoid hard-failing welcome emails.
+const awsRegion = (): string => process.env.AWS_REGION || 'us-east-1';
 
 // Interface for AWS SES errors
 interface AWSError {
@@ -16,14 +21,14 @@ interface AWSError {
 
 // Configure AWS SES
 export const configureSES = () => {
-  console.log(`[AWS SES] Configuring SES with region: ${awsRegion.value()}`);
-  
+  console.log(`[AWS SES] Configuring SES with region: ${awsRegion()}`);
+
   const ses = new AWS.SES({
     accessKeyId: awsAccessKeyId.value(),
     secretAccessKey: awsSecretAccessKey.value(),
-    region: awsRegion.value() || 'us-east-1',
+    region: awsRegion(),
   });
-  
+
   console.log('[AWS SES] SES client configured successfully');
   return ses;
 };
@@ -47,11 +52,12 @@ export const sendWelcomeEmail = async (email: string, name?: string) => {
     console.log(`[AWS SES] Template contains new text 'StoryInColor!': ${emailTemplate.includes('StoryInColor!')}`);
     console.log(`[AWS SES] Full template length: ${emailTemplate.length} characters`);
     
-    // Log AWS configuration being used
-    console.log(`[AWS SES] Using AWS Region: ${awsRegion.value()}`);
+    // Log AWS configuration being used. NOTE: never log a prefix of the
+    // access key — even 8 chars correlate against rotated/leaked credentials.
+    console.log(`[AWS SES] Using AWS Region: ${awsRegion()}`);
     console.log(`[AWS SES] Using Sender Email: ${senderEmail.value()}`);
-    console.log(`[AWS SES] AWS Access Key ID prefix: ${awsAccessKeyId.value().substring(0, 8)}...`);
-    
+
+
     // Construct email params
     const params = {
       Source: senderEmail.value(),
