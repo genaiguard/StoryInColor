@@ -3,14 +3,13 @@
 // duplicating string literals in each file) means one place to flip pixel /
 // GA / Clarity on-or-off when we onboard a new property or rotate an ID.
 //
-// The legacy lib/facebook-pixel-config.ts is kept untouched so existing
-// importers (FacebookPixel, login/page.tsx) don't break — both files agree
-// on the same Pixel ID.
+// (Previously a duplicate `lib/facebook-pixel-config.ts` existed for the
+// same purpose — deleted, all consumers migrated to this file.)
 
 /** Microsoft Clarity project id (the value in window.clarity bootstrap). */
 export const CLARITY_PROJECT_ID = "qxtkvqson7";
 
-/** Meta (Facebook) Pixel id. Same value as FACEBOOK_PIXEL_CONFIG.PIXEL_ID. */
+/** Meta (Facebook) Pixel id. */
 export const FB_PIXEL_ID = "660006810196406";
 
 /** GA4 measurement id, e.g. "G-XXXXXXXXXX". Wired via the Firebase

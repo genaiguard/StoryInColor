@@ -4,7 +4,7 @@ import './globals.css'
 import { FirebaseProvider } from './firebase/firebase-provider'
 import Script from 'next/script'
 import FacebookPixel from '@/components/tracking/facebook-pixel'
-import { FACEBOOK_PIXEL_CONFIG } from '@/lib/facebook-pixel-config'
+import { ANALYTICS_ENABLED, FB_PIXEL_ID } from '@/lib/analytics/config'
 import AttributionCapture from '@/components/tracking/attribution-capture'
 import RouteTracker from '@/components/tracking/route-tracker'
 import AuthBridge from '@/components/tracking/auth-bridge'
@@ -97,8 +97,8 @@ export default function RootLayout({
           `}
         </Script>
         {/* Facebook Pixel - Only load in production or when explicitly enabled */}
-        {FACEBOOK_PIXEL_CONFIG.ENABLED && (
-          <FacebookPixel pixelId={FACEBOOK_PIXEL_CONFIG.PIXEL_ID} />
+        {ANALYTICS_ENABLED && (
+          <FacebookPixel pixelId={FB_PIXEL_ID} />
         )}
         {/* GA4 (gtag.js). Loads only when NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
             is set AND analytics are master-switch enabled. Configured with

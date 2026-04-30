@@ -33,6 +33,7 @@ import {
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { loadStripe } from "@stripe/stripe-js";
 import { newEventId, trackInitiateCheckout } from "@/lib/analytics/events";
+import { tsToMillis } from "@/lib/utils";
 
 function PageHeader() {
   return (
@@ -153,7 +154,7 @@ export default function CreditsPage() {
 
         const sortedPurchaseHistory = userCredits.purchaseHistory || [];
         sortedPurchaseHistory.sort(
-          (a: any, b: any) => b.purchaseDate.seconds - a.purchaseDate.seconds,
+          (a: any, b: any) => tsToMillis(b.purchaseDate) - tsToMillis(a.purchaseDate),
         );
         setPurchaseHistory(sortedPurchaseHistory);
       } catch (err) {
@@ -374,7 +375,7 @@ export default function CreditsPage() {
           : `${usage.toolId || "reading"}`,
       isInitialCredits: false,
     })),
-  ].sort((a, b) => b.date.seconds - a.date.seconds);
+  ].sort((a, b) => tsToMillis(b.date) - tsToMillis(a.date));
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">

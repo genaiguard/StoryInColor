@@ -27,6 +27,7 @@ import { ToolGrid } from "@/components/tools/tool-grid";
 import { getToolById } from "@/lib/tools/registry";
 import { toast } from "sonner";
 import { trackPurchase } from "@/lib/analytics/events";
+import { tsToMillis } from "@/lib/utils";
 
 interface JobDoc {
   generationId?: string;
@@ -212,9 +213,7 @@ export default function DashboardPage() {
           userCredits.purchaseHistory?.length > 0
         ) {
           const sortedPurchases = [...userCredits.purchaseHistory].sort(
-            (a, b) =>
-              new Date(b.purchaseDate.seconds * 1000).getTime() -
-              new Date(a.purchaseDate.seconds * 1000).getTime(),
+            (a, b) => tsToMillis(b.purchaseDate) - tsToMillis(a.purchaseDate),
           );
           const mostRecentPurchase = sortedPurchases[0];
           if (mostRecentPurchase) {
