@@ -115,32 +115,6 @@ export default function MarketingView({ tool }: { tool: Tool }) {
         )}
 
         <CinematicSection
-          eyebrow="What you get"
-          title={
-            <>
-              In your{" "}
-              <span className="italic font-light text-gray-400">reading.</span>
-            </>
-          }
-          topBorder
-          containerWidth="default"
-        >
-          <ul className="grid gap-4 md:grid-cols-2">
-            {tool.seo.whatYouGet.map((bullet) => (
-              <li
-                key={bullet}
-                className="liquid-glass flex items-start gap-3 rounded-xl p-5"
-              >
-                <span className="mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
-                  <Check className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-                </span>
-                <p className="text-sm text-gray-200">{bullet}</p>
-              </li>
-            ))}
-          </ul>
-        </CinematicSection>
-
-        <CinematicSection
           eyebrow="How it works"
           title={
             <>
@@ -223,6 +197,32 @@ export default function MarketingView({ tool }: { tool: Tool }) {
               </div>
             </div>
           </div>
+        </CinematicSection>
+
+        <CinematicSection
+          eyebrow="What you get"
+          title={
+            <>
+              In your{" "}
+              <span className="italic font-light text-gray-400">reading.</span>
+            </>
+          }
+          topBorder
+          containerWidth="default"
+        >
+          <ul className="grid gap-4 md:grid-cols-2">
+            {tool.seo.whatYouGet.map((bullet) => (
+              <li
+                key={bullet}
+                className="liquid-glass flex items-start gap-3 rounded-xl p-5"
+              >
+                <span className="mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
+                  <Check className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+                </span>
+                <p className="text-sm text-gray-200">{bullet}</p>
+              </li>
+            ))}
+          </ul>
         </CinematicSection>
 
         <CinematicSection
