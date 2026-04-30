@@ -454,7 +454,8 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                       type="button"
                       onClick={handleGenerate}
                       disabled={generateDisabled}
-                      className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-busy={isSubmitting}
+                      className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-all duration-150 hover:bg-gray-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
                     >
                       {isSubmitting ? (
                         <>

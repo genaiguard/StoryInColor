@@ -145,6 +145,15 @@ export default function ResultView({ tool }: Props) {
   const [job, setJob] = useState<Job | null>(null);
   const [docMissing, setDocMissing] = useState<boolean>(false);
   const [subError, setSubError] = useState<string | null>(null);
+  // Inline button busy states (separate from `loading` for the page itself)
+  // — give immediate visual feedback while download fetch / createShareLink
+  // are in flight, instead of relying on a toast that takes 200-300ms to
+  // render. Refs back the same flags so we can early-exit reentrant clicks
+  // before React has flushed the setState.
+  const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const downloadingRef = useRef(false);
+  const sharingRef = useRef(false);
   // Fire view_reading_result exactly once per job — Firestore subscription
   // ticks repeatedly even after status flips to complete, so we need a
   // ref-guard to dedupe.
@@ -329,9 +338,11 @@ export default function ResultView({ tool }: Props) {
       // serves from firebasestorage.googleapis.com — a different origin
       // from storyincolor.com — so we must fetch the bytes ourselves and
       // hand the browser a blob URL.
+      if (downloadingRef.current) return;
+      downloadingRef.current = true;
+      setDownloading(true);
       const url = job.outputDownloadUrl!;
       const filename = `storyincolor-${tool.slug}.png`;
-      const loadingToast = toast.loading("Preparing download…");
       try {
         const res = await fetch(url, { mode: "cors", credentials: "omit" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -349,14 +360,16 @@ export default function ResultView({ tool }: Props) {
           // Free the blob a tick after click so Safari has time to grab it.
           setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
         }
-        toast.dismiss(loadingToast);
+        toast.success("Saved");
       } catch (err) {
-        toast.dismiss(loadingToast);
         console.error("[download] fetch-as-blob failed:", err);
         // Last-resort fallback: open the URL in a new tab so the user can
         // long-press / right-click → Save. Better than silently failing.
         window.open(url, "_blank", "noopener,noreferrer");
         toast.message("Opened in a new tab — long-press or right-click to save.");
+      } finally {
+        downloadingRef.current = false;
+        setDownloading(false);
       }
     };
 
@@ -368,11 +381,13 @@ export default function ResultView({ tool }: Props) {
       //
       // We mint the share doc on every click; the callable de-dupes
       // server-side per (jobId, uid), so repeat clicks reuse the same id.
+      if (sharingRef.current) return;
       if (!user?.uid || !jobId) {
         toast.error("Sign in required to share.");
         return;
       }
-      const loadingToast = toast.loading("Creating share link…");
+      sharingRef.current = true;
+      setSharing(true);
       let shareUrl: string;
       try {
         const [{ getFunctions, httpsCallable }] = await Promise.all([
@@ -389,11 +404,11 @@ export default function ResultView({ tool }: Props) {
             ? window.location.origin
             : "https://storyincolor.com";
         shareUrl = `${origin}/share?id=${encodeURIComponent(data.shareId)}`;
-        toast.dismiss(loadingToast);
       } catch (err) {
-        toast.dismiss(loadingToast);
         console.error("[share] createShareLink failed:", err);
         toast.error("Couldn't create share link.");
+        sharingRef.current = false;
+        setSharing(false);
         return;
       }
 
@@ -404,24 +419,29 @@ export default function ResultView({ tool }: Props) {
       //   /share?id=<hex>%20Check%20out%20my%20...
       // Keeping just title + url means "Copy" copies just the URL and
       // messaging targets show the URL preview card.
-      const nav: any =
-        typeof navigator !== "undefined" ? navigator : undefined;
-      if (nav?.share) {
-        try {
-          await nav.share({
-            title: `My ${tool.name} — StoryInColor`,
-            url: shareUrl,
-          });
-          return;
-        } catch (err: any) {
-          if (err?.name === "AbortError") return;
-        }
-      }
       try {
-        await navigator.clipboard.writeText(shareUrl);
-        toast.success("Link copied");
-      } catch {
-        toast.error("Couldn't copy link");
+        const nav: any =
+          typeof navigator !== "undefined" ? navigator : undefined;
+        if (nav?.share) {
+          try {
+            await nav.share({
+              title: `My ${tool.name} — StoryInColor`,
+              url: shareUrl,
+            });
+            return;
+          } catch (err: any) {
+            if (err?.name === "AbortError") return;
+          }
+        }
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          toast.success("Link copied");
+        } catch {
+          toast.error("Couldn't copy link");
+        }
+      } finally {
+        sharingRef.current = false;
+        setSharing(false);
       }
     };
 
@@ -456,22 +476,44 @@ export default function ResultView({ tool }: Props) {
               <button
                 type="button"
                 onClick={handleDownload}
-                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-colors hover:bg-gray-200"
+                disabled={downloading}
+                aria-busy={downloading}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-all duration-150 hover:bg-gray-200 active:scale-[0.97] disabled:cursor-wait disabled:opacity-80"
               >
-                <Download className="h-4 w-4" />
-                Download
+                {downloading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download
+                  </>
+                )}
               </button>
               <button
                 type="button"
                 onClick={handleShare}
-                className="liquid-glass inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium"
+                disabled={sharing}
+                aria-busy={sharing}
+                className="liquid-glass inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium transition-all duration-150 active:scale-[0.97] disabled:cursor-wait disabled:opacity-80"
               >
-                <Share2 className="h-4 w-4" />
-                Share
+                {sharing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Preparing…
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-4 w-4" />
+                    Share
+                  </>
+                )}
               </button>
               <Link
                 href={`/readings/${tool.slug}`}
-                className="liquid-glass inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium"
+                className="liquid-glass inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium transition-all duration-150 active:scale-[0.97]"
               >
                 <Plus className="h-4 w-4" />
                 Read another
