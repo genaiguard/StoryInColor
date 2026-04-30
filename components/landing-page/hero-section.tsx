@@ -21,43 +21,26 @@ const FEATURED = FEATURED_IDS.map((id) => {
   return tool;
 });
 
-// First rotation kicks in fast — the blur-fade-up entry animation finishes
-// around ~1550ms, so this lets the visitor see the title settle, then
-// gives them roughly 250ms to read it before the carousel cycles. The
-// goal: prove there's a carousel before the first scroll (which usually
-// happens in 2-3s on landing pages).
-const FIRST_ROTATE_MS = 1800;
-const ROTATE_MS = 3850;
+// Rotate every 2s, full stop. No first-cycle-fast variant, no pause-on-
+// hover, no tab-visibility logic. The earlier "pause on hover" behavior
+// caused the rotation to silently stop whenever the visitor's cursor
+// was anywhere on the hero — which on desktop is most of the time —
+// so the carousel looked broken. Keep it simple.
+const ROTATE_MS = 2000;
 
 export default function HeroSection() {
   const [idx, setIdx] = useState(0);
-  const [paused, setPaused] = useState(false);
   const featured = FEATURED[idx];
 
-  // Auto-rotate the featured reading. The first cycle fires fast (so a
-  // visitor who scrolls within a couple seconds still sees the carousel
-  // do something), then we settle into the normal cadence. Pauses while
-  // the cursor is on the hero so visitors can finish reading.
   useEffect(() => {
-    if (paused) return;
-    let intervalId: number | undefined;
-    const timeoutId = window.setTimeout(() => {
+    const intervalId = window.setInterval(() => {
       setIdx((i) => (i + 1) % FEATURED.length);
-      intervalId = window.setInterval(() => {
-        setIdx((i) => (i + 1) % FEATURED.length);
-      }, ROTATE_MS);
-    }, FIRST_ROTATE_MS);
-    return () => {
-      window.clearTimeout(timeoutId);
-      if (intervalId !== undefined) window.clearInterval(intervalId);
-    };
-  }, [paused]);
+    }, ROTATE_MS);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   return (
-    <div
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
+    <div>
       <CinematicHero
         video={{ src: "/videos/hero.mp4" }}
         contentKey={idx}
