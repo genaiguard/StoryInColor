@@ -65,8 +65,16 @@ export default function HeroSection() {
         italicTagline={`${featured.tagline}.`}
         description={featured.heroCopy}
         primaryCta={{
+          // Always go to registration. Conversion-critical: the hero
+          // rotates between readings every ~3.85s, but the primary CTA
+          // is "Start free" — sending a clicker to /readings/<whatever-
+          // happens-to-be-rotating-when-they-clicked> is a coincidence,
+          // not an intent. The visitor came to start, not to deep-link
+          // into an arbitrary reading. /login?register=true puts them
+          // on the signup form, which grants 2 free starter credits and
+          // lands them on the dashboard where they pick a reading.
           label: "Start free",
-          href: `/readings/${featured.slug}`,
+          href: "/login?register=true",
         }}
         secondaryCta={{
           label: "See readings",
