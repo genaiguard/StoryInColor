@@ -68,7 +68,27 @@ This means the source repo is private, the served repo is public, and `out/` in 
 
 ### Admin
 
-`/admin` and `getAdminDashboardData` are gated on `request.auth.token.email === 'ipekcioglu@me.com'` — the admin email is hard-coded in `firestore.rules`, `storage.rules`, and the function. Changing the admin requires editing all three plus redeploying rules and functions.
+Admin authorization uses a Firebase Auth **custom claim** `admin: true`. All four enforcement points (`firestore.rules`, `storage.rules` — two paths, `functions/src/index.ts:getAdminDashboardData`) check `request.auth.token.admin == true || request.auth.token.email == 'ipekcioglu@me.com'`. The email branch is a temporary stale-token fallback so an admin signed in with a token issued before the claim was set keeps working until it refreshes (~1h max). It's planned for removal in a follow-up once we're confident no one's stuck with a stale token.
+
+The claim is set on the Firebase Auth user, NOT in committed code. There's no source-controlled `setCustomUserClaims` call in `functions/src/` — it was set once via a one-off Admin SDK script using ADC and then deleted. To verify the current claim state:
+
+```bash
+firebase auth:export /tmp/auth.json --project storyincolor-ai
+python3 -c "import json;d=json.load(open('/tmp/auth.json'));[print(u.get('localId'),u.get('email'),u.get('customAttributes')) for u in d['users'] if u.get('email','').lower()=='ipekcioglu@me.com']"
+```
+
+To rotate the admin in the future:
+
+```js
+// in /tmp/set-admin.mjs, run from functions/ where firebase-admin is installed:
+import admin from "firebase-admin";
+admin.initializeApp({ projectId: "storyincolor-ai" });
+await admin.auth().setCustomUserClaims(NEW_UID, { admin: true });
+// optionally clear on the old user:
+// await admin.auth().setCustomUserClaims(OLD_UID, {});
+```
+
+Then update `ADMIN_EMAILS` in `app/admin/page.tsx` (UX hint only — server enforces). No rule/function redeploy needed.
 
 ### Analytics + attribution
 
