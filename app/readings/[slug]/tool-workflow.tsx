@@ -449,11 +449,11 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                   )}
 
                   <div className="mt-6 flex items-center justify-between gap-4">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-gray-500">
-                        Cost
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium text-gray-400">
+                        Cost:
                       </span>
-                      <span className="text-sm font-medium text-white tabular-nums">
+                      <span className="font-medium text-white tabular-nums">
                         {creditLabel}
                       </span>
                     </div>
@@ -480,12 +480,12 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
 
                   {insufficientCredits && (
                     <p className="mt-3 text-xs text-amber-300">
-                      You're out of readings.{" "}
+                      This is a premium reading.{" "}
                       <Link
                         href="/credits"
                         className="font-medium underline hover:text-amber-200"
                       >
-                        Top up
+                        Purchase readings
                       </Link>{" "}
                       to start a new {tool.name}.
                     </p>
@@ -528,10 +528,11 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
           <DialogContent className="border-white/10 bg-black text-white">
             <DialogHeader>
               <DialogTitle className="text-white">
-                You're out of readings
+                Premium reading
               </DialogTitle>
               <DialogDescription className="text-gray-400">
-                Top up to start a new {tool.name}.
+                This is a premium reading. Please purchase readings to start a
+                new {tool.name}.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:gap-3">
