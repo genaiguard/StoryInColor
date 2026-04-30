@@ -77,9 +77,21 @@ function LoadingState() {
   );
 }
 
+// shareId format: 16 lowercase hex chars (crypto.randomBytes(8).toString('hex')).
+// In the wild we've seen the query param polluted by share targets that
+// concatenate text+url before handing it off (e.g. some messaging apps,
+// some "copy link" UIs, some clipboard round-trips). Be tolerant: pull
+// the leading hex run, ignore the rest.
+const SHARE_ID_RE = /^[a-f0-9]{16}/;
+function extractShareId(raw: string | null): string | null {
+  if (!raw) return null;
+  const match = raw.toLowerCase().match(SHARE_ID_RE);
+  return match ? match[0] : null;
+}
+
 export default function ShareView() {
   const searchParams = useSearchParams();
-  const shareId = searchParams?.get("id") ?? null;
+  const shareId = extractShareId(searchParams?.get("id") ?? null);
   // FirebaseProvider initializes lazily inside its own useEffect, and child
   // effects run before parent effects in React — so we MUST wait for
   // `initialized` before calling getFirestore() or it throws "No Firebase

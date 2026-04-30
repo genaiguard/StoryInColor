@@ -397,13 +397,19 @@ export default function ResultView({ tool }: Props) {
         return;
       }
 
+      // We deliberately do NOT pass `text` to navigator.share. Some share
+      // targets (notably the system "Copy" action on macOS / iOS, and a
+      // few messaging apps) concatenate text + url into a single string
+      // when the user picks them, producing a polluted URL like
+      //   /share?id=<hex>%20Check%20out%20my%20...
+      // Keeping just title + url means "Copy" copies just the URL and
+      // messaging targets show the URL preview card.
       const nav: any =
         typeof navigator !== "undefined" ? navigator : undefined;
       if (nav?.share) {
         try {
           await nav.share({
-            title: `My ${tool.name}`,
-            text: `Check out my ${tool.name} from StoryInColor`,
+            title: `My ${tool.name} — StoryInColor`,
             url: shareUrl,
           });
           return;
