@@ -20,7 +20,19 @@ const PACK_BULLETS: Record<string, string> = {
   set: "Any six readings — make it a gift",
 };
 
-export default function PricingSection() {
+type PricingSectionProps = {
+  ctaHref?: string;
+  ctaLabel?: string;
+  ctaNote?: string;
+  trackingName?: string;
+};
+
+export default function PricingSection({
+  ctaHref = "/login?register=true",
+  ctaLabel = "Start free",
+  ctaNote = "Sign up free — no card required.",
+  trackingName = "Pricing CTA",
+}: PricingSectionProps) {
   return (
     <CinematicSection
       id="pricing"
@@ -123,20 +135,20 @@ export default function PricingSection() {
 
       <div className="mt-14 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
         <p className="max-w-xl text-sm text-gray-400">
-          Sign up free — no card required.
+          {ctaNote}
         </p>
         <Link
-          href="/login?register=true"
+          href={ctaHref}
           onClick={() => {
             // Renamed from InitiateCheckout — that event is reserved for the
             // moment we actually dispatch a Stripe redirect (see
             // app/credits/page.tsx). Pre-auth pricing intent is a Lead.
-            trackPricingCtaClick({ contentName: "Pricing CTA" });
+            trackPricingCtaClick({ contentName: trackingName });
           }}
           className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-base font-medium text-black transition-colors hover:bg-gray-200"
         >
           <Play className="h-[18px] w-[18px] fill-black" />
-          Start free
+          {ctaLabel}
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>

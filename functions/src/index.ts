@@ -385,7 +385,7 @@ export const submitContactForm = onCall({
 /**
  * Creates a Stripe checkout session for credit purchase
  */
-export const createCreditCheckout = onCall<{packageId: string, origin?: string, fbEventId?: string}>(
+export const createCreditCheckout = onCall<{packageId: string, origin?: string, fbEventId?: string, returnPath?: string}>(
   {
     secrets: [STRIPE_SECRET_KEY],
     labels: {
@@ -408,7 +408,7 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
     // generated client-side at InitiateCheckout time. Phase 4 stripeWebhook
     // will pull it from session.metadata when firing the CAPI Purchase
     // mirror so Meta deduplicates with the client Pixel emit.
-    const { packageId, origin, fbEventId } = request.data;
+    const { packageId, origin, fbEventId, returnPath } = request.data;
     console.log("[Request Body] Received packageId:", packageId);
     console.log("[Request Body] Received origin:", origin);
     if (fbEventId) {
@@ -475,6 +475,24 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
       // Determine domain for success/cancel URLs - use provided origin or default to production
       const domain = origin || 'https://storyincolor.com';
       console.log(`[Stripe] Using domain for redirects: ${domain}`);
+      // Optional same-site path to return visitors to the reading they were
+      // trying to start. Do not accept absolute/protocol-relative URLs.
+      const safeReturnPath =
+        typeof returnPath === 'string' &&
+        returnPath.startsWith('/') &&
+        !returnPath.startsWith('//') &&
+        !returnPath.startsWith('/\\') &&
+        !/[\r\n]/.test(returnPath)
+          ? returnPath
+          : null;
+      const appendQuery = (path: string, query: string) =>
+        `${path}${path.includes('?') ? '&' : '?'}${query}`;
+      const successPath = safeReturnPath
+        ? appendQuery(safeReturnPath, 'credit_purchase=success')
+        : '/dashboard?credit_purchase=success';
+      const cancelPath = safeReturnPath
+        ? `/credits?next=${encodeURIComponent(safeReturnPath)}`
+        : '/credits';
       
       // Create checkout session
       console.log("[Stripe] Creating checkout session...");
@@ -506,8 +524,8 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
           // stripeWebhook generates a fallback id in that case.
           fbEventId: fbEventId || '',
         },
-        success_url: `${domain}/dashboard?credit_purchase=success`,
-        cancel_url: `${domain}/credits`,
+        success_url: `${domain}${successPath}`,
+        cancel_url: `${domain}${cancelPath}`,
       });
       console.log(`[Stripe] Checkout session created successfully: ${session.id}`);
 

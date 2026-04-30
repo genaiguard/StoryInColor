@@ -12,16 +12,9 @@ import {
   Upload as UploadIcon,
   Play,
   Loader2,
+  CreditCard,
 } from "lucide-react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -93,7 +86,8 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [creditDialogOpen, setCreditDialogOpen] = useState<boolean>(false);
+  const returnPath = `/readings/${tool.slug}`;
+  const purchaseHref = `/credits?next=${encodeURIComponent(returnPath)}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -148,18 +142,14 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
     !file ||
     isSubmitting ||
     credits === null ||
-    insufficientCredits ||
     !user?.uid;
-  const creditsShort =
-    credits !== null && credits < tool.creditCost
-      ? tool.creditCost - credits
-      : 0;
+  const needsPurchase = !!file && insufficientCredits;
 
   async function handleGenerate() {
     if (!file || !user?.uid) return;
 
     if (credits !== null && credits < tool.creditCost) {
-      setCreditDialogOpen(true);
+      router.push(purchaseHref);
       return;
     }
 
@@ -300,7 +290,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Link
-                    href="/credits"
+                    href={purchaseHref}
                     aria-label="Reading balance — view credit packs"
                     className="liquid-glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.97]"
                   >
@@ -317,7 +307,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                 </TooltipContent>
               </Tooltip>
               <Link
-                href="/credits"
+                href={purchaseHref}
                 className="hidden text-sm font-medium text-gray-300 transition-colors hover:text-white sm:inline-block"
               >
                 Buy more
@@ -448,6 +438,32 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                     </p>
                   )}
 
+                  {needsPurchase && (
+                    <div className="mt-5 rounded-xl border border-amber-400/25 bg-amber-400/[0.08] p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-300/15 text-amber-200">
+                          <CreditCard className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        <div>
+                          <p className="text-sm font-medium text-amber-100">
+                            Your photo is ready for a premium reading.
+                          </p>
+                          <p className="mt-1 text-sm text-amber-100/80">
+                            Purchase readings to continue with {tool.name}.
+                            After checkout, you'll come back here to start.
+                          </p>
+                          <Link
+                            href={purchaseHref}
+                            className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-medium text-black transition-colors hover:bg-gray-200"
+                          >
+                            <CreditCard className="h-4 w-4" aria-hidden="true" />
+                            Purchase readings
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mt-6 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2 text-sm">
                       <span className="font-medium text-gray-400">
@@ -469,6 +485,11 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Reading…
                         </>
+                      ) : needsPurchase ? (
+                        <>
+                          <CreditCard className="h-4 w-4" />
+                          Purchase readings
+                        </>
                       ) : (
                         <>
                           <Play className="h-4 w-4 fill-black" />
@@ -477,19 +498,6 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                       )}
                     </button>
                   </div>
-
-                  {insufficientCredits && (
-                    <p className="mt-3 text-xs text-amber-300">
-                      This is a premium reading.{" "}
-                      <Link
-                        href="/credits"
-                        className="font-medium underline hover:text-amber-200"
-                      >
-                        Purchase readings
-                      </Link>{" "}
-                      to start a new {tool.name}.
-                    </p>
-                  )}
                 </div>
               </section>
 
@@ -520,38 +528,6 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
             </div>
           </div>
         </main>
-
-        <Dialog
-          open={creditDialogOpen}
-          onOpenChange={setCreditDialogOpen}
-        >
-          <DialogContent className="border-white/10 bg-black text-white">
-            <DialogHeader>
-              <DialogTitle className="text-white">
-                Premium reading
-              </DialogTitle>
-              <DialogDescription className="text-gray-400">
-                This is a premium reading. Please purchase readings to start a
-                new {tool.name}.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="gap-2 sm:gap-3">
-              <button
-                type="button"
-                onClick={() => setCreditDialogOpen(false)}
-                className="liquid-glass inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-medium"
-              >
-                Cancel
-              </button>
-              <Link
-                href="/credits"
-                className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-sm font-medium text-black transition-colors hover:bg-gray-200"
-              >
-                See packs
-              </Link>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </TooltipProvider>
   );

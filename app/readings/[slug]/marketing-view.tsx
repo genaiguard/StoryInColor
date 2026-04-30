@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import Header from "@/components/landing-page/header";
 import Footer from "@/components/landing-page/footer";
+import PricingSection from "@/components/landing-page/pricing-section";
 import { CinematicHero } from "@/components/cinematic/cinematic-hero";
 import { CinematicSection } from "@/components/cinematic/cinematic-section";
 import { trackViewReading } from "@/lib/analytics/events";
@@ -64,7 +65,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
           italicTagline={`${tool.tagline}.`}
           description={tool.heroCopy}
           primaryCta={{
-            label: "Try free — sign in",
+            label: "Start with this reading",
             href: ctaHref,
             icon: <Play className="h-[18px] w-[18px] fill-black" />,
           }}
@@ -225,6 +226,13 @@ export default function MarketingView({ tool }: { tool: Tool }) {
           </ul>
         </CinematicSection>
 
+        <PricingSection
+          ctaHref={ctaHref}
+          ctaLabel="Start with this reading"
+          ctaNote="Premium readings are pay-as-you-go. No subscription, no expiry, no surprise charges."
+          trackingName={`${tool.name} pricing CTA`}
+        />
+
         <CinematicSection
           eyebrow="FAQ"
           title={
@@ -279,7 +287,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
                 className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-base font-medium text-black transition-colors hover:bg-gray-200"
               >
                 <Play className="h-[18px] w-[18px] fill-black" />
-                Try free
+                Start with this reading
               </Link>
               <Link
                 href="/readings"

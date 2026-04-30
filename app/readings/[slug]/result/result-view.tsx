@@ -130,7 +130,7 @@ function ProcessingAnimation({ toolName }: { toolName: string }) {
         </span>
       </p>
       <p className="mt-2 text-sm text-gray-400">
-        Usually 20-40 seconds
+        Up to 2 minutes
       </p>
     </div>
   );

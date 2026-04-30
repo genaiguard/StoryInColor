@@ -76,9 +76,26 @@ const PACK_BULLETS: Record<string, string> = {
   set: "Any six readings — make it a gift",
 };
 
+function getSafeReturnPath(value: string | null): string | null {
+  if (
+    value &&
+    value.startsWith("/") &&
+    !value.startsWith("//") &&
+    !value.startsWith("/\\") &&
+    !/[\r\n]/.test(value)
+  ) {
+    return value;
+  }
+  return null;
+}
+
 export default function CreditsPage() {
   const router = useRouter();
-  const { user, initialized: firebaseInitialized } = useFirebase();
+  const {
+    user,
+    initialized: firebaseInitialized,
+    loading: firebaseLoading,
+  } = useFirebase();
   const [isLoading, setIsLoading] = useState(true);
   const [credits, setCredits] = useState(0);
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
@@ -87,16 +104,33 @@ export default function CreditsPage() {
   const [packageIdLoading, setPackageIdLoading] = useState<string | null>(
     null,
   );
+  const [returnPath, setReturnPath] = useState<string | null>(null);
 
   useEffect(() => {
-    if (firebaseInitialized && !user) {
-      router.replace("/login?next=/credits");
+    if (typeof window === "undefined") return;
+    const next = new URLSearchParams(window.location.search).get("next");
+    setReturnPath(getSafeReturnPath(next));
+  }, []);
+
+  useEffect(() => {
+    if (firebaseInitialized && !firebaseLoading && !user) {
+      const next =
+        typeof window !== "undefined"
+          ? getSafeReturnPath(new URLSearchParams(window.location.search).get("next"))
+          : null;
+      const creditsPath = next
+        ? `/credits?next=${encodeURIComponent(next)}`
+        : "/credits";
+      router.replace(`/login?next=${encodeURIComponent(creditsPath)}`);
     }
-  }, [firebaseInitialized, user, router]);
+  }, [firebaseInitialized, firebaseLoading, user, router]);
 
   useEffect(() => {
     async function loadUserCredits() {
-      if (!user || !firebaseInitialized) {
+      if (!firebaseInitialized || firebaseLoading) {
+        return;
+      }
+      if (!user) {
         setIsLoading(false);
         return;
       }
@@ -131,7 +165,7 @@ export default function CreditsPage() {
     }
 
     loadUserCredits();
-  }, [user, firebaseInitialized]);
+  }, [user, firebaseInitialized, firebaseLoading]);
 
   const formatHistoryDate = (timestamp: any) => {
     if (!timestamp) return "Unknown date";
@@ -221,6 +255,7 @@ export default function CreditsPage() {
         packageId: creditPackage.id,
         origin,
         fbEventId: checkoutEventId,
+        returnPath,
       });
 
       const data = result.data as any;
