@@ -1,4 +1,4 @@
-import * as AWS from 'aws-sdk';
+import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
 import { defineSecret } from 'firebase-functions/params';
 
 // AWS credentials are real secrets and stay in Secret Manager. AWS_REGION
@@ -12,20 +12,26 @@ const senderEmail = defineSecret('SENDER_EMAIL_ADDRESS');
 // Default to us-east-1 if missing to avoid hard-failing welcome emails.
 const awsRegion = (): string => process.env.AWS_REGION || 'us-east-1';
 
-// Interface for AWS SES errors
+// Interface for AWS SES errors. v3 throws actual Error objects with `name`,
+// but legacy `code`-shaped errors still appear in some downstream paths.
 interface AWSError {
   code?: string;
+  name?: string;
   message?: string;
   [key: string]: any;
 }
 
-// Configure AWS SES
+// Configure AWS SES (v3 client). The v3 client is tree-shakeable + smaller
+// cold-start than the v2 monolithic `aws-sdk` package, and v2 is in
+// maintenance-only mode (CVEs no longer get backported reliably).
 export const configureSES = () => {
   console.log(`[AWS SES] Configuring SES with region: ${awsRegion()}`);
 
-  const ses = new AWS.SES({
-    accessKeyId: awsAccessKeyId.value(),
-    secretAccessKey: awsSecretAccessKey.value(),
+  const ses = new SESClient({
+    credentials: {
+      accessKeyId: awsAccessKeyId.value(),
+      secretAccessKey: awsSecretAccessKey.value(),
+    },
     region: awsRegion(),
   });
 
@@ -79,15 +85,16 @@ export const sendWelcomeEmail = async (email: string, name?: string) => {
     }));
     
     try {
-      console.log('[AWS SES] Sending email via SES.sendEmail()');
-      const result = await ses.sendEmail(params).promise();
+      console.log('[AWS SES] Sending email via SES SendEmailCommand');
+      const result = await ses.send(new SendEmailCommand(params));
       console.log(`[AWS SES] Email successfully sent, MessageId: ${result.MessageId}`);
       return true;
     } catch (error) {
       const sesError = error as AWSError;
       console.error('[AWS SES] SES sending error:', sesError);
-      if (sesError.code) {
-        console.error(`[AWS SES] Error code: ${sesError.code}, message: ${sesError.message}`);
+      // v3 uses `name` for the error type; legacy `code` may still surface.
+      if (sesError.name || sesError.code) {
+        console.error(`[AWS SES] Error type: ${sesError.name ?? sesError.code}, message: ${sesError.message}`);
       }
       throw sesError;
     }
@@ -128,14 +135,14 @@ export const sendContactFormEmail = async (
   };
   
   try {
-    const result = await ses.sendEmail(params).promise();
+    const result = await ses.send(new SendEmailCommand(params));
     console.log(`[AWS SES] Contact form email sent, MessageId: ${result.MessageId}`);
     return true;
   } catch (err) {
     const error = err as AWSError;
     console.error('[AWS SES] Error sending contact form email:', error);
-    if (error.code) {
-      console.error(`[AWS SES] Error code: ${error.code}, message: ${error.message}`);
+    if (error.name || error.code) {
+      console.error(`[AWS SES] Error type: ${error.name ?? error.code}, message: ${error.message}`);
     }
     return false;
   }
