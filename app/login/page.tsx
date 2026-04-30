@@ -14,7 +14,7 @@ import {
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getAuth } from "firebase/auth";
-import { trackCompleteRegistration } from "@/lib/analytics/events";
+import { newEventId, trackCompleteRegistration } from "@/lib/analytics/events";
 import { persistUserProfileAndAttribution } from "@/lib/attribution/persist";
 import { toast } from "sonner";
 
@@ -96,7 +96,19 @@ function LoginForm() {
         }
       }
 
-      trackCompleteRegistration({ method: "email" });
+      // Mint a shared event_id so the Pixel emit (now) and the CAPI mirror
+      // fired by ensureUserCredits (later, when the dashboard mounts) land
+      // on Meta with the same id and dedupe within the 48h window.
+      const regEventId = newEventId();
+      try {
+        window.localStorage.setItem(
+          "sic_pending_registration_event_id",
+          regEventId,
+        );
+      } catch {
+        // privacy mode — Pixel still fires, server will mint its own id
+      }
+      trackCompleteRegistration({ method: "email", eventId: regEventId });
 
       try {
         const functions = getFunctions();
@@ -157,7 +169,18 @@ function LoginForm() {
           }
         }
 
-        trackCompleteRegistration({ method: "google" });
+        // Mint a shared event_id (same pattern as the email path) so the
+        // Pixel emit and the CAPI mirror dedupe.
+        const regEventId = newEventId();
+        try {
+          window.localStorage.setItem(
+            "sic_pending_registration_event_id",
+            regEventId,
+          );
+        } catch {
+          // privacy mode — Pixel still fires, server will mint its own id
+        }
+        trackCompleteRegistration({ method: "google", eventId: regEventId });
 
         try {
           const functions = getFunctions();

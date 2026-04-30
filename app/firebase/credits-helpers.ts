@@ -78,10 +78,41 @@ export interface CreditUsageEvent {
 // firestore.rules. The client cannot setDoc directly. New users are
 // bootstrapped through the `ensureUserCredits` callable Cloud Function
 // (server-side, idempotent, bypasses rules via admin SDK).
-export async function initializeUserCredits(userId: string): Promise<UserCredits> {
+//
+// On first creation the server also fires a CAPI CompleteRegistration
+// mirror. To dedupe with the Pixel emit fired on /login, we read the
+// event_id stashed in localStorage by the login page and pass it through.
+// `method` is optional metadata — only present when called directly
+// post-signup (we don't have it when called from getUserCredits).
+export async function initializeUserCredits(
+  userId: string,
+  opts?: { eventId?: string; method?: string },
+): Promise<UserCredits> {
   const functions = getFunctions();
   const ensure = httpsCallable(functions, "ensureUserCredits");
-  await ensure({});
+  let eventId = opts?.eventId;
+  if (!eventId && typeof window !== "undefined") {
+    try {
+      eventId =
+        window.localStorage.getItem("sic_pending_registration_event_id") ||
+        undefined;
+    } catch {
+      // localStorage can throw in privacy mode — ignore.
+    }
+  }
+  await ensure({
+    ...(eventId ? { eventId } : {}),
+    ...(opts?.method ? { method: opts.method } : {}),
+  });
+  // Single-use stash — drop after consumption so a returning session
+  // doesn't re-emit a stale event_id.
+  if (eventId && typeof window !== "undefined") {
+    try {
+      window.localStorage.removeItem("sic_pending_registration_event_id");
+    } catch {
+      // ignore
+    }
+  }
   // Re-read the doc (now guaranteed to exist on the server side)
   const db = getFirestore();
   const snap = await getDoc(doc(db, "userCredits", userId));
