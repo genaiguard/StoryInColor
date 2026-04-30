@@ -323,6 +323,43 @@ export default function ResultView({ tool }: Props) {
   }
 
   if (job?.status === "complete" && job.outputDownloadUrl) {
+    const handleDownload = async () => {
+      // The HTML `download` attribute is silently ignored for cross-origin
+      // URLs (the browser opens the file in-tab instead). Firebase Storage
+      // serves from firebasestorage.googleapis.com — a different origin
+      // from storyincolor.com — so we must fetch the bytes ourselves and
+      // hand the browser a blob URL.
+      const url = job.outputDownloadUrl!;
+      const filename = `storyincolor-${tool.slug}.png`;
+      const loadingToast = toast.loading("Preparing download…");
+      try {
+        const res = await fetch(url, { mode: "cors", credentials: "omit" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        try {
+          const a = document.createElement("a");
+          a.href = objectUrl;
+          a.download = filename;
+          a.rel = "noopener";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } finally {
+          // Free the blob a tick after click so Safari has time to grab it.
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        }
+        toast.dismiss(loadingToast);
+      } catch (err) {
+        toast.dismiss(loadingToast);
+        console.error("[download] fetch-as-blob failed:", err);
+        // Last-resort fallback: open the URL in a new tab so the user can
+        // long-press / right-click → Save. Better than silently failing.
+        window.open(url, "_blank", "noopener,noreferrer");
+        toast.message("Opened in a new tab — long-press or right-click to save.");
+      }
+    };
+
     const handleShare = async () => {
       // Build a public, brand-safe share URL by calling the createShareLink
       // callable. This persists a public sharedReadings/{shareId} doc and
@@ -410,14 +447,14 @@ export default function ResultView({ tool }: Props) {
               />
             </div>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <a
-                href={job.outputDownloadUrl}
-                download
+              <button
+                type="button"
+                onClick={handleDownload}
                 className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-colors hover:bg-gray-200"
               >
                 <Download className="h-4 w-4" />
                 Download
-              </a>
+              </button>
               <button
                 type="button"
                 onClick={handleShare}

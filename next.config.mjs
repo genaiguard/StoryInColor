@@ -1,10 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Build now enforces both. tsc has been clean for a while, and the
+  // ESLint backlog was retired in .eslintrc.json by turning off two
+  // cosmetic rules that were responsible for >95% of the noise.
+  // If a real-bug rule starts firing, fix it in code rather than
+  // re-enabling these flags.
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   output: 'export',
   images: {

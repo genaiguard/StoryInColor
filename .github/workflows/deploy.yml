@@ -40,23 +40,18 @@ jobs:
       - name: Install functions dependencies
         run: npm --prefix functions ci
 
-      # Non-blocking quality gates. next build itself is configured to
-      # ignore TS/ESLint errors (next.config.mjs) because there is a lint
-      # backlog we have not yet burned down. Run the strict checks here
-      # so regressions show up in the Actions tab. Drop continue-on-error
-      # once these checks are clean — that is the cue to also flip
-      # ignoreDuringBuilds / ignoreBuildErrors to false in next.config.mjs.
-      - name: Type-check root (non-blocking)
+      # Quality gates — these now block the deploy. next.config.mjs no
+      # longer ignores TS / ESLint errors, but `next build` only runs
+      # them implicitly; running them as discrete steps gives a clean
+      # signal in the Actions tab.
+      - name: Type-check root
         run: npx tsc --noEmit
-        continue-on-error: true
 
-      - name: Type-check functions (non-blocking)
+      - name: Type-check functions
         run: npm --prefix functions run build
-        continue-on-error: true
 
-      - name: Lint root (non-blocking)
+      - name: Lint root
         run: npm run lint
-        continue-on-error: true
 
       - name: Build with Next.js
         run: npm run build

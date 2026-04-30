@@ -127,8 +127,13 @@ function LoginForm() {
 
     try {
       const result = await googleSignIn();
-      // @ts-ignore - Firebase typings may be incomplete
-      const isNewUser = result.additionalUserInfo?.isNewUser || false;
+      // Firebase v9+ doesn't expose additionalUserInfo on UserCredential
+      // typings, but the runtime still returns it via getAdditionalUserInfo.
+      // Cast through unknown to read it without committing to a type.
+      const additional = (result as unknown as {
+        additionalUserInfo?: { isNewUser?: boolean };
+      }).additionalUserInfo;
+      const isNewUser = additional?.isNewUser || false;
 
       if (isNewUser) {
         // Persist profile + attribution before any other side-effect so the
