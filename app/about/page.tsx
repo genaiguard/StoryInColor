@@ -58,7 +58,7 @@ export default function AboutPage() {
               <span className="italic font-light text-gray-400">story.</span>
             </>
           }
-          description="StoryInColor is an editorial AI studio that turns a single photo — your palm, your face, your handwriting, your style, your skin — into a magazine-quality reading. One reading, designed to be saved."
+          description="StoryInColor is an editorial studio that turns a single photo — your palm, your face, your handwriting, your style, your skin — into a magazine-quality reading. One reading, designed to be saved."
           spotlight
           containerWidth="default"
         >

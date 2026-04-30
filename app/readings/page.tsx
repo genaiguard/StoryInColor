@@ -6,7 +6,7 @@ import { TOOLS } from "@/lib/tools/registry";
 import { CinematicSection } from "@/components/cinematic/cinematic-section";
 
 const SHORT_DESCRIPTION =
-  "Editorial AI photo readings — palm reading, face reading, beauty report, color analysis, hairstyle analysis, style audit, and more. Each one designed to be saved.";
+  "Editorial photo readings — palm reading, face reading, beauty report, color analysis, hairstyle analysis, style audit, and more. Each one designed to be saved.";
 
 export const metadata: Metadata = {
   title: "The reading room | StoryInColor",
@@ -32,7 +32,7 @@ function CatalogJsonLd() {
     "@type": "ItemList",
     name: "StoryInColor — the reading room",
     description:
-      "Editorial AI photo readings, written like an editor, not an algorithm.",
+      "Editorial photo readings, written like an editor, not an algorithm.",
     numberOfItems: TOOLS.length,
     itemListElement: TOOLS.map((tool, idx) => ({
       "@type": "ListItem",

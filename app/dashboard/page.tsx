@@ -91,15 +91,20 @@ function DashboardHeader({
           <span className="font-light">Color</span>
         </Link>
         <nav className="flex items-center gap-2 sm:gap-3">
-          {!isLoadingCredits && (
-            <Link
-              href="/credits"
-              className="liquid-glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"
-            >
-              <Sparkles className="h-4 w-4" />
-              <span>{formatCreditBalance(credits)}</span>
-            </Link>
-          )}
+          {/* Always render the balance pill as a Link to /credits, even
+              while credits are loading — gives the user a stable nav
+              affordance instead of one that pops in/out. While loading
+              we show a placeholder dot so the layout doesn't shift. */}
+          <Link
+            href="/credits"
+            aria-label="Reading balance — view credit packs"
+            className="liquid-glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.97]"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span>
+              {isLoadingCredits ? "…" : formatCreditBalance(credits)}
+            </span>
+          </Link>
           <Link
             href="/dashboard/settings"
             className="liquid-glass inline-flex h-10 w-10 items-center justify-center rounded-full"

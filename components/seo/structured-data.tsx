@@ -10,7 +10,7 @@
 const SITE_URL = "https://storyincolor.com";
 const SITE_NAME = "StoryInColor";
 const SITE_DESCRIPTION =
-  "Editorial AI photo readings, written from a single photo of you. Designed to be saved.";
+  "Editorial photo readings, written from a single photo of you. Designed to be saved.";
 const LOGO_URL = `${SITE_URL}/web-app-manifest-512x512.png`;
 
 const organizationSchema = {

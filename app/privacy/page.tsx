@@ -230,7 +230,7 @@ const SECTIONS: Array<{ heading: string; body: React.ReactNode }> = [
 ];
 
 const PRIVACY_DESCRIPTION =
-  "How StoryInColor collects, uses, and protects your personal information when you use our editorial AI photo readings.";
+  "How StoryInColor collects, uses, and protects your personal information when you use our editorial photo readings.";
 
 export const metadata = {
   title: "Privacy Policy | StoryInColor",

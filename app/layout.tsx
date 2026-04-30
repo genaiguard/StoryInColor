@@ -20,7 +20,7 @@ const inter = Inter({
 
 // One canonical site description used by every social card and the SEO
 // JSON-LD. Updating this in one place keeps every share preview in sync.
-const SITE_TITLE = 'StoryInColor — Editorial AI Photo Readings';
+const SITE_TITLE = 'StoryInColor — Editorial Photo Readings';
 const SITE_DESCRIPTION =
   'What does your photo know about you? Editorial readings of your palm, your face, your beauty, your handwriting, your style, your skin, and more. Designed to be saved.';
 const SITE_URL = 'https://storyincolor.com';
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
         url: SITE_OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: 'StoryInColor — Editorial AI Photo Readings',
+        alt: 'StoryInColor — Editorial Photo Readings',
       },
     ],
   },

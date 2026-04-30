@@ -252,7 +252,7 @@ const SECTIONS: Array<{ heading: string; body: React.ReactNode }> = [
 ];
 
 const TERMS_DESCRIPTION =
-  "Terms of Service for StoryInColor — editorial AI photo readings, written from a single photo of you.";
+  "Terms of Service for StoryInColor — editorial photo readings, written from a single photo of you.";
 
 export const metadata = {
   title: "Terms of Service | StoryInColor",

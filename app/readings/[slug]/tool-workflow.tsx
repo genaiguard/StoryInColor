@@ -292,18 +292,23 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
               <span className="font-light">Color</span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Balance pill is a Link to /credits on every page that
+                  shows it — dashboard, reading workflow, etc. — so the
+                  user always has a one-click path to top up. The
+                  tooltip explains what gets deducted; the link is the
+                  action. */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Reading balance"
-                    className="liquid-glass inline-flex cursor-help items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"
+                  <Link
+                    href="/credits"
+                    aria-label="Reading balance — view credit packs"
+                    className="liquid-glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.97]"
                   >
                     <Sparkles className="h-4 w-4" />
                     {credits === null
                       ? "…"
                       : formatCreditBalance(credits)}
-                  </button>
+                  </Link>
                 </TooltipTrigger>
                 <TooltipContent>
                   {isFree
@@ -444,12 +449,14 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                   )}
 
                   <div className="mt-6 flex items-center justify-between gap-4">
-                    <p className="text-sm text-gray-400">
-                      Cost:{" "}
-                      <span className="font-medium text-white">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-gray-500">
+                        Cost
+                      </span>
+                      <span className="text-sm font-medium text-white tabular-nums">
                         {creditLabel}
                       </span>
-                    </p>
+                    </div>
                     <button
                       type="button"
                       onClick={handleGenerate}

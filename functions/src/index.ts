@@ -456,7 +456,7 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
 
       // Create product name and description
       const productName = `${creditPackage.credits} Credits`;
-      const productDescription = `${creditPackage.credits} credits for AI photo readings on StoryInColor (${creditPackage.discountPercentage}% discount)`;
+      const productDescription = `${creditPackage.credits} credits for photo readings on StoryInColor (${creditPackage.discountPercentage}% discount)`;
 
       // Create line items
       const lineItems = [{
