@@ -3,16 +3,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Admin access (more permissive). Source-of-truth is the `admin: true`
-    // custom claim, set via Admin SDK (functions/src/index.ts — see the
-    // setAdminClaim path or the one-off bootstrap script). The email
-    // fallback is kept temporarily so an admin signed in with a token
-    // issued before the claim was set keeps working until their token
-    // refreshes (~1h max). Drop the email fallback in a follow-up cleanup
-    // once we're sure no one's stuck with a stale token.
+    // Firebase Auth custom claim. To rotate admins, set the claim via
+    // Admin SDK (see CLAUDE.md § Admin) — no rule redeploy needed.
     function isAdmin() {
-      return request.auth != null &&
-             (request.auth.token.admin == true ||
-              request.auth.token.email == 'ipekcioglu@me.com');
+      return request.auth != null && request.auth.token.admin == true;
     }
 
     // Allow admin full read access to everything

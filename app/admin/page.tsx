@@ -111,13 +111,11 @@ interface AdminDashboardData {
 // Source of truth for admin authorization is the `admin: true` Firebase
 // Auth custom claim. firestore.rules / storage.rules /
 // functions/src/index.ts:getAdminDashboardData all check
-// `request.auth.token.admin == true || request.auth.token.email == 'ipekcioglu@me.com'`
-// (the email path is a temporary stale-token fallback and is planned for
-// removal in a follow-up). This client-side array is purely a UX hint
-// for the SPA gate so we don't have to await a token-claims fetch on
-// every dashboard mount — the server is what actually enforces auth.
-// To rotate: setCustomUserClaims(newUid, {admin:true}) via Admin SDK,
-// then update this array. No rule/function redeploy needed.
+// `request.auth.token.admin == true`. This client-side array is purely
+// a UX hint for the SPA gate so we don't have to await a token-claims
+// fetch on every dashboard mount — the server is what actually enforces
+// auth. To rotate: setCustomUserClaims(newUid, {admin:true}) via Admin
+// SDK, then update this array. No rule/function redeploy needed.
 const ADMIN_EMAILS = ["ipekcioglu@me.com"];
 
 type SortKey =

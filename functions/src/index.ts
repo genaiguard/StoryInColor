@@ -644,14 +644,12 @@ export const getAdminDashboardData = onCall(
   async (request): Promise<AdminDashboardData> => {
     console.log("[getAdminDashboardData] Function called.");
 
-    // 1. Verify admin authentication. Source-of-truth is the `admin: true`
-    // custom claim. Email fallback kept temporarily for the ~1h grace
-    // period during which an admin's already-issued token won't yet
-    // contain the new claim. Drop the email check in a follow-up.
+    // 1. Verify admin authentication via the `admin: true` Firebase Auth
+    // custom claim. To rotate admins, set the claim via Admin SDK — no
+    // function redeploy needed. See CLAUDE.md § Admin for the recipe.
     const isAdminCaller =
       !!request.auth &&
-      ((request.auth.token as { admin?: boolean }).admin === true ||
-        request.auth.token.email === 'ipekcioglu@me.com');
+      (request.auth.token as { admin?: boolean }).admin === true;
     if (!isAdminCaller) {
       console.error(`[Admin Dashboard] Unauthorized attempt by ${request.auth?.token.email || 'unauthenticated user'}.`);
       throw new HttpsError('permission-denied', 'Admin access required.');

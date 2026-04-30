@@ -7,11 +7,8 @@ service firebase.storage {
     // doc). Server (admin SDK) bypasses these rules.
     match /users/{userId}/generations/{fileName} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      // Admin override. Custom claim is source of truth; email fallback
-      // kept temporarily for stale-token grace (drop in a follow-up).
-      allow read: if request.auth != null &&
-                     (request.auth.token.admin == true ||
-                      request.auth.token.email == 'ipekcioglu@me.com');
+      // Admin override via the `admin: true` custom claim.
+      allow read: if request.auth != null && request.auth.token.admin == true;
       allow write, delete: if false;
     }
 
@@ -22,11 +19,8 @@ service firebase.storage {
                      && request.resource.size < 10 * 1024 * 1024  // 10MB limit
                      && request.resource.contentType.matches('image/.*');
 
-      // Allow admin access to all user files. Custom claim is source of
-      // truth; email fallback kept temporarily for stale-token grace.
-      allow read, write: if request.auth != null &&
-                         (request.auth.token.admin == true ||
-                          request.auth.token.email == 'ipekcioglu@me.com');
+      // Allow admin access to all user files via the `admin: true` claim.
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
     }
 
     // Public files can be read by anyone but only written by authenticated users

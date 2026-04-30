@@ -68,7 +68,7 @@ This means the source repo is private, the served repo is public, and `out/` in 
 
 ### Admin
 
-Admin authorization uses a Firebase Auth **custom claim** `admin: true`. All four enforcement points (`firestore.rules`, `storage.rules` — two paths, `functions/src/index.ts:getAdminDashboardData`) check `request.auth.token.admin == true || request.auth.token.email == 'ipekcioglu@me.com'`. The email branch is a temporary stale-token fallback so an admin signed in with a token issued before the claim was set keeps working until it refreshes (~1h max). It's planned for removal in a follow-up once we're confident no one's stuck with a stale token.
+Admin authorization uses a Firebase Auth **custom claim** `admin: true`. All four enforcement points (`firestore.rules`, `storage.rules` — two paths, `functions/src/index.ts:getAdminDashboardData`) check `request.auth.token.admin == true`. There is no email fallback — rotating the admin is purely a matter of moving the claim, no rule/function redeploy needed.
 
 The claim is set on the Firebase Auth user, NOT in committed code. There's no source-controlled `setCustomUserClaims` call in `functions/src/` — it was set once via a one-off Admin SDK script using ADC and then deleted. To verify the current claim state:
 
