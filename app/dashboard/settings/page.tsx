@@ -22,7 +22,7 @@ import {
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import {
   getAuth,
-  updateEmail,
+  verifyBeforeUpdateEmail,
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -172,9 +172,17 @@ export default function SettingsPage() {
         currentPassword,
       );
       await reauthenticateWithCredential(user, credential);
-      await updateEmail(user, newEmail);
+      // Firebase deprecated `updateEmail` in favor of
+      // `verifyBeforeUpdateEmail`. The latter sends a verification link to
+      // the NEW address; the change only takes effect when the user clicks
+      // it. This is also the only path that works once Firebase Auth's
+      // "Email Enumeration Protection" is enabled on the project.
+      await verifyBeforeUpdateEmail(user, newEmail);
 
-      setMessage({ type: "success", text: "Email updated successfully" });
+      setMessage({
+        type: "success",
+        text: `Verification email sent to ${newEmail}. Click the link in that email to complete the change.`,
+      });
       setCurrentPassword("");
       setNewEmail("");
     } catch (error: any) {

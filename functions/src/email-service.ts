@@ -117,11 +117,21 @@ export const sendContactFormEmail = async (
   console.log(`[AWS SES] Preparing to send contact form email from ${name} (${email})`);
   
   const ses = configureSES();
-  
+
+  // Contact-form submissions get sent to the sender address (info@…) AND
+  // to a personal admin notification address. The personal address is
+  // not a security check — just a recipient — so it lives in
+  // functions/.env (ADMIN_NOTIFICATION_EMAIL) rather than as a Firebase
+  // secret. Falls back to senderEmail-only if the env var is unset.
+  const notificationEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+  const toAddresses = notificationEmail
+    ? [senderEmail.value(), notificationEmail]
+    : [senderEmail.value()];
+
   const params = {
     Source: senderEmail.value(),
-    Destination: { 
-      ToAddresses: [senderEmail.value(), 'ipekcioglu@me.com'], // Send to both admin and your personal email
+    Destination: {
+      ToAddresses: toAddresses,
     },
     ReplyToAddresses: [email], // Allow replying directly to the sender
     Message: {

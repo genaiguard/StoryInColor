@@ -644,12 +644,19 @@ export const getAdminDashboardData = onCall(
   async (request): Promise<AdminDashboardData> => {
     console.log("[getAdminDashboardData] Function called.");
 
-    // 1. Verify admin authentication
-    if (!request.auth || request.auth.token.email !== 'ipekcioglu@me.com') {
+    // 1. Verify admin authentication. Source-of-truth is the `admin: true`
+    // custom claim. Email fallback kept temporarily for the ~1h grace
+    // period during which an admin's already-issued token won't yet
+    // contain the new claim. Drop the email check in a follow-up.
+    const isAdminCaller =
+      !!request.auth &&
+      ((request.auth.token as { admin?: boolean }).admin === true ||
+        request.auth.token.email === 'ipekcioglu@me.com');
+    if (!isAdminCaller) {
       console.error(`[Admin Dashboard] Unauthorized attempt by ${request.auth?.token.email || 'unauthenticated user'}.`);
       throw new HttpsError('permission-denied', 'Admin access required.');
     }
-    console.log(`[Admin Dashboard] Admin user verified: ${request.auth.token.email}`);
+    console.log(`[Admin Dashboard] Admin user verified: ${request.auth!.token.email}`);
 
     let totalUsers = 0;
     let totalRevenueCents = 0;
