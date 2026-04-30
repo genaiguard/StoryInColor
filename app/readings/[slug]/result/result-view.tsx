@@ -324,8 +324,42 @@ export default function ResultView({ tool }: Props) {
 
   if (job?.status === "complete" && job.outputDownloadUrl) {
     const handleShare = async () => {
-      const shareUrl =
-        typeof window !== "undefined" ? window.location.href : "";
+      // Build a public, brand-safe share URL by calling the createShareLink
+      // callable. This persists a public sharedReadings/{shareId} doc and
+      // returns the short id we tack onto /share?id=... — the recipient
+      // doesn't need an account or auth token to view it.
+      //
+      // We mint the share doc on every click; the callable de-dupes
+      // server-side per (jobId, uid), so repeat clicks reuse the same id.
+      if (!user?.uid || !jobId) {
+        toast.error("Sign in required to share.");
+        return;
+      }
+      const loadingToast = toast.loading("Creating share link…");
+      let shareUrl: string;
+      try {
+        const [{ getFunctions, httpsCallable }] = await Promise.all([
+          import("firebase/functions"),
+        ]);
+        const functions = getFunctions();
+        const createShareLink = httpsCallable<
+          { jobId: string },
+          { shareId: string }
+        >(functions, "createShareLink");
+        const { data } = await createShareLink({ jobId });
+        const origin =
+          typeof window !== "undefined"
+            ? window.location.origin
+            : "https://storyincolor.com";
+        shareUrl = `${origin}/share?id=${encodeURIComponent(data.shareId)}`;
+        toast.dismiss(loadingToast);
+      } catch (err) {
+        toast.dismiss(loadingToast);
+        console.error("[share] createShareLink failed:", err);
+        toast.error("Couldn't create share link.");
+        return;
+      }
+
       const nav: any =
         typeof navigator !== "undefined" ? navigator : undefined;
       if (nav?.share) {

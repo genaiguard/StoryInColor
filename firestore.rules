@@ -58,5 +58,22 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null;
     }
+
+    // Shared readings — public read, server-only write. The createShareLink
+    // callable validates that the requester owns a complete job before
+    // creating a doc here; clients must NOT be able to forge share docs
+    // from the browser console (would let a malicious user point a share
+    // link at any image URL they wanted).
+    match /sharedReadings/{shareId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Stripe webhook idempotency markers — server-only writes (admin SDK
+    // bypasses these rules). No client should ever read or write these.
+    match /processedStripeEvents/{eventId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
   }
 }

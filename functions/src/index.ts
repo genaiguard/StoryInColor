@@ -127,48 +127,75 @@ export const stripeWebhook = onRequest(
                   
                   // Only process if payment is successful
                   if (session.payment_status === 'paid') {
+                      // Idempotency: dedupe on Stripe event id so retried/replayed
+                      // checkout.session.completed deliveries cannot double-grant.
+                      // The marker write + credit grant happen in one transaction;
+                      // a transient Firestore failure throws and we return 500
+                      // (Stripe will retry, the marker prevents the retry from
+                      // double-granting).
+                      const stripeEventId = event.id;
                       try {
-                          console.log(`[Credits] Adding ${creditAmount} credits for user ${userId}`);
-                          const userCreditsRef = db.collection('userCredits').doc(userId);
-                          
-                          // Get current user credits or create if not exists
-                          const userCreditsDoc = await userCreditsRef.get();
-                          if (!userCreditsDoc.exists) {
-                              // Create new user credits document
-                              await userCreditsRef.set({
-                                  balance: creditAmount,
-                                  used: 0,
-                                  purchaseHistory: [{
-                                      packageId,
-                                      creditAmount,
-                                      pricePaid: priceInCents,
-                                      purchaseDate: new Date() // Use regular Date instead of server timestamp
-                                  }],
-                                  // usageHistory array intentionally omitted — usage now lives in the
-                                  // userCredits/{uid}/usageEvents subcollection (see credit-ledger.ts).
-                                  lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+                          const grantResult = await db.runTransaction(async (tx) => {
+                              const markerRef = db.collection('processedStripeEvents').doc(stripeEventId);
+                              const markerSnap = await tx.get(markerRef);
+                              if (markerSnap.exists) {
+                                  console.log(`[Webhook] Stripe event ${stripeEventId} already processed; skipping credit grant.`);
+                                  return { granted: false, reason: 'already-processed' as const };
+                              }
+
+                              const userCreditsRef = db.collection('userCredits').doc(userId);
+                              const userCreditsSnap = await tx.get(userCreditsRef);
+                              const purchaseEntry = {
+                                  packageId,
+                                  creditAmount,
+                                  pricePaid: priceInCents,
+                                  purchaseDate: new Date(),
+                                  stripeEventId,
+                                  stripeSessionId: session.id,
+                              };
+                              if (!userCreditsSnap.exists) {
+                                  tx.set(userCreditsRef, {
+                                      balance: creditAmount,
+                                      used: 0,
+                                      purchaseHistory: [purchaseEntry],
+                                      // usageHistory array intentionally omitted — usage now lives in the
+                                      // userCredits/{uid}/usageEvents subcollection (see credit-ledger.ts).
+                                      lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+                                  });
+                              } else {
+                                  tx.update(userCreditsRef, {
+                                      balance: admin.firestore.FieldValue.increment(creditAmount),
+                                      purchaseHistory: admin.firestore.FieldValue.arrayUnion(purchaseEntry),
+                                      lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+                                  });
+                              }
+
+                              tx.set(markerRef, {
+                                  stripeEventId,
+                                  stripeSessionId: session.id,
+                                  userId,
+                                  packageId,
+                                  creditAmount,
+                                  priceInCents,
+                                  processedAt: admin.firestore.FieldValue.serverTimestamp(),
                               });
-                                      } else {
-                              // Update existing user credits document
-                              // We don't need the existing data for an increment operation
-                              await userCreditsRef.update({
-                                  balance: admin.firestore.FieldValue.increment(creditAmount),
-                                  purchaseHistory: admin.firestore.FieldValue.arrayUnion({
-                                      packageId,
-                                      creditAmount,
-                                      pricePaid: priceInCents,
-                                      purchaseDate: new Date() // Use regular Date instead of server timestamp
-                                  }),
-                                  lastUpdated: admin.firestore.FieldValue.serverTimestamp()
-                              });
+
+                              return { granted: true, reason: 'processed' as const };
+                          });
+
+                          if (grantResult.granted) {
+                              console.log(`[Credits] Successfully added ${creditAmount} credits for user ${userId} (stripe_event=${stripeEventId})`);
                           }
-                          
-                          console.log(`[Credits] Successfully added ${creditAmount} credits for user ${userId}`);
 
                           // Phase 4: server-side Purchase mirror to Meta CAPI + GA4 MP.
                           // Wrapped in its own try/catch so a tracker failure doesn't
                           // 500 the webhook (Stripe would then retry the credit grant).
-                          try {
+                          //
+                          // Gate on grantResult.granted: Meta CAPI dedupes via the
+                          // shared event_id, but GA4 Measurement Protocol does NOT,
+                          // so firing on a Stripe retry would double-count Purchase
+                          // in GA4. Only emit when the credit grant just happened.
+                          if (grantResult.granted) try {
                               const fbEventIdFromMeta = session.metadata?.fbEventId;
                               const eventId =
                                   (typeof fbEventIdFromMeta === 'string' && fbEventIdFromMeta.length > 0)
@@ -217,9 +244,12 @@ export const stripeWebhook = onRequest(
                               console.error('[Conversions] Server-side Purchase mirror failed (non-fatal):', convErr);
                           }
                       } catch (error) {
-                          console.error(`[Credits Error] Failed to add credits: ${error}`);
-                          // Still return success to Stripe but log the error
-                          res.status(200).send({ received: true, error: 'Failed to add credits' });
+                          // Transient Firestore failure: return 500 so Stripe
+                          // retries the webhook (default backoff up to 3 days).
+                          // The processedStripeEvents marker is part of the same
+                          // transaction so a successful retry will not double-grant.
+                          console.error(`[Credits Error] Failed to grant credits transactionally: ${error}`);
+                          res.status(500).send({ received: false, error: 'Transient failure granting credits; please retry.' });
                           return;
                                }
                           } else {
@@ -426,7 +456,7 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
 
       // Create product name and description
       const productName = `${creditPackage.credits} Credits`;
-      const productDescription = `${creditPackage.credits} credits for generating coloring pages (${creditPackage.discountPercentage}% discount)`;
+      const productDescription = `${creditPackage.credits} credits for AI photo readings on StoryInColor (${creditPackage.discountPercentage}% discount)`;
 
       // Create line items
       const lineItems = [{
@@ -835,3 +865,4 @@ export const disableCurrentUserAccount = onCall(
 
 export * from "./generate-for-tool";
 export * from "./ensure-user-credits";
+export * from "./share-link";

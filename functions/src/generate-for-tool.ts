@@ -272,7 +272,12 @@ export const generateForTool = onCall(
         },
       },
       conversionUserData,
-    ).catch((convErr) => {
+    ).then((res) => {
+      // Always log a one-line summary so verifying CAPI/MP from Cloud Logs
+      // doesn't depend on tooling — ok=true / ok=false at a glance.
+      console.log("[Conversions] ReadingStarted result:", JSON.stringify(res));
+      return res;
+    }).catch((convErr) => {
       console.warn("[Conversions] ReadingStarted dispatch failed (non-fatal):", convErr);
       return null;
     });
@@ -331,6 +336,7 @@ export const generateForTool = onCall(
       // Per-tool model override (config.model) wins over the env default.
       const modelForRequest = config.model || IMAGE_MODEL;
       const isGptImage2 = modelForRequest.startsWith("gpt-image-2");
+      console.log(`[Generation] tool=${toolId} model=${modelForRequest} endpoint=${config.endpoint} jobId=${jobId}`);
       let resp: Response;
       if (config.endpoint === "edits") {
         if (!inputBuffer) {
@@ -429,7 +435,7 @@ export const generateForTool = onCall(
       // payment and produced the output, so a tracker miss is just lost
       // visibility, not a user-facing failure.
       try {
-        await dispatchServerConversion(
+        const completedRes = await dispatchServerConversion(
           {
             name: "ReadingCompleted",
             eventId: `srv-readdone-${jobId}`,
@@ -445,6 +451,7 @@ export const generateForTool = onCall(
           },
           conversionUserData,
         );
+        console.log("[Conversions] ReadingCompleted result:", JSON.stringify(completedRes));
       } catch (convErr) {
         console.warn("[Conversions] ReadingCompleted dispatch failed (non-fatal):", convErr);
       }
@@ -504,7 +511,7 @@ export const generateForTool = onCall(
       // events with no terminal counterpart (looks like in-flight forever).
       // Custom event in Meta CAPI; standard custom event in GA4 MP.
       try {
-        await dispatchServerConversion(
+        const failedRes = await dispatchServerConversion(
           {
             name: "ReadingFailed",
             eventId: `srv-readfail-${jobId}`,
@@ -520,6 +527,7 @@ export const generateForTool = onCall(
           },
           conversionUserData,
         );
+        console.log("[Conversions] ReadingFailed result:", JSON.stringify(failedRes));
       } catch (convErr) {
         console.warn("[Conversions] ReadingFailed dispatch failed (non-fatal):", convErr);
       }
