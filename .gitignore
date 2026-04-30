@@ -65,3 +65,8 @@ setup-email-secrets.sh
 .cache/
 dist/
 build/ 
+# GitHub CLI output snapshots — get accidentally committed otherwise
+jobs.json
+latest_run.json
+
+# TypeScript incremental build cache (already covered by *.tsbuildinfo)
