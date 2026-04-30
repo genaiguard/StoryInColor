@@ -10,61 +10,6 @@ export const getConfiguredStorage = () => {
   return getStorage(app);
 }
 
-// Get a direct download URL that bypasses CORS
-export const getDirectDownloadURL = async (imagePath: string): Promise<string> => {
-  if (!imagePath) {
-    throw new Error('No image path provided');
-  }
-  
-  const storage = getConfiguredStorage();
-  const imageRef = ref(storage, imagePath);
-  
-  try {
-    const url = await getDownloadURL(imageRef);
-    // Add a token to bypass CORS
-    return `${url}&token=cors-bypass`;
-  } catch (error: any) {
-    console.warn(`Failed to get download URL: ${error.message}`);
-    throw error;
-  }
-}
-
-// Enhanced download URL function with retry capability for CORS issues
-export const getDownloadURLWithRetry = async (imagePath: string, maxRetries = 3): Promise<string> => {
-  if (!imagePath) {
-    throw new Error('No image path provided');
-  }
-  
-  const storage = getConfiguredStorage();
-  const imageRef = ref(storage, imagePath);
-  
-  let lastError;
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      // If not the first attempt, add a small delay to allow for network issues to resolve
-      if (attempt > 0) {
-        await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-      }
-      
-      const url = await getDownloadURL(imageRef);
-      if (process.env.NODE_ENV !== "production") console.log(`Successfully got download URL on attempt ${attempt + 1}`);
-      // Add a token to bypass CORS
-      return `${url}&token=cors-bypass`;
-    } catch (error: any) {
-      lastError = error;
-      console.warn(`Failed to get download URL on attempt ${attempt + 1}: ${error.message}`);
-      
-      // If the error is not CORS or permission-related, don't retry
-      if (error.code === 'storage/object-not-found') {
-        break;
-      }
-    }
-  }
-  
-  console.error(`Failed to get download URL after ${maxRetries} attempts:`, lastError);
-  throw lastError || new Error('Failed to get download URL');
-}
-
 // Upload a file to Firebase Storage
 export const uploadFile = async (
   file: File,
@@ -250,38 +195,3 @@ export const compressProcessedImage = async (
   return compressWithQuality(initialQuality);
 };
 
-// Get a CORS-bypassing download URL using a signed URL token
-export const getSignedDownloadURL = async (imagePath: string): Promise<string> => {
-  if (!imagePath) {
-    throw new Error('No image path provided');
-  }
-  
-  const storage = getConfiguredStorage();
-  const imageRef = ref(storage, imagePath);
-  
-  try {
-    const url = await getDownloadURL(imageRef);
-    
-    // Add parameters to bypass CORS completely
-    const bypassUrl = url.includes('?') 
-      ? `${url}&alt=media&token=${Date.now()}`
-      : `${url}?alt=media&token=${Date.now()}`;
-      
-    return bypassUrl;
-  } catch (error: any) {
-    console.warn(`Failed to get signed download URL: ${error.message}`);
-    
-    // If we can extract the base storage URL from the path, try a direct approach
-    if (imagePath) {
-      const bucketName = 'storyincolor-ai.appspot.com';
-      const sanitizedPath = imagePath.replace(/^\/+/, '');
-      
-      // Construct a direct download URL as a fallback
-      const directUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(sanitizedPath)}?alt=media&timestamp=${Date.now()}`;
-      if (process.env.NODE_ENV !== "production") console.log('Using fallback direct URL:', directUrl);
-      return directUrl;
-    }
-    
-    throw error;
-  }
-}; 

@@ -154,10 +154,13 @@ export const generateForTool = onCall(
     // page has creditCost: 0 so the credit-balance check below doesn't
     // gate it. Without this, an authenticated user could submit hundreds
     // of free generations per day at ~$0.06 each. Counted from the
-    // userCredits/{uid}/usageEvents subcollection — every call (free or
-    // paid) writes a deduct event with `cost`, so today's cost-0 deducts
-    // are the running total of free usage. The error code
-    // DAILY_FREE_LIMIT_REACHED is what the client looks for.
+    // userCredits/{uid}/usageEvents subcollection.
+    //
+    // Filtered server-side via a compound index on (cost, date) — see
+    // firestore.indexes.json. This avoids a full scan of today's events
+    // for users who run lots of paid jobs. We also `.limit(FREE_DAILY_CAP + 1)`
+    // because we only need to know whether the count has hit the cap;
+    // pulling more docs is wasted reads.
     const FREE_DAILY_CAP = 3;
     if (config.creditCost === 0) {
       const startOfDay = new Date();
@@ -166,12 +169,18 @@ export const generateForTool = onCall(
         .collection("userCredits")
         .doc(userId)
         .collection("usageEvents")
+        .where("cost", "==", 0)
         .where("date", ">=", admin.firestore.Timestamp.fromDate(startOfDay))
+        .limit(FREE_DAILY_CAP + 1)
         .get();
-      const freeToday = eventsToday.docs.filter((d) => {
-        const data = d.data();
-        return data.type === "deduct" && (data.cost ?? 0) === 0;
-      }).length;
+      // type==='deduct' filter stays in JS — refunds are also written here
+      // and we shouldn't count them against the cap. Refund records have
+      // type='refund' (or no type field on legacy docs), and refunds are
+      // rare for free tools, so the JS-side filter is essentially a no-op
+      // but keeps the invariant explicit.
+      const freeToday = eventsToday.docs.filter(
+        (d) => (d.data().type ?? "deduct") === "deduct",
+      ).length;
       if (freeToday >= FREE_DAILY_CAP) {
         throw new HttpsError(
           "resource-exhausted",

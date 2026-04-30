@@ -61,23 +61,19 @@ export const stripeWebhook = onRequest(
 
       try {
           console.log("[Webhook] Initializing Stripe client for verification.");
-          // Fetch the secret and apply stronger validation
-          let stripeKey = STRIPE_SECRET_KEY.value();
-          
-          // Check if key matches expected format pattern (sk_live_... or sk_test_...)
-          const isValidStripeKeyFormat = /^sk_(live|test)_[A-Za-z0-9_]+$/.test(stripeKey);
-          console.log(`[Webhook] Secret key format valid: ${isValidStripeKeyFormat}`);
-          
-          if (!isValidStripeKeyFormat) {
-            console.error('[Webhook] API key has invalid format - this will cause auth errors');
-            // Try to sanitize by removing all non-ASCII characters
-            const originalLength = stripeKey.length;
-            stripeKey = stripeKey.replace(/[^\x20-\x7E]/g, '');
-            console.log(`[Webhook] Sanitized key: removed ${originalLength - stripeKey.length} non-ASCII chars`);
+          const stripeKey = STRIPE_SECRET_KEY.value();
+
+          // Fail loudly on a malformed secret. The previous version stripped
+          // non-ASCII chars and continued — that masks real misconfiguration
+          // (e.g. a paste-in error with a zero-width space) and runtime-
+          // mutating a secret value is never the right answer.
+          if (!/^sk_(live|test)_[A-Za-z0-9_]+$/.test(stripeKey)) {
+            const len = stripeKey.length;
+            console.error(`[Webhook] STRIPE_SECRET_KEY format invalid (length=${len}). Re-set the secret in Secret Manager.`);
+            throw new Error('STRIPE_SECRET_KEY format invalid');
           }
-          
-          // Log a sanitized version for debugging
-          console.log(`[Webhook] Secret key prefix: ${stripeKey.substring(0, 8)}... (length: ${stripeKey.length})`);
+          // Sanitized prefix for cross-referencing logs without leaking the key.
+          console.log(`[Webhook] Stripe secret prefix: ${stripeKey.substring(0, 8)}... (length: ${stripeKey.length})`);
           
           const stripe = new Stripe(stripeKey, {
             apiVersion: '2023-10-16' // Updated to a newer version
@@ -104,10 +100,19 @@ export const stripeWebhook = onRequest(
           // Handle the checkout.session.completed event
           if (event.type === 'checkout.session.completed') {
               const session = event.data.object as Stripe.Checkout.Session;
-              console.log(`[Webhook] Handling checkout.session.completed for session: ${session.id}`);
-              console.log(`[Webhook] Payment status: ${session.payment_status}`);
-              console.log(`[Webhook] Payment method: ${session.payment_method_types?.join(', ')}`);
-              console.log(`[Webhook] Full session object: ${JSON.stringify(session)}`);
+              // Log only PII-free fields. The full session object contains
+              // customer_email, customer_details (name + billing address),
+              // and payment_intent — those go to Cloud Logging on every
+              // checkout and would persist for ~30 days. If you need the
+              // full session for one-off debugging, fetch it from Stripe's
+              // dashboard by session.id rather than logging it routinely.
+              console.log(`[Webhook] checkout.session.completed`, {
+                sessionId: session.id,
+                paymentStatus: session.payment_status,
+                paymentMethod: session.payment_method_types?.join(', '),
+                metadataType: session.metadata?.type,
+                packageId: session.metadata?.packageId,
+              });
 
               // Check if this is a credit purchase
               if (session.metadata?.type === 'credit_purchase') {
@@ -170,6 +175,14 @@ export const stripeWebhook = onRequest(
                                   });
                               }
 
+                              // Set expireAt 90 days out so Firestore TTL
+                              // service auto-deletes the marker. Stripe
+                              // retries deliveries for at most 3 days, so
+                              // 90 days is comfortable. TTL is configured
+                              // via fieldOverrides in firestore.indexes.json.
+                              const expireAt = admin.firestore.Timestamp.fromMillis(
+                                  Date.now() + 90 * 24 * 60 * 60 * 1000,
+                              );
                               tx.set(markerRef, {
                                   stripeEventId,
                                   stripeSessionId: session.id,
@@ -178,6 +191,7 @@ export const stripeWebhook = onRequest(
                                   creditAmount,
                                   priceInCents,
                                   processedAt: admin.firestore.FieldValue.serverTimestamp(),
+                                  expireAt,
                               });
 
                               return { granted: true, reason: 'processed' as const };
@@ -429,24 +443,14 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
       
       // Initialize Stripe
       console.log("[Stripe] Initializing Stripe client.");
-      
-      // Fetch the secret and apply stronger validation
-      let stripeKey = STRIPE_SECRET_KEY.value();
-      
-      // Check if key matches expected format pattern (sk_live_... or sk_test_...)
-      const isValidStripeKeyFormat = /^sk_(live|test)_[A-Za-z0-9_]+$/.test(stripeKey);
-      console.log(`[Stripe] Secret key format valid: ${isValidStripeKeyFormat}`);
-      
-      if (!isValidStripeKeyFormat) {
-        console.error('[Stripe] API key has invalid format - this will cause auth errors');
-        // Try to sanitize by removing all non-ASCII characters
-        const originalLength = stripeKey.length;
-        stripeKey = stripeKey.replace(/[^\x20-\x7E]/g, '');
-        console.log(`[Stripe] Sanitized key: removed ${originalLength - stripeKey.length} non-ASCII chars`);
+      const stripeKey = STRIPE_SECRET_KEY.value();
+
+      // Fail loudly on a malformed secret rather than silently mutating it.
+      if (!/^sk_(live|test)_[A-Za-z0-9_]+$/.test(stripeKey)) {
+        console.error(`[Stripe] STRIPE_SECRET_KEY format invalid (length=${stripeKey.length}). Re-set the secret in Secret Manager.`);
+        throw new HttpsError('failed-precondition', 'Stripe is not configured correctly. Please contact support.');
       }
-      
-      // Log a sanitized version (first 8 chars) for debugging
-      console.log(`[Stripe] Secret key prefix: ${stripeKey.substring(0, 8)}... (length: ${stripeKey.length})`);
+      console.log(`[Stripe] Secret prefix: ${stripeKey.substring(0, 8)}... (length: ${stripeKey.length})`);
       
       const stripe = new Stripe(stripeKey, {
         apiVersion: '2023-10-16',
