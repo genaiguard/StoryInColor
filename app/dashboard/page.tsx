@@ -446,6 +446,13 @@ export default function DashboardPage() {
     user,
     initialized,
     creditPurchaseSuccess,
+    // checkoutSessionId is read inside the effect for the session-match
+    // lookup against purchaseHistory. Including it ensures that if the
+    // URL changes (Next.js client navigation between two ?credit_purchase=
+    // success URLs with different session_id values within the same dashboard
+    // mount), the effect re-runs against the correct id instead of capturing
+    // a stale closure.
+    checkoutSessionId,
     paymentVerified,
     recentPurchaseDetected,
     pollingComplete,
