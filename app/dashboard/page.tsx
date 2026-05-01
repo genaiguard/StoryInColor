@@ -287,7 +287,7 @@ export default function DashboardPage() {
           // verified the Stripe session actually completed. Without
           // this gate, a user who cancels a 3DS challenge lands here
           // with `?credit_purchase=success&session_id=...` (Stripe
-          // redirects to return_url even on cancel), and the OLDEST
+          // redirects to return_url even on cancel), and an older
           // entry in their existing purchase history would be picked
           // up below as "the most recent purchase" and fire trackPurchase
           // for a payment that never actually happened in this session.
@@ -297,28 +297,55 @@ export default function DashboardPage() {
           !recentPurchaseDetected &&
           userCredits.purchaseHistory?.length > 0
         ) {
-          const sortedPurchases = [...userCredits.purchaseHistory].sort(
-            (a, b) => tsToMillis(b.purchaseDate) - tsToMillis(a.purchaseDate),
-          );
-          const mostRecentPurchase = sortedPurchases[0];
-          if (mostRecentPurchase) {
-            const isPaidPurchase = mostRecentPurchase.pricePaid > 0;
+          // P2 hardening (race condition): even after Stripe confirms
+          // the session is complete, the webhook handler that writes
+          // the new purchaseHistory entry is asynchronous and not yet
+          // guaranteed to have landed. Picking "the most recent paid
+          // purchase" naively grabs whatever's currently top of the
+          // list — which can be a STALE entry from a previous session
+          // if this user has bought before. The dashboard would then
+          // stop polling, fire a Pixel Purchase with the old entry's
+          // packageId / value / event_id, and show "credits added"
+          // before the new credits ever land.
+          //
+          // Match on stripeSessionId instead. The webhook records it
+          // on every entry (see stripeWebhook checkout.session.completed
+          // handler). If we don't yet see an entry for this session_id,
+          // do nothing — the polling interval will retry until the
+          // webhook lands. Only fire Purchase detection when we have a
+          // PROVEN MATCH between the URL session and a Firestore entry.
+          //
+          // Fall-back: if checkoutSessionId is missing (legacy URLs from
+          // before {CHECKOUT_SESSION_ID} templating), keep the old
+          // "most recent" behavior. paymentVerified === true is set to
+          // true in that legacy path so we don't block real customers.
+          const matchingPurchase = checkoutSessionId
+            ? userCredits.purchaseHistory.find(
+                (p: any) => p?.stripeSessionId === checkoutSessionId,
+              )
+            : [...userCredits.purchaseHistory].sort(
+                (a, b) =>
+                  tsToMillis(b.purchaseDate) - tsToMillis(a.purchaseDate),
+              )[0];
 
-            // Four independent gates prevent re-firing this Pixel emit
+          if (matchingPurchase) {
+            const isPaidPurchase = matchingPurchase.pricePaid > 0;
+
+            // Five independent gates prevent re-firing this Pixel emit
             // on stray dashboard loads:
             //   1. creditPurchaseSuccess — the URL ?credit_purchase=success
-            //      query param is set ONLY by Stripe's success_url redirect
+            //      query param is set ONLY by Stripe's return_url
+            //      redirect or by the embedded onComplete navigation
             //   2. paymentVerified === true — Stripe confirmed the
-            //      session actually completed (P2 hardening, see above)
-            //   3. !recentPurchaseDetected — local React state, prevents
+            //      session actually completed
+            //   3. matchingPurchase exists — Firestore has an entry
+            //      for THIS specific session_id (or, in the legacy
+            //      fallback, any paid entry exists)
+            //   4. !recentPurchaseDetected — local React state, prevents
             //      double-fire within the same render cycle
-            //   4. acknowledgedSessionKey in sessionStorage — set below,
+            //   5. acknowledgedSessionKey in sessionStorage — set below,
             //      survives reloads within the tab so refresh-loops don't
             //      re-fire
-            // (We previously also gated on isToday-in-local-tz, which was
-            // racy near UTC midnight for users in extreme time zones —
-            // dropped because the gates above are sufficient and the CAPI
-            // server emit is the source of truth either way.)
             if (isPaidPurchase) {
               setRecentPurchaseDetected(true);
               setIsProcessingCreditPurchase(false);
@@ -342,7 +369,7 @@ export default function DashboardPage() {
                     string,
                     { id?: string; createdAt?: number }
                   >;
-                  const entry = slot?.[mostRecentPurchase.packageId];
+                  const entry = slot?.[matchingPurchase.packageId];
                   if (entry?.id) {
                     const ageMs = Date.now() - (entry.createdAt ?? 0);
                     if (ageMs < 1000 * 60 * 60) {
@@ -352,8 +379,8 @@ export default function DashboardPage() {
                   // Drop the matched entry but keep any other in-flight
                   // pack entries (a second tab's stash for a different
                   // pack id should NOT be erased here).
-                  if (slot && mostRecentPurchase.packageId in slot) {
-                    delete slot[mostRecentPurchase.packageId];
+                  if (slot && matchingPurchase.packageId in slot) {
+                    delete slot[matchingPurchase.packageId];
                     if (Object.keys(slot).length === 0) {
                       window.localStorage.removeItem(SLOT_KEY);
                     } else {
@@ -367,9 +394,9 @@ export default function DashboardPage() {
               }
 
               trackPurchase({
-                packageId: mostRecentPurchase.packageId,
-                valueCents: mostRecentPurchase.pricePaid,
-                numItems: mostRecentPurchase.creditAmount,
+                packageId: matchingPurchase.packageId,
+                valueCents: matchingPurchase.pricePaid,
+                numItems: matchingPurchase.creditAmount,
                 eventId: stashedEventId,
               });
 
