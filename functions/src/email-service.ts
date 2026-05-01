@@ -276,15 +276,23 @@ function generateWelcomeEmailTemplate(name: string): string {
               <td align="center" style="padding:0 40px 56px;">
                 <p style="margin:0; font-size:12px; color:${INK_2};">
                   <strong style="font-weight:500; color:${INK};">30-day satisfaction guarantee.</strong>
-                  If a reading doesn't land, just reply within 30 days and we'll refund.
+                  If a reading doesn't land, email
+                  <a href="mailto:info@storyincolor.com" style="color:${INK_2}; text-decoration:underline;">info@storyincolor.com</a>
+                  within 30 days and we'll refund.
                 </p>
               </td>
             </tr>
-            <!-- Footer -->
+            <!-- Footer. Do-not-reply disclaimer per best-practice format
+                 for transactional welcome emails: italic + extra-muted
+                 colour to differentiate from the legal copyright
+                 line below. The earlier "Questions? Just reply" prompt
+                 was removed because the sending mailbox is unmonitored
+                 — actual support routes through info@storyincolor.com
+                 (linked above in the guarantee line). -->
             <tr>
               <td style="padding:22px 32px; border-top:1px solid ${RULE}; text-align:center;">
-                <p style="margin:0 0 4px; font-size:12px; color:${MUTED};">
-                  Questions? Just reply to this email.
+                <p style="margin:0 0 4px; font-size:12px; font-style:italic; color:${MUTED_2};">
+                  This mailbox is not monitored.
                 </p>
                 <p style="margin:0; font-size:11px; color:${MUTED_2};">
                   © ${new Date().getFullYear()} Story In Color · <a href="https://storyincolor.com" style="color:${MUTED_2}; text-decoration:underline;">storyincolor.com</a>
