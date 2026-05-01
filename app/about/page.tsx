@@ -139,8 +139,8 @@ export default function AboutPage() {
               everything from your settings at any time.
             </p>
             <p>
-              Most readings finish in roughly 20 to 40 seconds. If something
-              goes wrong on our end, the reading is refunded to your balance
+              Most readings finish in up to 2 minutes. If something goes
+              wrong on our end, the reading is refunded to your balance
               automatically — no support ticket required.
             </p>
           </div>

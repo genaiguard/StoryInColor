@@ -300,8 +300,8 @@ export default function MarketingView({ tool }: { tool: Tool }) {
               </span>
             </h2>
             <p className="mt-4 text-base text-gray-400 md:text-lg">
-              Sign in to upload your photo and get your result in about half a
-              minute.
+              Sign in to upload your photo and get your result in up to 2
+              minutes.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
