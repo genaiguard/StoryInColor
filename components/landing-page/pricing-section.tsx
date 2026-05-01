@@ -1,23 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CheckCircle, Play } from "lucide-react";
+import { ArrowRight, Play } from "lucide-react";
 import { trackPricingCtaClick } from "@/lib/analytics/events";
 import { CinematicSection } from "@/components/cinematic/cinematic-section";
 import { CREDIT_PACKAGES } from "@/app/firebase/credits-helpers";
 
-// Pack copy. Mirrors /credits/page.tsx — kept duplicated so the landing
-// section is self-contained and can be reordered independently.
-const PACK_HEADLINES: Record<string, string> = {
-  single: "Just one",
-  trio: "Most loved",
-  set: "Save 35%",
+// Pack tier labels — mirrors app/credits/page.tsx so the marketing
+// landing surface and the actual purchase page agree on framing. The
+// "Most popular" / "Best value" badges anchor middle / heaviest packs;
+// the smaller "Try one" tier title makes the entry SKU read as a
+// low-commitment first purchase rather than a leftover.
+const PACK_TIER_LABELS: Record<string, { title: string; badge?: string }> = {
+  single: { title: "Try one" },
+  trio: { title: "Most popular", badge: "Save 20%" },
+  set: { title: "Best value", badge: "Save 35%" },
 };
 
-const PACK_BULLETS: Record<string, string> = {
-  single: "One reading of your choice",
-  trio: "Any three readings",
-  set: "Any six readings — make it a gift",
+const PACK_DIFFERENTIATOR: Record<string, string> = {
+  single: "Try a single editorial reading",
+  trio: "Three readings to mix and match",
+  set: "Six readings at the lowest per-reading price",
 };
 
 type PricingSectionProps = {
@@ -50,39 +53,58 @@ export default function PricingSection({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {CREDIT_PACKAGES.map((pack) => {
           const isHighlight = pack.id === "trio";
-          const headline = PACK_HEADLINES[pack.id] ?? "";
-          const bullet = PACK_BULLETS[pack.id] ?? "";
+          const tier = PACK_TIER_LABELS[pack.id] ?? { title: "" };
           const perReading = (pack.pricePerCredit / 100).toFixed(2);
-          const price = (pack.price / 100).toFixed(2);
+          const packTotal = (pack.price / 100).toFixed(2);
           return (
             <div
               key={pack.id}
               className={`relative flex flex-col rounded-2xl p-6 transition-all duration-300 md:p-7 ${
                 isHighlight
-                  ? "bg-white text-black"
+                  ? "bg-white text-black ring-2 ring-white"
                   : "liquid-glass text-white"
               }`}
             >
-              {isHighlight && (
-                <span className="absolute -top-3 left-6 rounded-full bg-black px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-white">
-                  {headline}
-                </span>
-              )}
-              <div
-                className={`text-sm ${
-                  isHighlight ? "text-gray-600" : "text-gray-400"
-                }`}
-              >
-                {pack.credits === 1
-                  ? "1 reading"
-                  : `${pack.credits} readings`}
-              </div>
-              <div className="mt-1 flex items-baseline gap-2">
+              {/* Tier label + discount badge — same anchoring as
+                  /credits so the marketing teaser and the purchase
+                  page show identical framing. */}
+              <div className="flex items-center justify-between gap-3">
                 <span
-                  className="text-4xl font-normal"
+                  className={`text-xs font-medium uppercase tracking-wider ${
+                    isHighlight ? "text-gray-700" : "text-gray-300"
+                  }`}
+                >
+                  {tier.title}
+                </span>
+                {tier.badge && (
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                      isHighlight
+                        ? "bg-black text-white"
+                        : "bg-white/10 text-white"
+                    }`}
+                  >
+                    {tier.badge}
+                  </span>
+                )}
+              </div>
+
+              {/* Per-reading price BIG. Pack total + count smaller
+                  below — the per-unit cost is what comparison shoppers
+                  scan first. */}
+              <div className="mt-5 flex items-baseline gap-1">
+                <span
+                  className="text-5xl font-normal"
                   style={{ letterSpacing: "-0.03em" }}
                 >
-                  ${price}
+                  ${perReading}
+                </span>
+                <span
+                  className={`text-sm ${
+                    isHighlight ? "text-gray-600" : "text-gray-400"
+                  }`}
+                >
+                  / reading
                 </span>
               </div>
               <div
@@ -90,53 +112,27 @@ export default function PricingSection({
                   isHighlight ? "text-gray-600" : "text-gray-400"
                 }`}
               >
-                ${perReading} / reading
+                ${packTotal} for{" "}
+                {pack.credits === 1 ? "1 reading" : `${pack.credits} readings`}
               </div>
-              {!isHighlight && headline && (
-                <div className="mt-3 text-xs font-medium uppercase tracking-wider text-gray-300">
-                  {headline}
-                </div>
-              )}
 
-              <ul
-                className={`mt-5 flex-1 space-y-2 text-sm ${
+              {/* One differentiator line — the previous three-bullet
+                  stack had near-identical content across tiers and
+                  made the cards harder to scan. */}
+              <p
+                className={`mt-5 flex-1 text-sm ${
                   isHighlight ? "text-gray-700" : "text-gray-300"
                 }`}
               >
-                <li className="flex items-start gap-2">
-                  <CheckCircle
-                    className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
-                      isHighlight ? "text-black" : "text-white"
-                    }`}
-                  />
-                  <span>{bullet}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle
-                    className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
-                      isHighlight ? "text-black" : "text-white"
-                    }`}
-                  />
-                  <span>Editorial quality, print-ready</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle
-                    className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
-                      isHighlight ? "text-black" : "text-white"
-                    }`}
-                  />
-                  <span>Never expire, no subscription</span>
-                </li>
-              </ul>
+                {PACK_DIFFERENTIATOR[pack.id]}
+              </p>
             </div>
           );
         })}
       </div>
 
       <div className="mt-14 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-        <p className="max-w-xl text-sm text-gray-400">
-          {ctaNote}
-        </p>
+        <p className="max-w-xl text-sm text-gray-400">{ctaNote}</p>
         <Link
           href={ctaHref}
           onClick={() => {

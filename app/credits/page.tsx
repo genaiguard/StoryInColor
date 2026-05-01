@@ -80,7 +80,7 @@ function PageHeader() {
 const PACK_TIER_LABELS: Record<string, { title: string; badge?: string }> = {
   single: { title: "Try one" },
   trio: { title: "Most popular", badge: "Save 20%" },
-  set: { title: "Gift-ready", badge: "Save 35%" },
+  set: { title: "Best value", badge: "Save 35%" },
 };
 
 // Tools whose sample images get featured in the reel below the SKUs.
@@ -715,8 +715,8 @@ export default function CreditsPage() {
                         {pkg.id === "single"
                           ? "Try a single editorial reading"
                           : pkg.id === "trio"
-                            ? "Three readings to mix and share"
-                            : "Six readings — keep some, gift some"}
+                            ? "Three readings to mix and match"
+                            : "Six readings at the lowest per-reading price"}
                       </span>
                     </li>
                   </ul>
