@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import type React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -43,7 +43,100 @@ function LoginForm() {
       ? nextParam
       : null;
   const [activeTab, setActiveTab] = useState(showRegister ? "register" : "login");
-  const { signIn, signUp, googleSignIn, resetPassword } = useFirebase();
+  const {
+    signIn,
+    signUp,
+    googleSignIn,
+    consumeGoogleRedirectResult,
+    resetPassword,
+    initialized,
+  } = useFirebase();
+
+  // Consume any pending Google redirect result on mount. In-app
+  // browsers (Facebook, Instagram, etc.) use signInWithRedirect
+  // instead of signInWithPopup — see firebase-provider.tsx
+  // isInAppBrowser. After authenticating with Google, the user is
+  // redirected back to /login and we pick up the result here, then
+  // run the same post-signup ceremony as the popup path.
+  // Ref-guarded so React 18 strict-mode double-invocation doesn't
+  // double-fire.
+  const redirectConsumedRef = useRef(false);
+  useEffect(() => {
+    if (!initialized) return;
+    if (redirectConsumedRef.current) return;
+    redirectConsumedRef.current = true;
+
+    let cancelled = false;
+    (async () => {
+      let result: any = null;
+      try {
+        result = await consumeGoogleRedirectResult();
+      } catch (err) {
+        console.error("Google redirect result error:", err);
+        return;
+      }
+      if (cancelled || !result || !result.user) return;
+
+      // Mirror the popup-path ceremony from handleGoogleSignIn so
+      // first-time Google signups via redirect get the same
+      // attribution + tracking + welcome email + safe-next push.
+      const additional = (result as unknown as {
+        additionalUserInfo?: { isNewUser?: boolean };
+      }).additionalUserInfo;
+      const isNewUser = additional?.isNewUser || false;
+
+      if (isNewUser) {
+        try {
+          await persistUserProfileAndAttribution({
+            uid: result.user.uid,
+            email: result.user.email,
+            displayName: result.user.displayName,
+            providerId: "google.com",
+            createdAtIso:
+              result.user.metadata?.creationTime ?? new Date().toISOString(),
+          });
+        } catch (attrError) {
+          console.error(
+            "Failed to persist attribution on Google redirect signup:",
+            attrError,
+          );
+        }
+
+        const regEventId = newEventId();
+        try {
+          window.localStorage.setItem(
+            "sic_pending_registration_event_id",
+            regEventId,
+          );
+        } catch {
+          /* private mode — server mints its own id */
+        }
+        trackCompleteRegistration({ method: "google", eventId: regEventId });
+
+        try {
+          const functions = getFunctions();
+          const sendWelcomeEmailNotification = httpsCallable(
+            functions,
+            "sendWelcomeEmailNotification",
+          );
+          const userDisplayName =
+            result.user.displayName || result.user.email?.split("@")[0];
+          await sendWelcomeEmailNotification({ displayName: userDisplayName });
+        } catch (emailError) {
+          console.error(
+            "Error sending welcome email for Google redirect sign-in:",
+            emailError,
+          );
+        }
+      }
+
+      router.push(safeNext || "/dashboard");
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialized, consumeGoogleRedirectResult, router, safeNext]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -147,6 +240,12 @@ function LoginForm() {
 
     try {
       const result = await googleSignIn();
+      // googleSignIn returns null on the in-app-browser redirect path
+      // — the page is navigating to Google right now, the post-redirect
+      // mount-handler above will pick up the result. Just bail.
+      if (!result) {
+        return;
+      }
       // Firebase v9+ doesn't expose additionalUserInfo on UserCredential
       // typings, but the runtime still returns it via getAdditionalUserInfo.
       // Cast through unknown to read it without committing to a type.

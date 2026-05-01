@@ -27,6 +27,9 @@ const loadFirebaseModules = async () => {
       createUserWithEmailAndPassword,
       GoogleAuthProvider,
       signInWithPopup,
+      signInWithRedirect,
+      getRedirectResult,
+      getAdditionalUserInfo,
       signOut,
       sendPasswordResetEmail,
       connectAuthEmulator,
@@ -51,6 +54,9 @@ const loadFirebaseModules = async () => {
     createUserWithEmailAndPassword,
     GoogleAuthProvider,
     signInWithPopup,
+    signInWithRedirect,
+    getRedirectResult,
+    getAdditionalUserInfo,
     signOut,
     sendPasswordResetEmail,
     connectAuthEmulator,
@@ -65,6 +71,33 @@ const loadFirebaseModules = async () => {
   return firebaseModules
 }
 
+/**
+ * Detect in-app browsers (Facebook, Instagram, Messenger, LinkedIn,
+ * TikTok, Twitter/X, generic Android/iOS WebView). signInWithPopup is
+ * unreliable across these because they rewrite window.open and/or
+ * block the cross-origin cookies Firebase Auth needs to complete the
+ * popup handshake. The Clarity D4 investigation found 8 of 10 stuck-
+ * on-/login mobile sessions came from Facebook ads — Google sign-in
+ * was tapped once, never advanced, page eventually navigated back to
+ * the marketing surface un-authenticated.
+ *
+ * UA signatures sourced from each platform's published webview docs:
+ *   FBAN / FBAV / FB_IAB / FBSS — Facebook app + native iOS/Android
+ *   Instagram — Instagram in-app browser
+ *   MessengerLite / Messenger — Facebook Messenger
+ *   LinkedInApp — LinkedIn app
+ *   musical_ly / BytedanceWebview — TikTok
+ *   Twitter — Twitter / X webview
+ *   generic "WebView" or "; wv" — Android/iOS embedded webviews
+ */
+export function isInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /(FBAN|FBAV|FB_IAB|FBSS|Instagram|LinkedInApp|Messenger|MessengerLite|musical_ly|BytedanceWebview|Twitter|WebView|; wv\))/i.test(
+    ua,
+  );
+}
+
 // Development environment detection
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -76,7 +109,16 @@ type FirebaseContextType = {
   initialized: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
-  googleSignIn: () => Promise<UserCredential>
+  /** Resolves to a UserCredential on the popup path; resolves to null
+   *  on the redirect path (the page navigates away before the call
+   *  returns). Callers must handle null and rely on
+   *  consumeGoogleRedirectResult on the post-redirect page load. */
+  googleSignIn: () => Promise<UserCredential | null>
+  /** Returns the pending Google redirect result if one exists, or null
+   *  otherwise. Call once on app/login mount. Idempotent — calling
+   *  again returns null because Firebase clears the pending redirect
+   *  state after the first read. */
+  consumeGoogleRedirectResult: () => Promise<UserCredential | null>
   resetPassword: (email: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -255,7 +297,7 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const googleSignIn = async () => {
+  const googleSignIn = async (): Promise<UserCredential | null> => {
     if (!initialized) throw new Error("Firebase is not initialized")
     const modules = await loadFirebaseModules()
     const auth = modules.getAuth()
@@ -263,8 +305,37 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     // Explicitly request email and profile scopes
     provider.addScope('email');
     provider.addScope('profile');
+
+    // Branch on browser context. In-app browsers (Facebook,
+    // Instagram, Messenger, LinkedIn, TikTok, Twitter, generic
+    // WebView) reliably break signInWithPopup — see isInAppBrowser
+    // above and the D4 Clarity investigation. Switch them to
+    // signInWithRedirect; the page navigates to Google, the user
+    // authenticates, Google redirects back to the same page, and
+    // the result is consumed on mount via consumeGoogleRedirectResult.
+    if (isInAppBrowser()) {
+      await modules.signInWithRedirect(auth, provider);
+      // Page is navigating away — nothing useful to return. Callers
+      // must handle the null return and rely on the redirect-result
+      // consumer on the post-navigation page load.
+      return null;
+    }
+
     const result = await modules.signInWithPopup(auth, provider)
-    return result // Return the auth result
+    return result
+  }
+
+  const consumeGoogleRedirectResult = async (): Promise<UserCredential | null> => {
+    if (!initialized) return null
+    try {
+      const modules = await loadFirebaseModules()
+      const auth = modules.getAuth()
+      const result = await modules.getRedirectResult(auth)
+      return result
+    } catch (error) {
+      console.error("Google redirect result error:", error)
+      return null
+    }
   }
 
   const resetPassword = async (email: string) => {
@@ -289,6 +360,7 @@ export function FirebaseProvider({ children }: { children: ReactNode }) {
     signIn,
     signUp,
     googleSignIn,
+    consumeGoogleRedirectResult,
     resetPassword,
     logout,
   }
