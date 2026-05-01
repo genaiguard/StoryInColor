@@ -21,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import {
   getUserCredits,
@@ -328,7 +329,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
               </Tooltip>
               <Link
                 href={purchaseHref}
-                className="hidden text-sm font-medium text-gray-300 transition-colors hover:text-white sm:inline-block"
+                className="text-sm font-medium text-gray-300 transition-colors hover:text-white"
               >
                 Buy more
               </Link>
@@ -530,17 +531,26 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
               {/* Right: preview + hint. Use object-contain so the cover
                   image (2:3 portrait spread) is fully visible without
                   cropping. The dark surrounding box becomes letterboxing
-                  for any cover whose aspect doesn't match exactly. */}
+                  for any cover whose aspect doesn't match exactly. The
+                  cover image is wrapped in a lightbox so click-to-zoom
+                  works — Clarity recorded ~34 dead clicks on this image
+                  per /readings/aura-reading session before D3 landed. */}
               <aside>
                 <div className="liquid-glass overflow-hidden rounded-2xl">
-                  <div className="flex aspect-[2/3] w-full items-center justify-center overflow-hidden bg-black">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={tool.coverImage}
-                      alt={`${tool.name} sample`}
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
+                  <ImageLightbox
+                    src={tool.coverImage}
+                    alt={`${tool.name} sample`}
+                    triggerClassName="group relative block w-full cursor-zoom-in overflow-hidden bg-black p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  >
+                    <div className="flex aspect-[2/3] w-full items-center justify-center overflow-hidden bg-black">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={tool.coverImage}
+                        alt={`${tool.name} sample`}
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                  </ImageLightbox>
                   <div className="p-5">
                     <p className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
                       How to bring a photo

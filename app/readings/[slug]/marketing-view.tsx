@@ -15,6 +15,7 @@ import PricingSection from "@/components/landing-page/pricing-section";
 import { CinematicHero } from "@/components/cinematic/cinematic-hero";
 import { CinematicSection } from "@/components/cinematic/cinematic-section";
 import { trackViewReading } from "@/lib/analytics/events";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import type { Tool } from "@/lib/tools/types";
 
 // Tools that touch wellness-adjacent territory need an inline, visible
@@ -130,13 +131,21 @@ export default function MarketingView({ tool }: { tool: Tool }) {
               centered horizontal transition between them. Each card is
               full container width — the input/sample image fills its
               card at native 2:3 portrait, much larger than a thumbnail.
-              Reads top-to-bottom like a print magazine spread. */}
+              Reads top-to-bottom like a print magazine spread.
+              The upload preview is rendered as a Link that routes to
+              registration — Clarity tracked dead-clicks on the upload
+              area and helper text from signed-out visitors who took the
+              static preview as an interactive surface. */}
           <div className="flex flex-col items-stretch gap-6 md:gap-8">
             {/* Upload preview — no card frame at all. The photo sits free
                 on the page so its own backdrop doesn't have to fight a
                 liquid-glass rim, and the text beneath it reads as a
                 caption rather than a card body. */}
-            <div className="mx-auto w-full max-w-md text-center">
+            <Link
+              href={ctaHref}
+              aria-label={`Sign up to upload your photo for ${tool.name}`}
+              className="group mx-auto block w-full max-w-md cursor-pointer text-center transition-opacity hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded-2xl"
+            >
               {input ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -144,7 +153,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
                   alt={`${tool.name} upload example`}
                   loading="lazy"
                   decoding="async"
-                  className="mx-auto block aspect-square w-full rounded-2xl border border-white/5 object-cover"
+                  className="mx-auto block aspect-square w-full rounded-2xl border border-white/5 object-cover transition-transform group-hover:scale-[1.01]"
                 />
               ) : (
                 <div className="mx-auto flex aspect-square w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.02] text-xs uppercase tracking-[0.18em] text-gray-500">
@@ -157,7 +166,7 @@ export default function MarketingView({ tool }: { tool: Tool }) {
               <p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">
                 {tool.inputHint}
               </p>
-            </div>
+            </Link>
 
             {/* Horizontal transition between the two cards */}
             <div
@@ -172,21 +181,34 @@ export default function MarketingView({ tool }: { tool: Tool }) {
             </div>
 
             <div className="liquid-glass overflow-hidden rounded-2xl">
-              <div className="relative mx-auto flex aspect-[2/3] w-full max-w-2xl items-center justify-center overflow-hidden border-b border-white/5 bg-black">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={sample}
-                  alt={`${tool.name} sample output`}
-                  loading="lazy"
-                  decoding="async"
-                  className="h-full w-full object-contain"
-                />
-                {isPlaceholderSample && (
-                  <span className="absolute right-3 top-3 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-medium text-gray-200 ring-1 ring-white/10">
-                    Sample coming soon
-                  </span>
-                )}
-              </div>
+              {/* Sample output is the highest-trust signal on the page —
+                  it shows the actual deliverable. Wrapping it in a
+                  lightbox so visitors can examine it at native size
+                  rather than dead-clicking the thumbnail. Clarity
+                  recorded ~34 such dead clicks per reading page in the
+                  post-pivot cohort. */}
+              <ImageLightbox
+                src={sample}
+                alt={`${tool.name} sample output`}
+                triggerClassName="group relative block w-full cursor-zoom-in overflow-hidden bg-black p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                showZoomIcon={!isPlaceholderSample}
+              >
+                <div className="relative mx-auto flex aspect-[2/3] w-full max-w-2xl items-center justify-center overflow-hidden border-b border-white/5 bg-black">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={sample}
+                    alt={`${tool.name} sample output`}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-contain"
+                  />
+                  {isPlaceholderSample && (
+                    <span className="absolute right-3 top-3 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-medium text-gray-200 ring-1 ring-white/10">
+                      Sample coming soon
+                    </span>
+                  )}
+                </div>
+              </ImageLightbox>
               <div className="p-5 md:p-6">
                 <h3 className="text-lg font-medium text-white md:text-xl">
                   The reading.
