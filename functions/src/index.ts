@@ -397,7 +397,12 @@ export const submitContactForm = onCall({
 /**
  * Creates a Stripe checkout session for credit purchase
  */
-export const createCreditCheckout = onCall<{packageId: string, origin?: string, fbEventId?: string, returnPath?: string}>(
+export const createCreditCheckout = onCall<{
+  packageId: string;
+  origin?: string;
+  fbEventId?: string;
+  returnPath?: string;
+}>(
   {
     secrets: [STRIPE_SECRET_KEY],
     labels: {
@@ -499,29 +504,49 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
       const successPath = safeReturnPath
         ? appendQuery(safeReturnPath, 'credit_purchase=success')
         : '/dashboard?credit_purchase=success';
-      const cancelPath = safeReturnPath
-        ? `/credits?next=${encodeURIComponent(safeReturnPath)}`
-        : '/credits';
+      // No cancelPath — embedded checkout has no Stripe-side "cancel"
+      // step; closing the modal is the cancel action, handled entirely
+      // client-side. The session expires after 24h if unused.
       
-      // Create checkout session.
+      // Create the embedded Checkout Session.
       //
-      // We deliberately omit `payment_method_types` so Stripe Checkout
-      // shows EVERY method that's enabled at the account level —
-      // including Apple Pay, Google Pay, Link (one-click), and any
-      // BNPL/wallet options enabled in the dashboard. With ~72% of our
-      // traffic on mobile, mobile-native wallets are worth the breadth.
-      // Apple Pay alone is published as +22% global / +58% mobile vs
-      // card-only forms; Stripe Link adds +14% on repeat customers.
-      // The `payment_method_options.card` block stays — it only applies
-      // when card is the chosen method, and it preserves 3DS automatic
-      // + future off-session use (for refund-able re-charges).
-      console.log("[Stripe] Creating checkout session...");
+      // ui_mode: "embedded" renders the Stripe payment form inside an
+      // iframe on /credits via @stripe/react-stripe-js
+      // (EmbeddedCheckoutProvider + EmbeddedCheckout). The user never
+      // leaves storyincolor.com. The webhook event is still
+      // `checkout.session.completed`, so the fulfilment pipeline
+      // (idempotency marker + credit grant transaction + Phase-4 CAPI
+      // Purchase mirror) is unchanged.
+      //
+      // We deliberately omit `payment_method_types` so Stripe surfaces
+      // EVERY method enabled at the account level — Apple Pay, Google
+      // Pay, Link (one-click), card, and any wallet/BNPL options. With
+      // ~72% of our traffic on mobile, native-wallet coverage is the
+      // largest single checkout-layer lift available. Apple Pay alone
+      // is published as +22% global / +58% mobile vs card-only forms;
+      // Stripe Link adds +14% on repeat customers.
+      //
+      // `payment_method_options.card` stays — it only applies when card
+      // is the chosen method, and it preserves 3DS automatic + future
+      // off-session use (for refund-able re-charges).
+      //
+      // `return_url` (not success_url/cancel_url) is required for
+      // embedded mode. Stripe sends the user there only for redirect-
+      // based payment methods (3DS challenge, bank wallets); for card
+      // without redirect, the embedded checkout's onComplete fires
+      // in-page and the client navigates to the same URL itself.
+      // Either way the landing URL is the same `/dashboard?credit_
+      // purchase=success` so the dashboard polling pipeline catches
+      // both paths.
+      console.log("[Stripe] Creating embedded checkout session...");
       const session = await stripe.checkout.sessions.create({
+        ui_mode: 'embedded',
+        return_url: `${domain}${successPath}`,
         payment_method_options: {
           card: {
             setup_future_usage: 'off_session',
-            request_three_d_secure: 'automatic'
-          }
+            request_three_d_secure: 'automatic',
+          },
         },
         payment_intent_data: {
           capture_method: 'automatic',
@@ -543,13 +568,18 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
           // stripeWebhook generates a fallback id in that case.
           fbEventId: fbEventId || '',
         },
-        success_url: `${domain}${successPath}`,
-        cancel_url: `${domain}${cancelPath}`,
       });
-      console.log(`[Stripe] Checkout session created successfully: ${session.id}`);
+      console.log(`[Stripe] Embedded checkout session created: ${session.id}`);
 
-      // Return the session ID 
-      return { sessionId: session.id };
+      // Return shape: clientSecret powers EmbeddedCheckoutProvider on
+      // the client. sessionId is also returned for analytics / logging
+      // continuity, and `cancelPath` doesn't apply in embedded mode
+      // (the user just closes the modal to cancel — no Stripe-side
+      // cancel URL is involved).
+      return {
+        sessionId: session.id,
+        clientSecret: session.client_secret,
+      };
 
     } catch (error) {
       console.error('[Stripe Error] Failed to create checkout session:', error);

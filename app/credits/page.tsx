@@ -32,7 +32,6 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { loadStripe } from "@stripe/stripe-js";
 import {
   newEventId,
   trackInitiateCheckout,
@@ -42,6 +41,7 @@ import { tsToMillis } from "@/lib/utils";
 import { ORDERED_TOOLS } from "@/lib/tools/registry";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { PaymentMethodChips } from "@/components/ui/payment-logos";
+import { EmbeddedCheckoutModal } from "@/components/credits/embedded-checkout-modal";
 
 /**
  * Page header. Restructured per Clarity finding: the previous prominent
@@ -309,6 +309,17 @@ export default function CreditsPage() {
     null,
   );
   const [returnPath, setReturnPath] = useState<string | null>(null);
+  // Embedded checkout state. clientSecret drives the
+  // EmbeddedCheckoutProvider mount inside the modal — when non-null the
+  // modal opens and Stripe's iframe renders. Per-pack analytics
+  // continuity (matching event_id from the click moment to the
+  // post-success Pixel Purchase emit) is handled via the
+  // `sic_pending_fb_event_ids` localStorage map keyed by packageId,
+  // not by component state — so we don't need to track which pack is
+  // in flight here.
+  const [embeddedClientSecret, setEmbeddedClientSecret] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -392,9 +403,16 @@ export default function CreditsPage() {
     );
   };
 
+  const stripePublishableKey =
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+
   const handlePurchaseCredits = async (packageId: string) => {
     if (!user) {
       toast.error("You must be signed in to top up");
+      return;
+    }
+    if (!stripePublishableKey) {
+      toast.error("Payment is not configured. Please contact support.");
       return;
     }
 
@@ -429,11 +447,12 @@ export default function CreditsPage() {
       //   1) be passed to createCreditCheckout, which stores it on the
       //      Stripe session metadata (`fbEventId`) so Phase-4 CAPI mirror
       //      can echo it from the webhook.
-      //   2) be passed to trackInitiateCheckout RIGHT NOW so Pixel records
-      //      the same id Phase-4 CAPI will echo.
-      //   3) be stashed in localStorage so the post-redirect dashboard
+      //   2) be passed to trackInitiateCheckout RIGHT BEFORE we mount
+      //      the embedded checkout iframe so Pixel records the same id
+      //      Phase-4 CAPI will echo.
+      //   3) be stashed in localStorage so the post-payment dashboard
       //      Purchase emit re-uses the same id (full Pixel ↔ CAPI dedup
-      //      across the redirect boundary).
+      //      across the embedded → onComplete → /dashboard navigation).
       // Result: Pixel + CAPI dedupe end-to-end on a single event_id.
       const checkoutEventId = newEventId();
       try {
@@ -471,26 +490,16 @@ export default function CreditsPage() {
         returnPath,
       });
 
-      const data = result.data as any;
-      if (!data || !data.sessionId) {
-        throw new Error("Checkout session ID not received from server");
+      const data = result.data as { sessionId?: string; clientSecret?: string };
+      if (!data || !data.clientSecret) {
+        throw new Error("Checkout client secret not received from server");
       }
 
-      const sessionId = data.sessionId;
-      const stripePublicKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-
-      if (!stripePublicKey) {
-        throw new Error("Stripe public key is not configured");
-      }
-
-      const stripe = await loadStripe(stripePublicKey);
-      if (!stripe) {
-        throw new Error("Failed to load Stripe library");
-      }
-
-      // Fire InitiateCheckout BEFORE redirect — once we redirect to Stripe,
-      // the Pixel won't have a chance to flush. fbq queues internally so
-      // even sub-millisecond before navigation it'll send.
+      // Fire InitiateCheckout RIGHT BEFORE mounting the embedded iframe.
+      // This matches the timing of the previous redirect-based flow where
+      // InitiateCheckout fired immediately before the navigation away.
+      // Mounting the iframe is the analogous "user is now in the
+      // checkout surface" moment.
       trackInitiateCheckout({
         packageId: creditPackage.id,
         valueCents: creditPackage.price,
@@ -498,16 +507,10 @@ export default function CreditsPage() {
         eventId: checkoutEventId,
       });
 
-      const { error: stripeError } = await stripe.redirectToCheckout({
-        sessionId,
-      });
-
-      if (stripeError) {
-        console.error("Stripe redirect error:", stripeError);
-        throw new Error(
-          `Payment Error: ${stripeError.message || "Could not process payment"}`,
-        );
-      }
+      // Open the modal. The clientSecret hand-off triggers the
+      // EmbeddedCheckoutProvider mount inside the modal, which loads
+      // Stripe.js and renders the payment iframe.
+      setEmbeddedClientSecret(data.clientSecret);
     } catch (err: any) {
       console.error("Credit purchase failed:", err);
       const message =
@@ -517,6 +520,36 @@ export default function CreditsPage() {
     } finally {
       setPackageIdLoading(null);
     }
+  };
+
+  /**
+   * Stripe's onComplete fires when the embedded payment succeeds in-page
+   * (no redirect path). We navigate the user to the same
+   * /dashboard?credit_purchase=success URL the redirect-based flow used
+   * to land at, so the existing dashboard polling pipeline (webhook →
+   * userCredits balance update → Pixel/GA Purchase emit) continues to
+   * work without any dashboard-side changes.
+   *
+   * For redirect-based payment methods (3DS challenge, bank-redirect
+   * wallets) Stripe sends the user to the session's return_url, which
+   * is the same URL — so both completion paths converge.
+   */
+  const handleEmbeddedComplete = () => {
+    const successPath = returnPath
+      ? `${returnPath}${returnPath.includes("?") ? "&" : "?"}credit_purchase=success`
+      : "/dashboard?credit_purchase=success";
+    setEmbeddedClientSecret(null);
+    router.push(successPath);
+  };
+
+  /**
+   * User dismissed the modal without completing payment (closed it,
+   * pressed ESC, clicked outside). Tear down the iframe; the underlying
+   * Checkout Session expires after 24h. The user can pick another pack
+   * (or the same one) and a fresh session will be created.
+   */
+  const handleEmbeddedDismiss = () => {
+    setEmbeddedClientSecret(null);
   };
 
   if (isLoading) {
@@ -854,6 +887,20 @@ export default function CreditsPage() {
           </div>
         </div>
       </main>
+
+      {/* Embedded Stripe checkout. Renders nothing until a Buy click
+          produces a clientSecret; mounts on top of the page when one
+          arrives. The user pays in-page, never leaving storyincolor.com,
+          and on success we navigate to the same /dashboard?credit_
+          purchase=success URL the redirect-based flow used to land at
+          so dashboard polling + Pixel Purchase emit pipeline still
+          fires unchanged. */}
+      <EmbeddedCheckoutModal
+        clientSecret={embeddedClientSecret}
+        publishableKey={stripePublishableKey}
+        onComplete={handleEmbeddedComplete}
+        onDismiss={handleEmbeddedDismiss}
+      />
     </div>
   );
 }
