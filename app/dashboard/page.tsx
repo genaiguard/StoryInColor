@@ -19,6 +19,7 @@ import {
   limit,
   onSnapshot,
 } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import {
   getUserCredits,
   formatCreditBalance,
@@ -178,10 +179,83 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const creditPurchaseSuccess =
     searchParams.get("credit_purchase") === "success";
+  const checkoutSessionId = searchParams.get("session_id");
+
+  // P2 guard: if the user landed here from a redirect-based payment
+  // method that was cancelled or failed, the URL still says
+  // ?credit_purchase=success (Stripe always redirects to return_url).
+  // Without verification, the polling pipeline below would spin for 30s
+  // on a payment that will never produce a webhook. We retrieve the
+  // Checkout Session status from Stripe and only proceed with the
+  // success-polling pipeline when status === "complete".
+  //
+  // - paymentVerified === null  → check still in flight (or no session_id
+  //                               in URL — fall through to legacy
+  //                               behaviour which assumes success)
+  // - paymentVerified === true  → status === "complete", run polling
+  // - paymentVerified === false → status === "open" / "expired", show
+  //                               "payment didn't complete" UI instead
+  //                               of polling
+  const [paymentVerified, setPaymentVerified] = useState<boolean | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!creditPurchaseSuccess) return;
+    if (!checkoutSessionId) {
+      // No session_id in URL — this is a legacy redirect from before
+      // the embedded migration, OR the Stripe template variable didn't
+      // get substituted. Fall back to "assume complete" (legacy
+      // behaviour) so we don't block real purchases.
+      setPaymentVerified(true);
+      return;
+    }
+    if (!user || !initialized) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const functions = getFunctions();
+        const getStatus = httpsCallable<
+          { sessionId: string },
+          { status: string; paymentStatus: string; packageId: string | null }
+        >(functions, "getCheckoutSessionStatus");
+        const { data } = await getStatus({ sessionId: checkoutSessionId });
+        if (cancelled) return;
+        const succeeded =
+          data?.status === "complete" && data?.paymentStatus === "paid";
+        setPaymentVerified(succeeded);
+        if (!succeeded) {
+          // Don't show the "purchase processing" toast for failed/
+          // cancelled sessions. A separate notice is rendered below.
+          setIsProcessingCreditPurchase(false);
+        }
+      } catch (err) {
+        console.error("[dashboard] session status check failed:", err);
+        if (!cancelled) {
+          // Fail-open: if the check itself fails, fall back to legacy
+          // polling behaviour. Worse to block a paying customer than
+          // to occasionally show the polling state for a cancelled
+          // session — credits won't actually land without the webhook.
+          setPaymentVerified(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [creditPurchaseSuccess, checkoutSessionId, user, initialized]);
 
   useEffect(() => {
     const acknowledgedSessionKey = "creditPurchaseAcknowledged";
     if (creditPurchaseSuccess) {
+      // Wait for the session-status verification before deciding what
+      // to surface. paymentVerified === null means the check is still
+      // in flight; paymentVerified === false means cancelled/failed.
+      if (paymentVerified === null) return;
+      if (paymentVerified === false) {
+        setIsProcessingCreditPurchase(false);
+        return;
+      }
       const alreadyAcknowledged =
         sessionStorage.getItem(acknowledgedSessionKey) === "true";
       if (!alreadyAcknowledged) {
@@ -194,7 +268,7 @@ export default function DashboardPage() {
         setIsProcessingCreditPurchase(false);
       }
     }
-  }, [creditPurchaseSuccess]);
+  }, [creditPurchaseSuccess, paymentVerified]);
 
   useEffect(() => {
     const acknowledgedSessionKey = "creditPurchaseAcknowledged";
@@ -302,6 +376,7 @@ export default function DashboardPage() {
     let intervalId: NodeJS.Timeout | null = null;
     if (
       creditPurchaseSuccess &&
+      paymentVerified === true &&
       !recentPurchaseDetected &&
       !pollingComplete
     ) {
@@ -331,6 +406,7 @@ export default function DashboardPage() {
     user,
     initialized,
     creditPurchaseSuccess,
+    paymentVerified,
     recentPurchaseDetected,
     pollingComplete,
   ]);
@@ -491,6 +567,31 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+
+          {/* P2 — payment cancelled / failed notice. Surfaced when the
+              session-status check returned anything other than
+              "complete + paid". A user who cancels or fails the 3DS /
+              bank-redirect challenge ends up here, and we explicitly
+              tell them the payment didn't go through (instead of
+              spinning the polling state forever). */}
+          {creditPurchaseSuccess && paymentVerified === false && (
+            <div className="mb-6 flex items-start gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/[0.06] p-5 text-rose-100">
+              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-rose-300" />
+              <div>
+                <p className="font-medium">Payment didn't complete</p>
+                <p className="mt-1 text-sm text-rose-200/80">
+                  Your card was not charged. You can try again from the
+                  credits page — no readings have been deducted.
+                </p>
+                <Link
+                  href="/credits"
+                  className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-medium text-black transition-colors hover:bg-gray-200"
+                >
+                  Try again
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Welcome */}
           <div className="mb-10">

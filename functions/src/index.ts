@@ -1,6 +1,14 @@
 import { onRequest, onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
-import Stripe from 'stripe';
+import StripeImport from 'stripe';
+// In stripe-node v22+, the top-level "stripe" ambient module was removed
+// (see CHANGELOG 22.0.0). The runtime constructor still imports cleanly
+// as the default export above, but the namespace types (Stripe.Event,
+// Stripe.Checkout.Session, Stripe.Checkout.SessionCreateParams, etc.)
+// only live inside stripe.core. Type-only deep import gives us those
+// types back without bundling internals at runtime.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { Stripe } from 'stripe/cjs/stripe.core.js';
 import { defineSecret } from 'firebase-functions/params';
 import { sendWelcomeEmail, sendContactFormEmail } from './email-service';
 import { CREDIT_PACKAGES } from './credit-packages';
@@ -75,8 +83,8 @@ export const stripeWebhook = onRequest(
           // Sanitized prefix for cross-referencing logs without leaking the key.
           console.log(`[Webhook] Stripe secret prefix: ${stripeKey.substring(0, 8)}... (length: ${stripeKey.length})`);
           
-          const stripe = new Stripe(stripeKey, {
-            apiVersion: '2023-10-16' // Updated to a newer version
+          const stripe = new StripeImport(stripeKey, {
+            apiVersion: '2026-04-22.dahlia',
           });
 
           let event: Stripe.Event;
@@ -457,8 +465,11 @@ export const createCreditCheckout = onCall<{
       }
       console.log(`[Stripe] Secret prefix: ${stripeKey.substring(0, 8)}... (length: ${stripeKey.length})`);
       
-      const stripe = new Stripe(stripeKey, {
-        apiVersion: '2023-10-16',
+      // Pin the API version explicitly. SDK 22.x defaults to
+      // 2026-04-22.dahlia which is the version that introduced the
+      // session-level `branding_settings` parameter we use below.
+      const stripe = new StripeImport(stripeKey, {
+        apiVersion: '2026-04-22.dahlia',
       });
 
       // Create product name and description.
@@ -540,8 +551,41 @@ export const createCreditCheckout = onCall<{
       // both paths.
       console.log("[Stripe] Creating embedded checkout session...");
       const session = await stripe.checkout.sessions.create({
-        ui_mode: 'embedded',
-        return_url: `${domain}${successPath}`,
+        // API version 2026-04-22.dahlia renamed the UiMode enum values:
+        // "embedded" → "embedded_page", "hosted" → "hosted_page",
+        // "custom" → "elements". Same behavior, new label.
+        ui_mode: 'embedded_page',
+        // {CHECKOUT_SESSION_ID} is a Stripe-side template variable —
+        // Stripe substitutes the real session id when redirecting.
+        // The dashboard uses this id to call getCheckoutSessionStatus
+        // and verify the payment actually succeeded before showing the
+        // success-polling state. Without this, a user who cancels a
+        // 3DS / bank-redirect flow lands on `?credit_purchase=success`
+        // and the dashboard would show "your purchase is being
+        // processed" even though no webhook will ever fire.
+        return_url: `${domain}${appendQuery(successPath, 'session_id={CHECKOUT_SESSION_ID}')}`,
+        // For card / Apple Pay / Google Pay / Link without 3DS, Stripe
+        // fires the embedded checkout's onComplete callback in-page
+        // and the client navigates to the success URL. Only redirect-
+        // requiring methods (3DS, bank wallets) hit the return_url.
+        // Default is 'always' which would force a redirect even for
+        // simple card payments, defeating the modal's onComplete path.
+        redirect_on_completion: 'if_required',
+        // Per-session brand override. Defaults come from the Stripe
+        // Dashboard's Branding settings; we override here so the
+        // embedded iframe matches the dark editorial brand exactly
+        // without requiring the dashboard to be reconfigured. Hex
+        // values mirror the site's CARD_BG / primary CTA. Inter font
+        // matches the rest of the site (next/font/google in
+        // app/layout.tsx). 'rounded' is the closest preset to our
+        // rounded-2xl utility.
+        branding_settings: {
+          display_name: 'StoryInColor',
+          background_color: '#0a0a0a',
+          button_color: '#ffffff',
+          font_family: 'inter',
+          border_style: 'rounded',
+        },
         payment_method_options: {
           card: {
             setup_future_usage: 'off_session',
@@ -589,6 +633,92 @@ export const createCreditCheckout = onCall<{
       throw new HttpsError('internal', 'Failed to create checkout session');
     }
   }
+);
+
+/**
+ * Returns the lifecycle status of a Checkout Session by id.
+ *
+ * Why this exists: with `ui_mode: "embedded_page"` and
+ * `redirect_on_completion: "if_required"`, redirect-based payment
+ * methods (3DS challenge, bank-redirect wallets) send the user to the
+ * session's `return_url` AFTER auth — but Stripe also sends them there
+ * on cancel/failure. The return URL appends `?credit_purchase=success`
+ * unconditionally, so without verifying session status the dashboard
+ * would show the "purchase processing" polling state for a payment
+ * that will never produce a `checkout.session.completed` webhook.
+ *
+ * The dashboard calls this on mount whenever it sees `?session_id=...`
+ * in the URL, BEFORE engaging the polling pipeline:
+ *   - status="complete" + payment_status="paid" → real success, poll
+ *     for credits as before
+ *   - status="open" or "expired" → user cancelled / session timed
+ *     out → dashboard shows "payment didn't complete, try again"
+ *   - any retrieval error → fall back to existing polling behaviour
+ *     (safer to assume success-path on error than to block a paying
+ *     customer)
+ *
+ * Auth-gated to the user who owns the session: we verify the session's
+ * `client_reference_id` matches the calling uid before returning, so a
+ * malicious client can't fish for arbitrary session payment statuses.
+ */
+export const getCheckoutSessionStatus = onCall<{ sessionId: string }>(
+  {
+    secrets: [STRIPE_SECRET_KEY],
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated.');
+    }
+    const userId = request.auth.uid;
+    const { sessionId } = request.data;
+    if (!sessionId || typeof sessionId !== 'string') {
+      throw new HttpsError('invalid-argument', 'sessionId is required');
+    }
+    // Defensive: Stripe session ids look like "cs_test_..." or "cs_live_...".
+    // Reject anything that doesn't fit so we don't issue arbitrary lookups.
+    if (!/^cs_(test|live)_[A-Za-z0-9]+$/.test(sessionId)) {
+      throw new HttpsError('invalid-argument', 'Invalid sessionId format');
+    }
+
+    try {
+      const stripeKey = STRIPE_SECRET_KEY.value();
+      if (!/^sk_(live|test)_[A-Za-z0-9_]+$/.test(stripeKey)) {
+        throw new HttpsError(
+          'failed-precondition',
+          'Stripe is not configured correctly. Please contact support.',
+        );
+      }
+      const stripe = new StripeImport(stripeKey, {
+        apiVersion: '2026-04-22.dahlia',
+      });
+
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+      // Owner check: session.client_reference_id was set to the user's
+      // uid when the session was created (see createCreditCheckout
+      // above). If it doesn't match the caller's uid, deny — otherwise
+      // any signed-in user could probe arbitrary session statuses.
+      if (session.client_reference_id !== userId) {
+        console.warn(
+          `[getCheckoutSessionStatus] uid ${userId} attempted to read session ${sessionId} owned by ${session.client_reference_id}`,
+        );
+        throw new HttpsError('permission-denied', 'Not your session.');
+      }
+
+      return {
+        status: session.status, // "open" | "complete" | "expired"
+        paymentStatus: session.payment_status, // "no_payment_required" | "paid" | "unpaid"
+        packageId: session.metadata?.packageId ?? null,
+      };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      console.error('[getCheckoutSessionStatus] retrieval failed:', error);
+      throw new HttpsError(
+        'internal',
+        'Could not verify checkout session status.',
+      );
+    }
+  },
 );
 
 // --- Type Definitions for Admin Dashboard ---
