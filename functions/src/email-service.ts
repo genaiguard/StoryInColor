@@ -172,13 +172,22 @@ export const sendContactFormEmail = async (
 
 const FONT_STACK =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif";
-const PAGE_BG = "#f5f3ee"; // outer cream
-const CARD_BG = "#ffffff";
-const RULE = "#eae6dc";
-const INK = "#111111";
-const INK_2 = "#444444";
-const MUTED = "#888888";
-const MUTED_2 = "#aaaaaa";
+// Dark editorial palette — mirrors the site (storyincolor.com is black
+// background with white text and gray accents). Hex values match the
+// Tailwind gray scale used on the site's components: gray-300 for body
+// copy, gray-400 for muted, gray-500 for very muted, plus pure black
+// outer / near-black card with a subtle hairline border.
+const PAGE_BG = "#000000"; // outer black
+const CARD_BG = "#0a0a0a"; // near-black card with depth
+const RULE = "#1f1f1f"; // hairline border (subtle but visible on dark)
+const INK = "#ffffff"; // primary text / headlines
+const INK_2 = "#d1d5db"; // body text — Tailwind gray-300
+const MUTED = "#9ca3af"; // muted — Tailwind gray-400 (used for italic accents)
+const MUTED_2 = "#6b7280"; // extra muted — Tailwind gray-500
+// Button colours: bg-white + text-black matches the site's primary CTA
+// pattern (Read my photo / Buy a reading / Buy now).
+const BTN_BG = "#ffffff";
+const BTN_TEXT = "#111111";
 
 function escapeHtml(s: string): string {
   return s
@@ -192,25 +201,32 @@ function escapeHtml(s: string): string {
 function generateWelcomeEmailTemplate(name: string): string {
   const safeName = escapeHtml(name);
   const greeting = name && name !== "there" ? `Hi ${safeName} —` : "Welcome —";
+  // Brand wordmark with three font-weights, mirroring the site mark
+  // ("Story" light + "In" semibold + "Color" light).
+  const wordmark = `<span style="font-weight:300;">Story</span><span style="font-weight:600;">In</span><span style="font-weight:300;">Color</span>`;
   return `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
     <title>Welcome to StoryInColor</title>
   </head>
-  <body style="margin:0; padding:0; background-color:${PAGE_BG}; font-family:${FONT_STACK};">
+  <body style="margin:0; padding:0; background-color:${PAGE_BG}; font-family:${FONT_STACK}; color:${INK_2};">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${PAGE_BG};">
       <tr>
         <td align="center" style="padding:48px 16px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px; background-color:${CARD_BG}; border:1px solid ${RULE};">
-            <!-- Brand bar -->
+            <!-- Brand bar — three-weight wordmark mirrors the site mark -->
             <tr>
               <td style="padding:22px 32px; border-bottom:1px solid ${RULE}; text-align:center;">
-                <span style="font-size:11px; font-weight:500; letter-spacing:0.18em; color:${MUTED}; text-transform:uppercase;">Story In Color</span>
+                <span style="font-size:14px; letter-spacing:-0.02em; color:${INK};">${wordmark}</span>
               </td>
             </tr>
-            <!-- Headline -->
+            <!-- Headline. The italic gray accent on the second line
+                 mirrors the site's editorial heading pattern (e.g.
+                 "Pick your <em>pack.</em>" on /credits). -->
             <tr>
               <td style="padding:56px 40px 8px;">
                 <p style="margin:0; font-size:11px; font-weight:500; letter-spacing:0.18em; color:${MUTED_2}; text-transform:uppercase;">Welcome</p>
@@ -231,10 +247,11 @@ function generateWelcomeEmailTemplate(name: string): string {
                 </p>
               </td>
             </tr>
-            <!-- CTA -->
+            <!-- CTA — white pill on the dark card matches the site's
+                 primary button (Read my photo / Buy a reading / Buy now). -->
             <tr>
               <td align="center" style="padding:36px 40px 12px;">
-                <a href="https://storyincolor.com/readings" style="display:inline-block; padding:14px 28px; background-color:${INK}; color:#ffffff; text-decoration:none; font-size:14px; font-weight:500; letter-spacing:-0.005em; border-radius:999px;">
+                <a href="https://storyincolor.com/readings" style="display:inline-block; padding:14px 28px; background-color:${BTN_BG}; color:${BTN_TEXT}; text-decoration:none; font-size:14px; font-weight:500; letter-spacing:-0.005em; border-radius:999px;">
                   See the reading room
                 </a>
               </td>
@@ -249,8 +266,9 @@ function generateWelcomeEmailTemplate(name: string): string {
                  commitment moment. -->
             <tr>
               <td align="center" style="padding:8px 40px 12px;">
-                <p style="margin:0; font-size:12px; color:${MUTED};">
-                  Pay-as-you-go. Single Issue $9.99, Three pack $24, Six pack $39.
+                <p style="margin:0; font-size:12px; line-height:1.5; color:${MUTED};">
+                  Pay-as-you-go from <span style="color:${INK_2};">$6.50 per reading</span>.<br />
+                  Single $9.99 · 3-pack $8 each · 6-pack $6.50 each.
                 </p>
               </td>
             </tr>

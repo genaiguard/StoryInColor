@@ -26,6 +26,7 @@ import { useFirebase } from "@/app/firebase/firebase-provider";
 import {
   getUserCredits,
   formatCreditBalance,
+  CREDIT_PACKAGES,
 } from "@/app/firebase/credits-helpers";
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers";
 import {
@@ -277,6 +278,19 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
     : tool.creditCost === 1
       ? "1 reading"
       : `${tool.creditCost} readings`;
+  // Lowest PER-READING price across the SKU table (NOT the lowest pack
+  // total). Used in the no-credits retail line so the "from $X / reading"
+  // anchor reflects the cheapest unit price the user can actually get
+  // — which lives in the largest pack thanks to volume discounts. The
+  // single-pack price ($9.99) is the highest per-reading rate, not the
+  // lowest, so anchoring "from" against it would mislead. Standard
+  // SaaS / e-commerce convention is to anchor on the lowest unit price
+  // available across the SKU set.
+  const cheapestPerReading = CREDIT_PACKAGES.reduce(
+    (min, pkg) => (pkg.pricePerCredit < min ? pkg.pricePerCredit : min),
+    Number.POSITIVE_INFINITY,
+  );
+  const cheapestPerReadingLabel = `$${(cheapestPerReading / 100).toFixed(2)}`;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -461,44 +475,54 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                     </p>
                   )}
 
-                  {/* Insufficient-credits notice. Kept as a contextual
-                      banner only — the primary "Purchase readings" CTA
-                      lives in the cost-row button immediately below to
-                      avoid two stacked CTAs with the same label. */}
-                  {needsPurchase && (
-                    <div className="mt-5 rounded-xl border border-amber-400/25 bg-amber-400/[0.08] p-3 sm:p-4">
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-300/15 text-amber-200">
-                          <CreditCard className="h-4 w-4" aria-hidden="true" />
-                        </span>
+                  {/* Cost / retail row + primary CTA.
+                      Two states:
+                       - User has enough credits → "Cost: 1 reading" +
+                         "Read my photo" button.
+                       - User has 0 credits → re-frame the row as a
+                         retail offer ("From $9.99 · 30-day guarantee")
+                         with a "Buy a reading" CTA.
+                      Stacked column on mobile so the button is full-
+                      width; row layout on sm+. */}
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div className="text-sm">
+                      {needsPurchase ? (
                         <div>
-                          <p className="text-sm font-medium text-amber-100">
-                            Your photo is ready for a premium reading.
+                          {/* Anchor pricing: from the lowest per-reading
+                              rate across the SKU table (the 6-pack rate),
+                              with the unit explicit. Smaller secondary
+                              line carries the trust signal. Two-line
+                              format gives the price visual breathing
+                              room and keeps the guarantee on a separate
+                              eye-line so it reads as a reassurance
+                              rather than fine print. */}
+                          <p className="text-base font-medium text-white">
+                            From {cheapestPerReadingLabel}{" "}
+                            <span className="text-gray-400 font-normal">
+                              / reading
+                            </span>
                           </p>
-                          <p className="mt-0.5 text-sm text-amber-100/80">
-                            Purchase a reading below — you'll come back
-                            here to start.
+                          <p className="mt-0.5 text-xs text-gray-500">
+                            30-day satisfaction guarantee
                           </p>
                         </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-6 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="font-medium text-gray-400">
-                        Cost:
-                      </span>
-                      <span className="font-medium text-white tabular-nums">
-                        {creditLabel}
-                      </span>
+                      ) : (
+                        <p className="flex items-center gap-2">
+                          <span className="font-medium text-gray-400">
+                            Cost:
+                          </span>
+                          <span className="font-medium text-white tabular-nums">
+                            {creditLabel}
+                          </span>
+                        </p>
+                      )}
                     </div>
                     <button
                       type="button"
                       onClick={handleGenerate}
                       disabled={generateDisabled}
                       aria-busy={isSubmitting}
-                      className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-all duration-150 hover:bg-gray-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-all duration-150 hover:bg-gray-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 sm:w-auto"
                     >
                       {isSubmitting ? (
                         <>
@@ -508,7 +532,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                       ) : needsPurchase ? (
                         <>
                           <CreditCard className="h-4 w-4" />
-                          Purchase readings
+                          Buy a reading
                         </>
                       ) : (
                         <>
