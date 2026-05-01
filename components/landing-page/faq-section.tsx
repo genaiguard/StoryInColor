@@ -17,7 +17,7 @@ const FAQS: FAQ[] = [
     value: "cost",
     question: "How much does a reading cost?",
     answer:
-      "Pay-as-you-go. Single Issue is $9.99 for one reading. The Three pack is $24 ($8 each, 20% off). The Six pack is $39 ($6.50 each, 35% off). Signing up is free, no card required.",
+      "Pay-as-you-go. Single Issue is $9.99 for one reading. The Three pack is $24 ($8 each, 20% off). The Six pack is $39 ($6.50 each, 35% off). Signing up is free.",
   },
   {
     value: "subscription",

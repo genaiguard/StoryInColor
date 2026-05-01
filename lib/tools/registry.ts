@@ -27,7 +27,7 @@ export const TOOLS: Tool[] = [
         "A clean line illustration drawn from your photo",
         "Print-ready black-and-white output sized for one standard page",
         "Faithful preservation of the subject's likeness and pose",
-        "Free starter credits when you sign up — no card required",
+        "A polished keepsake page you can save or print at home",
       ],
       faq: [
         {

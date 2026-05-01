@@ -62,7 +62,7 @@ const faqSchema = {
       name: "How does pricing work?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Pay-as-you-go. Single Issue is $9.99 for one reading; Three pack is $24 ($8 each, 20% off); Six pack is $39 ($6.50 each, 35% off). Signing up is free, no card required. No subscription, no expiry.",
+        text: "Pay-as-you-go. Single Issue is $9.99 for one reading; Three pack is $24 ($8 each, 20% off); Six pack is $39 ($6.50 each, 35% off). Signing up is free. No subscription, no expiry.",
       },
     },
     {

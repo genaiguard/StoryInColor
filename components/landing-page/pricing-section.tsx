@@ -30,7 +30,7 @@ type PricingSectionProps = {
 export default function PricingSection({
   ctaHref = "/login?register=true",
   ctaLabel = "Start free",
-  ctaNote = "Sign up free — no card required.",
+  ctaNote = "Sign up free.",
   trackingName = "Pricing CTA",
 }: PricingSectionProps) {
   return (

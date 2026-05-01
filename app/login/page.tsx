@@ -416,7 +416,7 @@ function LoginForm() {
                     </span>
                   </h1>
                   <p className="mt-2 text-sm text-gray-400">
-                    Sign up free — no card required.
+                    Sign up free.
                   </p>
 
                   {error && (
@@ -539,7 +539,7 @@ function LoginForm() {
               {[
                 {
                   title: "Free to start",
-                  body: "Sign up free, try a coloring page — no card required.",
+                  body: "Sign up free and try a coloring page on us.",
                 },
                 {
                   title: "Saved to your library",

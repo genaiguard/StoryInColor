@@ -54,8 +54,10 @@ export default function HeroSection() {
           // happens-to-be-rotating-when-they-clicked> is a coincidence,
           // not an intent. The visitor came to start, not to deep-link
           // into an arbitrary reading. /login?register=true puts them
-          // on the signup form, which grants 2 free starter credits and
-          // lands them on the dashboard where they pick a reading.
+          // on the signup form and lands them on the dashboard where
+          // they pick a reading. (Editorial readings are paid; the
+          // free entry post-signup is the coloring page — see
+          // DECISIONS.md "Copy rules".)
           label: "Start free",
           href: "/login?register=true",
         }}
