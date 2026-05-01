@@ -67,7 +67,15 @@ function LoginForm() {
     setError("");
 
     if (password !== confirmPassword) {
-      return setError("Passwords do not match");
+      // Surface the mismatch on top of the soft keyboard, where mobile
+      // users can actually see it. The previous inline-only setError
+      // rendered above the form, off-screen behind the keyboard, and
+      // produced the silent multi-tap "Create account" pattern Clarity
+      // recorded across multiple FB-ad sessions stuck on /login.
+      const message = "Passwords do not match";
+      setError(message);
+      toast.error(message);
+      return;
     }
 
     setLoading(true);
@@ -480,12 +488,42 @@ function LoginForm() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
-                        className={INPUT_CLASS}
+                        aria-invalid={
+                          confirmPassword.length > 0 &&
+                          password !== confirmPassword
+                            ? true
+                            : undefined
+                        }
+                        aria-describedby={
+                          confirmPassword.length > 0 &&
+                          password !== confirmPassword
+                            ? "confirm-password-hint"
+                            : undefined
+                        }
+                        className={`${INPUT_CLASS} ${
+                          confirmPassword.length > 0 &&
+                          password !== confirmPassword
+                            ? "border-rose-400/50 focus:border-rose-400/70"
+                            : ""
+                        }`}
                       />
+                      {confirmPassword.length > 0 &&
+                        password !== confirmPassword && (
+                          <p
+                            id="confirm-password-hint"
+                            className="text-xs text-rose-300"
+                          >
+                            Passwords don't match yet.
+                          </p>
+                        )}
                     </div>
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={
+                        loading ||
+                        (confirmPassword.length > 0 &&
+                          password !== confirmPassword)
+                      }
                       className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-gray-200 disabled:opacity-60"
                     >
                       {loading ? (
