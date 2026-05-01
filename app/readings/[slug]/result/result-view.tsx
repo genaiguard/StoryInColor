@@ -15,6 +15,7 @@ import {
 
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import { trackViewReadingResult } from "@/lib/analytics/events";
+import { getNextTool, getPairingTease } from "@/lib/tools/pairings";
 import type { Job, Tool } from "@/lib/tools/types";
 
 type Props = { tool: Tool };
@@ -525,6 +526,17 @@ export default function ResultView({ tool }: Props) {
                 Back to dashboard
               </Link>
             </div>
+
+            {/* Pairing-driven upsell. Surfaces a complementary reading
+                tied thematically to the one just completed — aura→face,
+                palm→handwriting, beauty→colour, etc. (see lib/tools/pairings.ts).
+                Sits below the action row so the primary download/share
+                actions stay top-of-mind, but it's the largest non-action
+                element on the page so users actively engaged with their
+                result see "what's next" without being shoved into another
+                purchase. coloring-book has no pairing — the card hides
+                cleanly when getNextTool returns null. */}
+            <UpsellCard currentToolId={tool.id} />
           </div>
         </main>
       </div>
@@ -545,5 +557,74 @@ export default function ResultView({ tool }: Props) {
         </div>
       </main>
     </div>
+  );
+}
+
+/**
+ * Pairing-driven "Up next" card. Reads from lib/tools/pairings.ts to
+ * pick a complementary reading and renders a single editorial card with
+ * the paired tool's cover image on the left, a tease line + CTA on the
+ * right. The pairing is deterministic per current tool; coloring-book
+ * yields null and the card renders nothing.
+ */
+function UpsellCard({ currentToolId }: { currentToolId: string }) {
+  const next = getNextTool(currentToolId);
+  if (!next) return null;
+  const tease = getPairingTease(currentToolId);
+  return (
+    <section
+      aria-label="Try another reading"
+      className="mt-14"
+    >
+      <div className="mb-4 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+        <span className="h-px w-8 bg-white/20" aria-hidden="true" />
+        Up next
+      </div>
+      <div className="liquid-glass overflow-hidden rounded-2xl">
+        <div className="grid items-center gap-6 p-5 md:grid-cols-[160px_1fr] md:gap-7 md:p-6">
+          {/* Cover image — small thumbnail tile so the just-completed
+              result above stays the focal point of the page. */}
+          <Link
+            href={`/readings/${next.slug}`}
+            className="block overflow-hidden rounded-xl ring-1 ring-white/5 transition-transform hover:scale-[1.02]"
+            aria-label={`Try ${next.name}`}
+          >
+            <div className="aspect-[2/3] w-full bg-black">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={next.coverImage}
+                alt={`${next.name} sample`}
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover"
+              />
+            </div>
+          </Link>
+          <div className="flex flex-col gap-3">
+            <h2 className="text-2xl font-normal tracking-[-0.03em] text-white sm:text-3xl">
+              {next.name}{" "}
+              <span className="italic font-light text-gray-400">
+                — {next.tagline.toLowerCase()}.
+              </span>
+            </h2>
+            <p className="text-sm text-gray-300 md:text-base">{tease}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <Link
+                href={`/readings/${next.slug}`}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-black transition-all duration-150 hover:bg-gray-200 active:scale-[0.97]"
+              >
+                Try {next.name}
+              </Link>
+              <Link
+                href="/readings"
+                className="text-sm font-medium text-gray-400 transition-colors hover:text-white"
+              >
+                See all readings
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
