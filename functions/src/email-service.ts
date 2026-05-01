@@ -243,7 +243,7 @@ function generateWelcomeEmailTemplate(name: string): string {
                   StoryInColor turns one photo into an editorial reading — palm, face, beauty, aura, iridology, handwriting, style, skincare. Each one is a magazine-quality spread, designed to be saved.
                 </p>
                 <p style="margin:0; font-size:16px; line-height:1.6; color:${INK_2};">
-                  Bring whatever you have a photo of and we'll write you back in about 30 seconds.
+                  Upload a photo and your reading lands in about thirty seconds.
                 </p>
               </td>
             </tr>
