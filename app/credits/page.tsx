@@ -38,7 +38,7 @@ import {
   trackClickedBuyNow,
 } from "@/lib/analytics/events";
 import { tsToMillis } from "@/lib/utils";
-import { ORDERED_TOOLS } from "@/lib/tools/registry";
+import { ORDERED_TOOLS, getToolBySlug } from "@/lib/tools/registry";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { PaymentMethodChips } from "@/components/ui/payment-logos";
 import { EmbeddedCheckoutModal } from "@/components/credits/embedded-checkout-modal";
@@ -119,6 +119,37 @@ const PRICING_TESTIMONIALS = [
     reading: "Hairstyle",
   },
 ];
+
+/**
+ * Slim contextual line that surfaces on /credits ONLY when the user
+ * arrived from a specific reading (i.e. `?next=/readings/<slug>`).
+ * Tells them where they'll land after checkout without hero-framing
+ * the SKU grid as if it were a single-reading purchase. Per-pack
+ * SKUs stay reading-agnostic on purpose — packs work for any
+ * reading on the catalog.
+ *
+ * Falls back to nothing rendered if the next path isn't a known
+ * reading slug, so this is a no-op for direct visits to /credits.
+ */
+function ReturnToReadingHint({ returnPath }: { returnPath: string | null }) {
+  if (!returnPath) return null;
+  // Only act on /readings/<slug> paths, not arbitrary returnPath values.
+  // Strip any trailing query/fragment so getToolBySlug gets a clean slug.
+  const match = /^\/readings\/([^/?#]+)/.exec(returnPath);
+  if (!match) return null;
+  const tool = getToolBySlug(match[1]);
+  if (!tool) return null;
+  return (
+    <div className="mb-5 flex items-center gap-2 text-sm text-gray-400">
+      <span
+        className="inline-block h-px w-6 bg-white/15"
+        aria-hidden="true"
+      />
+      After checkout, you'll come back to start your{" "}
+      <span className="text-white">{tool.name}</span>.
+    </div>
+  );
+}
 
 function getSafeReturnPath(value: string | null): string | null {
   if (
@@ -657,6 +688,8 @@ export default function CreditsPage() {
             </div>
           )}
 
+          <ReturnToReadingHint returnPath={returnPath} />
+
           <TrustBadgesRow />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -772,7 +805,16 @@ export default function CreditsPage() {
                     ) : (
                       <>
                         <CreditCard className="h-4 w-4" />
-                        Buy now
+                        {/* Reading-count framing on the button matches the
+                            per-reading-price emphasis in the card body
+                            (B6) and reinforces what's being bought at the
+                            moment of commitment. Generic "Buy now" was
+                            ambiguous — "Buy 1 reading" / "Buy 3 readings"
+                            / "Buy 6 readings" makes the unit explicit and
+                            stays consistent across all three packs (no
+                            tier is singled out as reading-specific). */}
+                        Buy {pkg.credits} reading
+                        {pkg.credits === 1 ? "" : "s"}
                       </>
                     )}
                   </button>
