@@ -1,15 +1,24 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import dynamic from 'next/dynamic'
 import Header from "@/components/landing-page/header"
 import HeroSection from "@/components/landing-page/hero-section"
-const EditorialQuoteSection = dynamic(() => import('@/components/landing-page/editorial-quote-section'))
-const ExamplesSection = dynamic(() => import('@/components/landing-page/examples-section'))
-const PricingSection = dynamic(() => import('@/components/landing-page/pricing-section'))
-const TestimonialsSection = dynamic(() => import('@/components/landing-page/testimonials-section'))
-const FAQSection = dynamic(() => import('@/components/landing-page/faq-section'))
-const Footer = dynamic(() => import('@/components/landing-page/footer'))
+// Below-fold sections were previously next/dynamic for code-splitting,
+// but next/dynamic from a "use client" component in App Router wraps
+// each import in a Suspense/lazy boundary that shifts React's useId
+// counter between SSR and CSR — Radix Accordion in FAQSection reads
+// these IDs and refuses to hydrate when they disagree (visible as
+// "tree hydrated but some attributes didn't match" with offset
+// aria-controls / id values on every accordion item). Static imports
+// avoid the boundary entirely. Bundle-weight cost is small for this
+// marketing surface and the site is a static export anyway, so the
+// "below-fold lazy" optimisation wasn't really paying for itself.
+import EditorialQuoteSection from "@/components/landing-page/editorial-quote-section"
+import ExamplesSection from "@/components/landing-page/examples-section"
+import PricingSection from "@/components/landing-page/pricing-section"
+import TestimonialsSection from "@/components/landing-page/testimonials-section"
+import FAQSection from "@/components/landing-page/faq-section"
+import Footer from "@/components/landing-page/footer"
 import LandingPageSEO from "@/components/seo/landing-page-seo"
 import StructuredData from "@/components/seo/structured-data"
 
