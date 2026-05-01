@@ -274,11 +274,8 @@ function generateWelcomeEmailTemplate(name: string): string {
             </tr>
             <tr>
               <td align="center" style="padding:0 40px 56px;">
-                <p style="margin:0; font-size:12px; color:${INK_2};">
-                  <strong style="font-weight:500; color:${INK};">30-day satisfaction guarantee.</strong>
-                  If a reading doesn't land, email
-                  <a href="mailto:info@storyincolor.com" style="color:${INK_2}; text-decoration:underline;">info@storyincolor.com</a>
-                  within 30 days and we'll refund.
+                <p style="margin:0; font-size:12px; color:${INK};">
+                  <strong style="font-weight:500;">30-day satisfaction guarantee.</strong>
                 </p>
               </td>
             </tr>
