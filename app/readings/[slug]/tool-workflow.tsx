@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -24,7 +24,6 @@ import {
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import {
-  getUserCredits,
   formatCreditBalance,
   CREDIT_PACKAGES,
 } from "@/app/firebase/credits-helpers";
@@ -95,22 +94,83 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
   const returnPath = `/readings/${tool.slug}`;
   const purchaseHref = `/credits?next=${encodeURIComponent(returnPath)}`;
 
+  // Detect post-purchase return. When the user just completed embedded
+  // checkout, Stripe (or onComplete) navigates them back here with
+  // `?credit_purchase=success`. The webhook that lands the new credits
+  // into Firestore can take 1-5 seconds to fire, so we use this flag
+  // to suppress the "Buy a reading" CTA during that window — otherwise
+  // the user briefly sees "you have 0 readings, buy one" right after
+  // paying. Cleared automatically when the snapshot listener below
+  // sees a balance >= tool.creditCost.
+  const searchParams = useSearchParams();
+  const creditPurchaseSuccess =
+    searchParams?.get("credit_purchase") === "success";
+  const [purchasePending, setPurchasePending] = useState<boolean>(
+    creditPurchaseSuccess,
+  );
+
+  // Real-time credit balance via Firestore onSnapshot. Replaces the
+  // previous one-time getUserCredits fetch which left the navbar +
+  // cost row stale after a webhook-driven balance change (the most
+  // common case being "user just bought, webhook landed 2s after
+  // page mount, but workflow page never knew about the update").
+  // The listener fires immediately with the current value AND on
+  // every subsequent update — debits from generations + credits
+  // from purchases + refunds all flow through.
   useEffect(() => {
-    let cancelled = false;
     if (!user?.uid) return;
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
     (async () => {
       try {
-        const c = await getUserCredits(user.uid);
-        if (!cancelled) setCredits(c.balance ?? 0);
+        const { getFirestore, doc, onSnapshot } = await import(
+          "firebase/firestore"
+        );
+        if (cancelled) return;
+        const db = getFirestore();
+        const ref = doc(db, "userCredits", user.uid);
+        unsubscribe = onSnapshot(
+          ref,
+          (snap) => {
+            if (cancelled) return;
+            const balance = snap.exists()
+              ? ((snap.data() as { balance?: number })?.balance ?? 0)
+              : 0;
+            setCredits(balance);
+            // If the post-purchase pending banner is up and credits
+            // arrived, drop it — the balance is now sufficient and
+            // the normal "Read my photo" CTA can show.
+            if (balance >= tool.creditCost) {
+              setPurchasePending(false);
+            }
+          },
+          (err) => {
+            console.error("userCredits snapshot error:", err);
+            if (!cancelled) setCredits(0);
+          },
+        );
       } catch (err) {
-        console.error("Failed to load credits:", err);
+        console.error("Failed to subscribe to userCredits:", err);
         if (!cancelled) setCredits(0);
       }
     })();
     return () => {
       cancelled = true;
+      if (unsubscribe) unsubscribe();
     };
-  }, [user?.uid]);
+  }, [user?.uid, tool.creditCost]);
+
+  // Defensive: if `?credit_purchase=success` is in the URL but the
+  // webhook never lands within 30 seconds, clear the pending state so
+  // the user isn't stuck on a loading message forever. The dashboard
+  // (which is the canonical post-purchase landing) has the same 30s
+  // bound on its polling pipeline; mirroring it here keeps the two
+  // surfaces consistent.
+  useEffect(() => {
+    if (!creditPurchaseSuccess) return;
+    const timeout = setTimeout(() => setPurchasePending(false), 30_000);
+    return () => clearTimeout(timeout);
+  }, [creditPurchaseSuccess]);
 
   useEffect(() => {
     if (!file) {
@@ -156,8 +216,13 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
     !file ||
     isSubmitting ||
     credits === null ||
+    purchasePending ||
     !user?.uid;
-  const needsPurchase = !!file && insufficientCredits;
+  // needsPurchase is suppressed while a purchase is in flight — the
+  // user just paid and the webhook is landing the credits any second.
+  // Showing them "Buy a reading" in that window would be confusing at
+  // best and produce a duplicate-purchase risk at worst.
+  const needsPurchase = !!file && insufficientCredits && !purchasePending;
 
   async function handleGenerate() {
     if (!file || !user?.uid) return;
@@ -476,17 +541,27 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                   )}
 
                   {/* Cost / retail row + primary CTA.
-                      Two states:
+                      Three states:
+                       - User just paid, webhook still landing →
+                         "Adding readings to your balance…" with a
+                         disabled spinner button. Suppresses both the
+                         retail offer and the "Buy a reading" CTA so we
+                         don't ask them to buy twice.
                        - User has enough credits → "Cost: 1 reading" +
                          "Read my photo" button.
                        - User has 0 credits → re-frame the row as a
-                         retail offer ("From $9.99 · 30-day guarantee")
-                         with a "Buy a reading" CTA.
+                         retail offer ("From $6.50 / reading · 30-day
+                         guarantee") with a "Buy a reading" CTA.
                       Stacked column on mobile so the button is full-
                       width; row layout on sm+. */}
                   <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <div className="text-sm">
-                      {needsPurchase ? (
+                      {purchasePending ? (
+                        <p className="flex items-center gap-2 text-gray-300">
+                          <Loader2 className="h-4 w-4 animate-spin text-white" />
+                          Adding readings to your balance…
+                        </p>
+                      ) : needsPurchase ? (
                         <div>
                           {/* Anchor pricing: from the lowest per-reading
                               rate across the SKU table (the 6-pack rate),
@@ -521,13 +596,18 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                       type="button"
                       onClick={handleGenerate}
                       disabled={generateDisabled}
-                      aria-busy={isSubmitting}
+                      aria-busy={isSubmitting || purchasePending}
                       className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition-all duration-150 hover:bg-gray-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 sm:w-auto"
                     >
                       {isSubmitting ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Reading…
+                        </>
+                      ) : purchasePending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          One moment…
                         </>
                       ) : needsPurchase ? (
                         <>
