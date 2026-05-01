@@ -337,10 +337,10 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-10 md:px-8 md:py-14">
+        <main className="flex-1 px-4 py-6 md:px-8 md:py-14">
           <div className="container mx-auto max-w-6xl">
             <nav
-              className="mb-8 text-xs text-gray-500"
+              className="mb-4 text-xs text-gray-500 md:mb-8"
               aria-label="Breadcrumb"
             >
               <ol className="flex items-center gap-1.5">
@@ -359,10 +359,15 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
               </ol>
             </nav>
 
-            <div className="grid gap-10 md:grid-cols-2 md:gap-12">
-              {/* Left: title + form */}
+            <div className="grid gap-6 md:grid-cols-2 md:gap-12">
+              {/* Left: title + form. Compressed for mobile so the dropzone
+                  + primary CTA fit above the fold on a 390x844 viewport
+                  (Clarity recorded ~32% scroll depth pre-revamp). The
+                  longer hero-copy paragraph and the right-rail sample +
+                  hint render below the workflow card for users who
+                  scroll, but the action is anchored above. */}
               <section>
-                <div className="mb-4 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+                <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 md:mb-4">
                   <span
                     className="h-px w-8 bg-white/20"
                     aria-hidden="true"
@@ -370,21 +375,18 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                   {tool.category} reading
                 </div>
                 <h1
-                  className="text-3xl font-normal tracking-[-0.04em] sm:text-4xl md:text-5xl"
+                  className="text-2xl font-normal leading-tight tracking-[-0.04em] sm:text-3xl md:text-5xl"
                 >
                   {tool.name}
                 </h1>
-                <p className="mt-3 text-lg italic font-light text-gray-300 md:text-xl">
+                <p className="mt-2 text-base italic font-light text-gray-300 sm:text-lg md:text-xl">
                   {tool.tagline}.
                 </p>
-                <p className="mt-4 text-sm text-gray-400 md:text-base">
-                  {tool.heroCopy}
-                </p>
 
-                <div className="liquid-glass mt-8 rounded-2xl p-6">
+                <div className="liquid-glass mt-4 rounded-2xl p-4 sm:p-6 md:mt-8">
                   <div
                     {...getRootProps()}
-                    className={`flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors ${
+                    className={`flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-5 text-center transition-colors sm:min-h-[200px] sm:px-6 sm:py-8 ${
                       isDragActive
                         ? "border-white/40 bg-white/[0.06]"
                         : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
@@ -397,7 +399,7 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                         <img
                           src={previewUrl}
                           alt="Selected preview"
-                          className="max-h-44 rounded-lg border border-white/10 object-contain"
+                          className="max-h-36 rounded-lg border border-white/10 object-contain sm:max-h-44"
                         />
                         <p className="text-sm text-gray-200">
                           {file?.name}{" "}
@@ -411,8 +413,8 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                       </div>
                     ) : (
                       <>
-                        <UploadIcon className="mb-3 h-7 w-7 text-gray-400" />
-                        <p className="text-base font-medium text-white">
+                        <UploadIcon className="mb-2 h-6 w-6 text-gray-400 sm:mb-3 sm:h-7 sm:w-7" />
+                        <p className="text-sm font-medium text-white sm:text-base">
                           {isDragActive
                             ? "Drop your photo here"
                             : "Drag & drop a photo, or click to choose"}
@@ -459,8 +461,12 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                     </p>
                   )}
 
+                  {/* Insufficient-credits notice. Kept as a contextual
+                      banner only — the primary "Purchase readings" CTA
+                      lives in the cost-row button immediately below to
+                      avoid two stacked CTAs with the same label. */}
                   {needsPurchase && (
-                    <div className="mt-5 rounded-xl border border-amber-400/25 bg-amber-400/[0.08] p-4">
+                    <div className="mt-5 rounded-xl border border-amber-400/25 bg-amber-400/[0.08] p-3 sm:p-4">
                       <div className="flex items-start gap-3">
                         <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-300/15 text-amber-200">
                           <CreditCard className="h-4 w-4" aria-hidden="true" />
@@ -469,23 +475,10 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                           <p className="text-sm font-medium text-amber-100">
                             Your photo is ready for a premium reading.
                           </p>
-                          <p className="mt-1 text-sm text-amber-100/80">
-                            Purchase readings to continue with {tool.name}.
-                            After checkout, you'll come back here to start.
+                          <p className="mt-0.5 text-sm text-amber-100/80">
+                            Purchase a reading below — you'll come back
+                            here to start.
                           </p>
-                          <Link
-                            href={purchaseHref}
-                            onClick={() =>
-                              trackClickedPurchaseFromTool({
-                                toolId: tool.id,
-                                toolName: tool.name,
-                              })
-                            }
-                            className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-medium text-black transition-colors hover:bg-gray-200"
-                          >
-                            <CreditCard className="h-4 w-4" aria-hidden="true" />
-                            Purchase readings
-                          </Link>
                         </div>
                       </div>
                     </div>
@@ -526,6 +519,15 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                     </button>
                   </div>
                 </div>
+
+                {/* Longer hero context paragraph. Lives BELOW the
+                    workflow card on every viewport so on mobile it
+                    doesn't push the dropzone below the fold, and on
+                    desktop it sits naturally as supporting copy after
+                    the action. */}
+                <p className="mt-6 text-sm text-gray-400 md:text-base">
+                  {tool.heroCopy}
+                </p>
               </section>
 
               {/* Right: preview + hint. Use object-contain so the cover
