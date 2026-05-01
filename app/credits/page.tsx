@@ -41,6 +41,7 @@ import {
 import { tsToMillis } from "@/lib/utils";
 import { ORDERED_TOOLS } from "@/lib/tools/registry";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
+import { PaymentMethodChips } from "@/components/ui/payment-logos";
 
 /**
  * Page header. Restructured per Clarity finding: the previous prominent
@@ -158,12 +159,7 @@ function TrustBadgesRow() {
         {GUARANTEE_WINDOW_DAYS}-day satisfaction guarantee
       </span>
       <span className="hidden h-4 w-px bg-white/10 sm:inline-block" aria-hidden="true" />
-      <span className="inline-flex items-center gap-2 font-medium tracking-wide text-gray-200">
-        <span className="rounded-md bg-white/[0.06] px-2 py-0.5">Visa</span>
-        <span className="rounded-md bg-white/[0.06] px-2 py-0.5">Mastercard</span>
-        <span className="rounded-md bg-white/[0.06] px-2 py-0.5">Apple Pay</span>
-        <span className="rounded-md bg-white/[0.06] px-2 py-0.5">Google Pay</span>
-      </span>
+      <PaymentMethodChips className="flex items-center gap-1.5 sm:gap-2" />
     </div>
   );
 }
@@ -603,11 +599,11 @@ export default function CreditsPage() {
               className="text-3xl font-normal tracking-[-0.04em] sm:text-4xl md:text-5xl"
             >
               Pick your{" "}
-              <span className="italic font-light text-gray-400">reading.</span>
+              <span className="italic font-light text-gray-400">pack.</span>
             </h1>
             <p className="mt-3 text-base text-gray-400 md:text-lg">
-              Pay-as-you-go. No subscription, no expiry, no surprise
-              charges.
+              Single readings, three, or six. Pay-as-you-go — no
+              subscription, no expiry, no surprise charges.
             </p>
             <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm">
               <Sparkles className="h-4 w-4 text-white" />
