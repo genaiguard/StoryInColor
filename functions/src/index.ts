@@ -456,9 +456,16 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
         apiVersion: '2023-10-16',
       });
 
-      // Create product name and description
-      const productName = `${creditPackage.credits} Credits`;
-      const productDescription = `${creditPackage.credits} credits for photo readings on StoryInColor (${creditPackage.discountPercentage}% discount)`;
+      // Create product name and description.
+      // User-facing vocabulary is "reading", not "credits" — this name shows
+      // up on the Stripe Checkout page, the customer's bank statement, and
+      // the receipt/invoice. Keeping it consistent with the site copy
+      // reduces "what did I buy?" support inquiries and refund disputes.
+      // The internal ledger field is still called `credits` (1 credit ==
+      // 1 reading) — see DECISIONS.md "Copy rules".
+      const readingLabel = creditPackage.credits === 1 ? "Reading" : "Readings";
+      const productName = `${creditPackage.credits} ${readingLabel}`;
+      const productDescription = `${creditPackage.credits} editorial photo ${readingLabel.toLowerCase()} on StoryInColor (${creditPackage.discountPercentage}% discount)`;
 
       // Create line items
       const lineItems = [{
@@ -496,10 +503,20 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
         ? `/credits?next=${encodeURIComponent(safeReturnPath)}`
         : '/credits';
       
-      // Create checkout session
+      // Create checkout session.
+      //
+      // We deliberately omit `payment_method_types` so Stripe Checkout
+      // shows EVERY method that's enabled at the account level —
+      // including Apple Pay, Google Pay, Link (one-click), and any
+      // BNPL/wallet options enabled in the dashboard. With ~72% of our
+      // traffic on mobile, mobile-native wallets are worth the breadth.
+      // Apple Pay alone is published as +22% global / +58% mobile vs
+      // card-only forms; Stripe Link adds +14% on repeat customers.
+      // The `payment_method_options.card` block stays — it only applies
+      // when card is the chosen method, and it preserves 3DS automatic
+      // + future off-session use (for refund-able re-charges).
       console.log("[Stripe] Creating checkout session...");
       const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
         payment_method_options: {
           card: {
             setup_future_usage: 'off_session',
@@ -509,7 +526,7 @@ export const createCreditCheckout = onCall<{packageId: string, origin?: string, 
         payment_intent_data: {
           capture_method: 'automatic',
         },
-        billing_address_collection: 'auto', 
+        billing_address_collection: 'auto',
         line_items: lineItems,
         mode: 'payment',
         locale: 'en',
