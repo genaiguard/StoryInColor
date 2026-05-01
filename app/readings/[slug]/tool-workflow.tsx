@@ -27,6 +27,10 @@ import {
   formatCreditBalance,
 } from "@/app/firebase/credits-helpers";
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers";
+import {
+  trackUploadedPhoto,
+  trackClickedPurchaseFromTool,
+} from "@/lib/analytics/events";
 import type { Tool } from "@/lib/tools/types";
 
 type Props = { tool: Tool };
@@ -116,18 +120,26 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  const onDrop = useCallback((accepted: File[], rejected: any[]) => {
-    setError(null);
-    if (rejected && rejected.length > 0) {
-      const reason = rejected[0]?.errors?.[0]?.message ?? "File rejected";
-      setError(reason);
-      toast.error(reason);
-      return;
-    }
-    if (accepted.length === 0) return;
-    setFile(accepted[0]);
-    setUploadProgress(0);
-  }, []);
+  const onDrop = useCallback(
+    (accepted: File[], rejected: any[]) => {
+      setError(null);
+      if (rejected && rejected.length > 0) {
+        const reason = rejected[0]?.errors?.[0]?.message ?? "File rejected";
+        setError(reason);
+        toast.error(reason);
+        return;
+      }
+      if (accepted.length === 0) return;
+      setFile(accepted[0]);
+      setUploadProgress(0);
+      // Funnel-gap instrumentation. Clarity & Pixel fire UploadedPhoto so
+      // we can see what % of signed-in workflow visitors actually upload —
+      // a step that's currently invisible between SignUp and any /credits
+      // visit.
+      trackUploadedPhoto({ toolId: tool.id, toolName: tool.name });
+    },
+    [tool.id, tool.name],
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -149,6 +161,14 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
     if (!file || !user?.uid) return;
 
     if (credits !== null && credits < tool.creditCost) {
+      // Funnel-gap instrumentation. Logs the specific path "uploaded photo
+      // → ran out of credits → routed to /credits" — the only handoff
+      // moment between the workflow and the pricing surface for users
+      // with zero balance.
+      trackClickedPurchaseFromTool({
+        toolId: tool.id,
+        toolName: tool.name,
+      });
       router.push(purchaseHref);
       return;
     }
@@ -454,6 +474,12 @@ function AuthenticatedWorkflow({ tool }: { tool: Tool }) {
                           </p>
                           <Link
                             href={purchaseHref}
+                            onClick={() =>
+                              trackClickedPurchaseFromTool({
+                                toolId: tool.id,
+                                toolName: tool.name,
+                              })
+                            }
                             className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-medium text-black transition-colors hover:bg-gray-200"
                           >
                             <CreditCard className="h-4 w-4" aria-hidden="true" />

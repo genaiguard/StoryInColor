@@ -59,6 +59,10 @@ interface FireOptions {
    *  are noisy and we suppress them on Clarity (e.g. PageView, which is
    *  already implicit in session recording). */
   toClarity?: boolean;
+  /** Set to true for non-standard event names (e.g. UploadedPhoto, ClickedBuyNow)
+   *  — uses fbq("trackCustom", ...) on the Pixel side so Meta records them
+   *  as custom events instead of warning about an unknown standard event. */
+  custom?: boolean;
 }
 
 /** Internal: fan out to all three trackers. Each call is wrapped so a
@@ -68,12 +72,20 @@ function fire(eventName: string, options: FireOptions = {}): string {
   const eventId = options.eventId ?? newEventId();
   const params = options.params ?? {};
   const toClarity = options.toClarity ?? true;
+  const custom = options.custom ?? false;
 
   // Meta Pixel — `eventID` (capital ID) is the deduplication key the CAPI
   // mirror must echo. Order: track, then params, then options object.
+  // Use trackCustom for non-standard event names so Meta doesn't log a
+  // "unknown standard event" warning and records the event correctly.
   if (typeof window.fbq === "function") {
     try {
-      window.fbq("track", eventName, params, { eventID: eventId });
+      window.fbq(
+        custom ? "trackCustom" : "track",
+        eventName,
+        params,
+        { eventID: eventId },
+      );
     } catch (e) {
       console.warn(`Pixel fire failed (${eventName}):`, e);
     }
@@ -245,6 +257,65 @@ export function trackInitiateCheckout(opts: {
       currency: "USD",
       value: opts.valueCents / 100,
       num_items: opts.numItems,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Funnel-gap instrumentation (custom events). These don't have a Meta
+// standard mapping; they exist so Clarity (and Pixel custom-events) can
+// answer "where in the funnel does the 49-of-50 dropoff actually happen?"
+// ---------------------------------------------------------------------------
+
+/** Custom: signed-in user dropped a photo onto the workflow dropzone. Fires
+ *  once per accepted file. Tells us "did they get past upload?" — the step
+ *  we currently can't see in Clarity between SignUp and InitiateCheckout. */
+export function trackUploadedPhoto(opts: {
+  toolId: string;
+  toolName: string;
+}): string {
+  return fire("UploadedPhoto", {
+    custom: true,
+    params: {
+      content_type: "reading",
+      content_ids: [opts.toolId],
+      content_name: opts.toolName,
+    },
+  });
+}
+
+/** Custom: signed-in user with insufficient credits clicked the
+ *  "Read my photo" / "Purchase readings" CTA on the tool workflow and is
+ *  being routed to /credits. Fires immediately before the router push. */
+export function trackClickedPurchaseFromTool(opts: {
+  toolId: string;
+  toolName: string;
+}): string {
+  return fire("ClickedPurchaseFromTool", {
+    custom: true,
+    params: {
+      content_type: "reading",
+      content_ids: [opts.toolId],
+      content_name: opts.toolName,
+    },
+  });
+}
+
+/** Custom: user clicked "Buy now" on a /credits SKU tile. Fires before the
+ *  Stripe session is created. The earlier Lead/InitiateCheckout helpers
+ *  fire on landing-page pricing-CTA clicks and on the post-Stripe-session
+ *  redirect respectively — this one fills the gap in between. */
+export function trackClickedBuyNow(opts: {
+  packageId: string;
+  valueCents: number;
+}): string {
+  return fire("ClickedBuyNow", {
+    custom: true,
+    params: {
+      content_ids: [opts.packageId],
+      content_name: `Credit pack: ${opts.packageId}`,
+      currency: "USD",
+      value: opts.valueCents / 100,
     },
   });
 }

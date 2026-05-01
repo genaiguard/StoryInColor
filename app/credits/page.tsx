@@ -32,7 +32,11 @@ import {
 } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { loadStripe } from "@stripe/stripe-js";
-import { newEventId, trackInitiateCheckout } from "@/lib/analytics/events";
+import {
+  newEventId,
+  trackInitiateCheckout,
+  trackClickedBuyNow,
+} from "@/lib/analytics/events";
 import { tsToMillis } from "@/lib/utils";
 
 function PageHeader() {
@@ -203,6 +207,15 @@ export default function CreditsPage() {
 
     setPackageIdLoading(packageId);
     setError("");
+
+    // Funnel-gap instrumentation. Fires the moment a user commits to a
+    // pack on /credits, BEFORE we wait on Cloud Functions / Stripe — so
+    // Clarity records intent even if the network call hangs or the user
+    // bounces during the spinner.
+    trackClickedBuyNow({
+      packageId: creditPackage.id,
+      valueCents: creditPackage.price,
+    });
 
     try {
       const functions = getFunctions();
