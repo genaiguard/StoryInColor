@@ -283,6 +283,17 @@ export default function DashboardPage() {
 
         if (
           creditPurchaseSuccess &&
+          // P2 hardening: don't run Purchase detection until we've
+          // verified the Stripe session actually completed. Without
+          // this gate, a user who cancels a 3DS challenge lands here
+          // with `?credit_purchase=success&session_id=...` (Stripe
+          // redirects to return_url even on cancel), and the OLDEST
+          // entry in their existing purchase history would be picked
+          // up below as "the most recent purchase" and fire trackPurchase
+          // for a payment that never actually happened in this session.
+          // paymentVerified === true gates by design — null means "still
+          // checking", false means "session didn't complete".
+          paymentVerified === true &&
           !recentPurchaseDetected &&
           userCredits.purchaseHistory?.length > 0
         ) {
@@ -293,13 +304,15 @@ export default function DashboardPage() {
           if (mostRecentPurchase) {
             const isPaidPurchase = mostRecentPurchase.pricePaid > 0;
 
-            // Three independent gates already prevent re-firing this Pixel
-            // emit on stray dashboard loads:
+            // Four independent gates prevent re-firing this Pixel emit
+            // on stray dashboard loads:
             //   1. creditPurchaseSuccess — the URL ?credit_purchase=success
             //      query param is set ONLY by Stripe's success_url redirect
-            //   2. !recentPurchaseDetected — local React state, prevents
+            //   2. paymentVerified === true — Stripe confirmed the
+            //      session actually completed (P2 hardening, see above)
+            //   3. !recentPurchaseDetected — local React state, prevents
             //      double-fire within the same render cycle
-            //   3. acknowledgedSessionKey in sessionStorage — set below,
+            //   4. acknowledgedSessionKey in sessionStorage — set below,
             //      survives reloads within the tab so refresh-loops don't
             //      re-fire
             // (We previously also gated on isToday-in-local-tz, which was
