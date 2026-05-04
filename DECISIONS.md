@@ -151,3 +151,13 @@ explicitly **Rejected** below.
   is genuinely free (server enforces `creditCost: 0`), but it is not
   framed as a giveaway in marketing copy. The "Free" badge appears
   contextually on the card for signed-in users only.
+- **Meta Advantage+ Audience (in any form).** Every ad set must lock
+  `targeting.targeting_automation.advantage_audience: 0` and
+  `targeting.targeting_relaxation_types: {lookalike: 0, custom_audience: 0}`.
+  Reasoning: at our small budget ($5–10/day) we run controlled
+  audience-fit experiments and Advantage+ auto-expansion contaminates
+  the test signal — we can't tell if results came from our chosen
+  targeting or from Meta's expansion. Every NEW ad set / clone-rebuild
+  must verify both flags are 0 before activation. This applies even
+  in "hybrid" mode (Advantage+ Audience with seed interests) — still
+  rejected.
