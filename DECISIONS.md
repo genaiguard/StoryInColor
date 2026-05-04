@@ -161,3 +161,15 @@ explicitly **Rejected** below.
   must verify both flags are 0 before activation. This applies even
   in "hybrid" mode (Advantage+ Audience with seed interests) — still
   rejected.
+
+  **Known constraint we cannot disable:** Meta forces Detailed
+  Targeting Expansion ON for any ad set optimizing on a conversion
+  event (Sales / Purchase / `OFFSITE_CONVERSIONS`). The interest +
+  life-event seeds we set are signals to Meta's optimizer, NOT a
+  hard fence on the delivery audience. The relaxation flags above
+  do NOT control this — Meta removed the UI checkbox and the API
+  control for conversion objectives. The hard floors (age, gender,
+  geo, mobile-only) ARE respected; the flexible_spec is not. When
+  writing up post-test results, frame conclusions as "audience that
+  Meta found when seeded with X" rather than "audience X converted",
+  because the actual delivery cohort is broader than the seed.
