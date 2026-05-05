@@ -25,6 +25,10 @@ export {
   getQuizPaywallStatus,
 } from './quiz-checkout';
 export { cleanupExpiredPendingReadings } from './cleanup-pending-readings';
+export {
+  dispatchDailyReflections,
+  generateReflectionPreview,
+} from './daily-reflections';
 
 // Version log - update this to verify deployments
 console.log('Cloud Functions initializing - OpenAI Integration Version');
@@ -860,6 +864,18 @@ interface AdminDashboardData {
   aggregatedStats: AggregatedStats;
   users: EnrichedUser[];
   sourceBreakdown: SourceFunnelRow[];
+  /** Quiz funnel rollup. Per QUIZ-PIVOT-SPEC.md §9.2. */
+  quizFunnel?: {
+    pendingReadingsByStatus: Record<string, number>;
+    /** Last 7 days only — keeps the count meaningful as the corpus grows. */
+    last7DaysCount: number;
+    /** Distinct toolIds seen in last 7 days. */
+    last7DaysByTool: Record<string, number>;
+    /** Activated subscriptions (status=active|trialing). */
+    activeSubscribers: number;
+    /** Total subscribers with subscription field set (any status). */
+    totalSubscribersEver: number;
+  };
 }
 
 // --- Admin Dashboard Data Function (getAdminDashboardData - Enhanced) ---
@@ -1059,6 +1075,41 @@ export const getAdminDashboardData = onCall(
 
       console.log("[Admin Dashboard] Aggregation and data preparation complete.");
 
+      // --- Quiz funnel rollup (additive, per QUIZ-PIVOT-SPEC.md §9.2) ---
+      const quizFunnel: AdminDashboardData['quizFunnel'] = {
+        pendingReadingsByStatus: {},
+        last7DaysCount: 0,
+        last7DaysByTool: {},
+        activeSubscribers: 0,
+        totalSubscribersEver: 0,
+      };
+      try {
+        const sevenDaysAgo = admin.firestore.Timestamp.fromMillis(Date.now() - 7 * 24 * 3600 * 1000);
+        const pendingSnap = await db.collection('pendingReadings').limit(2000).get();
+        for (const d of pendingSnap.docs) {
+          const data = d.data() as { status?: string; toolId?: string; createdAt?: admin.firestore.Timestamp };
+          const status = data.status || 'unknown';
+          quizFunnel.pendingReadingsByStatus[status] = (quizFunnel.pendingReadingsByStatus[status] || 0) + 1;
+          if (data.createdAt && data.createdAt.toMillis() >= sevenDaysAgo.toMillis()) {
+            quizFunnel.last7DaysCount++;
+            const tool = data.toolId || 'unknown';
+            quizFunnel.last7DaysByTool[tool] = (quizFunnel.last7DaysByTool[tool] || 0) + 1;
+          }
+        }
+        // Subscribers count: re-walk userCredits we already loaded
+        userCreditsSnapshot.forEach(doc => {
+          const data = doc.data() as { subscription?: { status?: string } };
+          if (data.subscription) {
+            quizFunnel.totalSubscribersEver++;
+            if (data.subscription.status === 'active' || data.subscription.status === 'trialing') {
+              quizFunnel.activeSubscribers++;
+            }
+          }
+        });
+      } catch (qfErr) {
+        console.warn('[Admin Dashboard] quizFunnel rollup failed (non-fatal):', qfErr);
+      }
+
       // 4. Return Data
       return {
         success: true,
@@ -1072,6 +1123,7 @@ export const getAdminDashboardData = onCall(
         },
         users: enrichedUsers,
         sourceBreakdown,
+        quizFunnel,
       };
 
     } catch (error: any) {

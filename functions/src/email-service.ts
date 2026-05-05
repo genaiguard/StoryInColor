@@ -358,3 +358,110 @@ function generateContactFormTemplate(
 </html>`;
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* Daily Reflection email                                                     */
+/* Per QUIZ-PIVOT-SPEC.md §17.5. Sent to subscribers only — gated upstream    */
+/* by daily-reflections.ts loadActiveSubscribers().                           */
+/* -------------------------------------------------------------------------- */
+
+function generateDailyReflectionTemplate(
+  reflectionText: string,
+  name?: string,
+): string {
+  const safeName = escapeHtml(name || "");
+  const safeText = escapeHtml(reflectionText)
+    // preserve paragraph breaks if any
+    .replace(/\n\n+/g, "</p><p style=\"margin:0 0 14px 0;\">")
+    .replace(/\n/g, "<br/>");
+  const greeting = safeName ? `Hi ${safeName} —` : "Hi —";
+  const wordmark = `<span style="font-weight:300;">Story</span><span style="font-weight:600;">In</span><span style="font-weight:300;">Color</span>`;
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
+    <title>Today's Reflection</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:${PAGE_BG}; font-family:${FONT_STACK}; color:${INK_2};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${PAGE_BG};">
+      <tr>
+        <td align="center" style="padding:48px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px; background-color:${CARD_BG}; border:1px solid ${RULE};">
+            <tr>
+              <td style="padding:22px 32px; border-bottom:1px solid ${RULE}; text-align:center;">
+                <span style="font-size:14px; letter-spacing:-0.02em; color:${INK};">${wordmark}</span>
+                <div style="margin-top:6px; font-size:11px; color:${MUTED_2}; letter-spacing:0.08em; text-transform:uppercase;">
+                  Today's Reflection · ${today}
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:36px 32px 18px 32px;">
+                <p style="margin:0 0 18px 0; font-size:14px; color:${MUTED};">${greeting}</p>
+                <p style="margin:0 0 14px 0; font-size:17px; line-height:1.65; color:${INK_2}; font-style:italic;">${safeText}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 32px 28px 32px;">
+                <a href="https://storyincolor.com/dashboard" style="display:inline-block; padding:11px 20px; background-color:${BTN_BG}; color:${BTN_TEXT}; text-decoration:none; font-size:13px; font-weight:500; letter-spacing:-0.01em;">
+                  Open my library
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px 24px 32px; border-top:1px solid ${RULE};">
+                <p style="margin:0; font-size:11px; line-height:1.6; color:${MUTED_2};">
+                  Drawn from your Reading Profile. You can change cadence or
+                  pause Reflections in
+                  <a href="https://storyincolor.com/dashboard/profile" style="color:${MUTED_2}; text-decoration:underline;">your profile settings</a>.
+                </p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:24px 0 0 0; font-size:11px; color:${MUTED_2}; line-height:1.6; max-width:560px;">
+            This mailbox is not monitored.
+            <br/>© ${new Date().getFullYear()} Story In Color
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+export const sendDailyReflectionEmail = async (
+  email: string,
+  reflectionText: string,
+  name?: string,
+): Promise<boolean> => {
+  try {
+    const ses = configureSES();
+    const html = generateDailyReflectionTemplate(reflectionText, name);
+    const params = {
+      Source: senderEmail.value(),
+      Destination: { ToAddresses: [email] },
+      Message: {
+        Subject: {
+          Data: "Today's Reflection · StoryInColor",
+        },
+        Body: { Html: { Data: html } },
+      },
+    };
+    const result = await ses.send(new SendEmailCommand(params));
+    console.log(
+      `[AWS SES] Daily reflection sent to ${email}, MessageId: ${result.MessageId}`,
+    );
+    return true;
+  } catch (err) {
+    console.error("[AWS SES] Daily reflection send error:", err);
+    return false;
+  }
+};

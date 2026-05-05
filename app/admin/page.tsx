@@ -99,11 +99,20 @@ interface SourceFunnelRow {
   completedReadings: number;
 }
 
+interface QuizFunnelRollup {
+  pendingReadingsByStatus?: Record<string, number>;
+  last7DaysCount?: number;
+  last7DaysByTool?: Record<string, number>;
+  activeSubscribers?: number;
+  totalSubscribersEver?: number;
+}
+
 interface AdminDashboardData {
   success: boolean;
   aggregatedStats?: AggregatedStats;
   users?: EnrichedUser[];
   sourceBreakdown?: SourceFunnelRow[];
+  quizFunnel?: QuizFunnelRollup;
   message?: string;
   error?: string;
 }
@@ -223,6 +232,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AggregatedStats | null>(null);
   const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [sourceBreakdown, setSourceBreakdown] = useState<SourceFunnelRow[]>([]);
+  const [quizFunnel, setQuizFunnel] = useState<QuizFunnelRollup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -270,6 +280,7 @@ export default function AdminPage() {
           setStats(data.aggregatedStats);
           setUsers(data.users);
           setSourceBreakdown(data.sourceBreakdown ?? []);
+          setQuizFunnel(data.quizFunnel ?? null);
         } else {
           setError(
             data.message ||
@@ -505,6 +516,11 @@ export default function AdminPage() {
               one user with attribution data exists (legacy-only state). */}
           {sourceBreakdown.length > 0 && (
             <SourceBreakdownTable rows={sourceBreakdown} />
+          )}
+
+          {/* Quiz funnel rollup. Per QUIZ-PIVOT-SPEC.md §9.2. */}
+          {quizFunnel && (quizFunnel.last7DaysCount ?? 0) > 0 && (
+            <QuizFunnelPanel data={quizFunnel} />
           )}
 
           {/* Filters + sort */}
@@ -872,6 +888,68 @@ function UserDetailCard({ userData }: { userData: EnrichedUser }) {
             No readings yet.
           </p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function QuizFunnelPanel({ data }: { data: QuizFunnelRollup }) {
+  const byStatus = data.pendingReadingsByStatus ?? {};
+  const byTool = data.last7DaysByTool ?? {};
+  return (
+    <div className="liquid-glass mt-8 rounded-2xl p-6">
+      <h2 className="text-base font-medium text-white">Quiz funnel</h2>
+      <p className="mt-1 text-xs text-white/50">
+        Pending readings + subscribers from the new /quiz/&lt;slug&gt; flow.
+      </p>
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="text-xs text-white/50">Pending readings — last 7d</div>
+          <div className="mt-1 text-2xl font-semibold text-white">
+            {(data.last7DaysCount ?? 0).toLocaleString()}
+          </div>
+          {Object.keys(byTool).length > 0 ? (
+            <ul className="mt-3 space-y-1 text-xs text-white/60">
+              {Object.entries(byTool).map(([tool, count]) => (
+                <li key={tool} className="flex justify-between">
+                  <span>{tool}</span>
+                  <span className="text-white/80">{count}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="text-xs text-white/50">By status (all time)</div>
+          <ul className="mt-3 space-y-1 text-xs text-white/60">
+            {Object.entries(byStatus).map(([status, count]) => (
+              <li key={status} className="flex justify-between">
+                <span className="capitalize">{status}</span>
+                <span className="text-white/80">{count}</span>
+              </li>
+            ))}
+            {Object.keys(byStatus).length === 0 ? (
+              <li className="text-white/40">No quiz traffic yet.</li>
+            ) : null}
+          </ul>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="text-xs text-white/50">Subscribers</div>
+          <div className="mt-1 text-2xl font-semibold text-white">
+            {(data.activeSubscribers ?? 0).toLocaleString()}
+          </div>
+          <p className="mt-1 text-xs text-white/50">
+            Active or trialing.
+            {data.totalSubscribersEver != null ? (
+              <>
+                {" "}
+                <span className="text-white/40">
+                  ({data.totalSubscribersEver} ever)
+                </span>
+              </>
+            ) : null}
+          </p>
+        </div>
       </div>
     </div>
   );

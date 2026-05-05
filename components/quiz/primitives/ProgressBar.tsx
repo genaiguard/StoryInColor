@@ -15,16 +15,14 @@ type Props = {
 export function ProgressBar({ value, className }: Props) {
   const pct = Math.max(0, Math.min(100, value * 100));
   return (
-    <div
-      className={cn("h-px w-full bg-white/10", className)}
-      role="progressbar"
-      aria-valuenow={Math.round(pct)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-    >
+    <div className={cn("relative h-1.5 w-full bg-white/[0.08]", className)}>
       <div
-        className="h-full bg-white transition-[width] duration-500 ease-[cubic-bezier(.34,1.56,.64,1)]"
+        className="h-full bg-gradient-to-r from-white/90 to-white shadow-[0_0_12px_rgba(255,255,255,0.45)] transition-[width] duration-500 ease-out"
         style={{ width: `${pct}%` }}
+        role="progressbar"
+        aria-valuenow={Math.round(pct)}
+        aria-valuemin={0}
+        aria-valuemax={100}
       />
     </div>
   );
