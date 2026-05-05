@@ -8,6 +8,10 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as admin from "firebase-admin";
 import { isQuizFunnelEnabled } from "./quiz-types";
 
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
 const db = admin.firestore();
 const bucket = admin.storage().bucket();
 

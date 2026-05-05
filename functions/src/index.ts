@@ -44,8 +44,12 @@ const SENDER_EMAIL_ADDRESS = defineSecret('SENDER_EMAIL_ADDRESS');
 // `firebase functions:secrets:set <NAME>` step.
 const META_CAPI_TOKEN = defineSecret('META_CAPI_TOKEN');
 const GA4_MP_API_SECRET = defineSecret('GA4_MP_API_SECRET');
-// Initialize Firebase Admin
-admin.initializeApp();
+// Initialize Firebase Admin (guarded — quiz-funnel modules also self-init
+// because ES module imports hoist ahead of this line; without the guard,
+// Firebase throws app/duplicate-app on the second call).
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 const db = admin.firestore(); // Initialize Firestore globally here
 const auth = admin.auth();    // Initialize Auth globally here
 

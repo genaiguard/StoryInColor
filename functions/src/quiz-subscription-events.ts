@@ -9,6 +9,10 @@
 import * as admin from "firebase-admin";
 import type { Stripe } from "stripe/cjs/stripe.core.js";
 
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
 const db = admin.firestore();
 
 export async function handleSubscriptionLifecycleEvent(

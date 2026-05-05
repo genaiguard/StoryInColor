@@ -11,6 +11,10 @@ import { dispatchServerConversion } from "./conversions/dispatch";
 import type { ServerUserData } from "./conversions/types";
 import type { PendingReadingDoc } from "./quiz-types";
 
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
 const db = admin.firestore();
 const auth = admin.auth();
 const bucket = admin.storage().bucket();

@@ -12,6 +12,10 @@ import type { PendingReadingDoc } from "./quiz-types";
 
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
 const db = admin.firestore();
 
 /**

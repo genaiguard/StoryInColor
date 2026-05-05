@@ -32,6 +32,13 @@ const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 
 const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
 
+// Self-init guard: ES module imports hoist ahead of admin.initializeApp()
+// in index.ts. Without this, module-level admin.* calls below throw at
+// load time. Idempotent — checks before init.
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
 const db = admin.firestore();
 const bucket = admin.storage().bucket();
 
