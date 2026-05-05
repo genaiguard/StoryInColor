@@ -344,3 +344,185 @@ export function trackPurchase(opts: {
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Quiz-funnel events (per QUIZ-PIVOT-SPEC.md §9.1).
+// All custom events; the only one that doubles as a standard event is
+// QuizPurchase, which dispatches as Purchase to keep Meta's standard event
+// taxonomy intact (server CAPI mirror in functions/src/quiz-webhook-handler.ts
+// fires Purchase with the same event_id).
+// ---------------------------------------------------------------------------
+
+/** Quiz funnel: user landed on /quiz/<slug> screen 1. */
+export function trackQuizStarted(opts: {
+  slug: string;
+  eventId?: string;
+  utm?: Record<string, string | undefined>;
+}): string {
+  return fire("QuizStarted", {
+    custom: true,
+    eventId: opts.eventId,
+    params: {
+      content_type: "reading",
+      content_ids: [opts.slug],
+      content_category: "quiz_funnel",
+      ...opts.utm,
+    },
+  });
+}
+
+/** Quiz funnel: each option select. */
+export function trackQuizQuestionAnswered(opts: {
+  slug: string;
+  questionId: string;
+  optionId: string;
+  screenIndex: number;
+}): string {
+  return fire("QuizQuestionAnswered", {
+    custom: true,
+    params: {
+      content_ids: [opts.slug],
+      content_category: "quiz_funnel",
+      question_id: opts.questionId,
+      option_id: opts.optionId,
+      screen_index: opts.screenIndex,
+    },
+  });
+}
+
+/** Quiz funnel: user submitted upload. */
+export function trackQuizPhotoUploaded(opts: {
+  slug: string;
+  pendingReadingToken: string;
+  fileSize: number;
+}): string {
+  return fire("QuizPhotoUploaded", {
+    custom: true,
+    params: {
+      content_ids: [opts.slug],
+      content_category: "quiz_funnel",
+      pending_reading_token: opts.pendingReadingToken,
+      file_size_bytes: opts.fileSize,
+    },
+  });
+}
+
+/** Quiz funnel: blurred reveal screen rendered. */
+export function trackQuizRevealShown(opts: {
+  slug: string;
+  pendingReadingToken: string;
+}): string {
+  return fire("QuizRevealShown", {
+    custom: true,
+    params: {
+      content_ids: [opts.slug],
+      content_category: "quiz_funnel",
+      pending_reading_token: opts.pendingReadingToken,
+    },
+  });
+}
+
+/** Quiz funnel: email submitted at the reveal screen. */
+export function trackQuizEmailCaptured(opts: {
+  slug: string;
+  pendingReadingToken: string;
+}): string {
+  return fire("QuizEmailCaptured", {
+    custom: true,
+    params: {
+      content_ids: [opts.slug],
+      content_category: "quiz_funnel",
+      pending_reading_token: opts.pendingReadingToken,
+    },
+  });
+}
+
+/** Quiz funnel: paywall screen rendered. */
+export function trackQuizPaywallShown(opts: {
+  slug: string;
+  pendingReadingToken: string;
+}): string {
+  return fire("QuizPaywallShown", {
+    custom: true,
+    params: {
+      content_ids: [opts.slug],
+      content_category: "quiz_funnel",
+      pending_reading_token: opts.pendingReadingToken,
+    },
+  });
+}
+
+/** Quiz funnel: user picked a tier on the paywall. */
+export function trackQuizPaywallTierSelected(opts: {
+  slug: string;
+  pendingReadingToken: string;
+  tierId: "single" | "monthly" | "annual" | "trial_dollar";
+}): string {
+  return fire("QuizPaywallTierSelected", {
+    custom: true,
+    params: {
+      content_ids: [opts.slug],
+      content_category: "quiz_funnel",
+      pending_reading_token: opts.pendingReadingToken,
+      tier_id: opts.tierId,
+    },
+  });
+}
+
+/** Quiz funnel: exit-intent (currently unused in v2.1 — kept for re-enable). */
+export function trackQuizExitIntent(opts: {
+  slug: string;
+  pendingReadingToken: string;
+}): string {
+  return fire("QuizExitIntent", {
+    custom: true,
+    params: {
+      content_ids: [opts.slug],
+      content_category: "quiz_funnel",
+      pending_reading_token: opts.pendingReadingToken,
+    },
+  });
+}
+
+/** Quiz funnel: client-side InitiateCheckout when Stripe session opens. */
+export function trackQuizInitiateCheckout(opts: {
+  slug: string;
+  pendingReadingToken: string;
+  tierId: string;
+  valueCents: number;
+  eventId?: string;
+}): string {
+  return fire("InitiateCheckout", {
+    eventId: opts.eventId,
+    params: {
+      content_ids: [`quiz_${opts.tierId}`],
+      content_name: `Quiz tier: ${opts.tierId}`,
+      content_category: "quiz_funnel",
+      currency: "USD",
+      value: opts.valueCents / 100,
+      pending_reading_token: opts.pendingReadingToken,
+    },
+  });
+}
+
+/** Quiz funnel: post-payment Purchase emit (dedupes with server CAPI mirror). */
+export function trackQuizPurchase(opts: {
+  slug: string;
+  pendingReadingToken: string;
+  tierId: string;
+  valueCents: number;
+  eventId?: string;
+}): string {
+  return fire("Purchase", {
+    eventId: opts.eventId,
+    params: {
+      content_ids: [`quiz_${opts.tierId}`],
+      content_name: "Quiz Funnel Purchase",
+      content_category: opts.tierId,
+      currency: "USD",
+      value: opts.valueCents / 100,
+      num_items: 1,
+      pending_reading_token: opts.pendingReadingToken,
+    },
+  });
+}

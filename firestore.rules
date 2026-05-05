@@ -77,5 +77,32 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if isAdmin();
     }
+
+    // Quiz funnel pendingReadings — entirely server-managed. Clients NEVER
+    // read or write directly; all access goes through Cloud Functions
+    // (generateForToolUnauth, captureQuizEmail, createQuizCheckoutSession,
+    // getQuizPaywallStatus). Per QUIZ-PIVOT-SPEC.md §8.4.
+    match /pendingReadings/{token} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Reading Profile — owner read + admin. Writes are server-only since
+    // archetypes + reading history must be writeable only by Cloud Functions.
+    // Per QUIZ-PIVOT-SPEC.md §17.6.
+    match /userProfiles/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+    match /userProfiles/{userId}/{subdoc=**} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Daily Reflection writes — server-only.
+    match /users/{userId}/reflections/{date} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
   }
 }

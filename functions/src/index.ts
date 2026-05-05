@@ -14,6 +14,17 @@ import { sendWelcomeEmail, sendContactFormEmail } from './email-service';
 import { CREDIT_PACKAGES } from './credit-packages';
 import { dispatchServerConversion } from './conversions/dispatch';
 import type { ServerUserData } from './conversions/types';
+import { handleQuizPurchase } from './quiz-webhook-handler';
+
+// Quiz funnel callables (additive — see QUIZ-PIVOT-SPEC.md §8.1).
+// Re-exporting from index so `firebase deploy --only functions` picks them up.
+export { generateForToolUnauth } from './generate-for-tool-unauth';
+export {
+  captureQuizEmail,
+  createQuizCheckoutSession,
+  getQuizPaywallStatus,
+} from './quiz-checkout';
+export { cleanupExpiredPendingReadings } from './cleanup-pending-readings';
 
 // Version log - update this to verify deployments
 console.log('Cloud Functions initializing - OpenAI Integration Version');
@@ -281,12 +292,48 @@ export const stripeWebhook = onRequest(
                   // Acknowledge receipt of the event
                   res.status(200).send({ received: true, type: 'credit_purchase' });
                   return;
+              } else if (session.metadata?.type === 'quiz_purchase') {
+                  // Quiz funnel purchase (per QUIZ-PIVOT-SPEC.md §3.3.4).
+                  // Materializes account, claims pending reading, grants
+                  // sub allowance or one-time credit. Idempotent on event.id.
+                  console.log(`[Webhook] Processing quiz_purchase`);
+                  try {
+                      const handlerResult = await handleQuizPurchase({
+                          event,
+                          session,
+                          stripe,
+                      });
+                      console.log(`[QuizWebhook] result:`, JSON.stringify(handlerResult));
+                      res.status(200).send({ received: true, type: 'quiz_purchase', ...handlerResult });
+                      return;
+                  } catch (qpErr) {
+                      console.error(`[QuizWebhook Error]`, qpErr);
+                      // Return 500 so Stripe retries — handleQuizPurchase
+                      // is idempotent on Stripe event id.
+                      res.status(500).send({ received: false, error: 'Transient failure processing quiz purchase; please retry.' });
+                      return;
+                  }
                   } else {
                   // Unknown checkout type
                   console.log(`[Webhook] Unrecognized checkout type. Session ID: ${session.id}`);
                   res.status(200).send({ received: true, type: 'unknown' });
                   return;
               }
+          } else if (
+              event.type === 'customer.subscription.updated' ||
+              event.type === 'customer.subscription.deleted' ||
+              event.type === 'invoice.paid'
+          ) {
+              // Quiz funnel subscription lifecycle (per QUIZ-PIVOT-SPEC.md §17.6, §8.7).
+              // Lazy-imported so the file doesn't grow unbounded; pure additive branch.
+              try {
+                  const { handleSubscriptionLifecycleEvent } = await import('./quiz-subscription-events');
+                  await handleSubscriptionLifecycleEvent(event);
+              } catch (subErr) {
+                  console.warn('[Webhook] Subscription lifecycle handler failed (non-fatal):', subErr);
+              }
+              res.status(200).send({ received: true, type: event.type });
+              return;
           } else {
               // Other event types can be handled here if needed
               console.log(`[Webhook] Received non-checkout event: ${event.type}`);

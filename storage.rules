@@ -28,5 +28,35 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.auth != null;
     }
+
+    // Quiz funnel pending storage — unauthenticated upload (input photo)
+    // and read of the blurred preview, but full output is gated behind a
+    // server-only move to users/{uid}/generations/. Per QUIZ-PIVOT-SPEC.md §8.3.
+    match /pending/{token}/input.{ext} {
+      // Anonymous upload of input photo. Size + content-type bounded.
+      allow create: if request.resource.size < 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+      // Server (admin SDK) reads the input. Clients don't need to read back.
+      allow read: if false;
+      allow update, delete: if false;
+    }
+    match /pending/{token}/blurred.jpg {
+      // Blurred preview is publicly readable (it's blurred + low-res +
+      // short-lived). Reveal screen fetches it via download URL.
+      allow read: if true;
+      // Server-only writes.
+      allow create, update, delete: if false;
+    }
+    match /pending/{token}/output.png {
+      // Full output is gated. Clients never read directly; server moves
+      // it to users/{uid}/generations/ on payment. Block all client access.
+      allow read: if false;
+      allow create, update, delete: if false;
+    }
+    match /pending/{token}/{anyOther=**} {
+      // Catch-all denylist for the pending namespace.
+      allow read, write: if false;
+    }
   }
-} 
+}
+
