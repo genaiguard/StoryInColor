@@ -66,6 +66,18 @@ interface GenerateUnauthRequest {
   fbEventId?: string;
 }
 
+function cleanStringRecord(input: unknown): Record<string, string> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+
+  const cleaned: Record<string, string> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (typeof value === "string" && value.length > 0) {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+}
+
 export const generateForToolUnauth = onCall(
   {
     secrets: [OPENAI_API_KEY],
@@ -150,19 +162,29 @@ export const generateForToolUnauth = onCall(
       // failed/expired — fall through and rebuild
     }
 
-    // Initial pending doc + processing flag
-    const pendingDoc: PendingReadingDoc = {
+    // Initial pending doc + processing flag.
+    // Firestore rejects undefined values in document writes, so we
+    // construct the object with only the fields that are actually set.
+    const pendingDoc: Record<string, unknown> = {
       token,
       toolId,
       status: "processing",
       ipHash,
-      quizAnswers,
+      quizAnswers: cleanStringRecord(quizAnswers),
       inputStoragePath,
-      attribution,
-      fbEventId,
       createdAt: admin.firestore.Timestamp.now(),
       expiresAt: makeExpiresAt(),
     };
+    if (attribution && Object.keys(attribution).length > 0) {
+      // Strip undefined values inside the attribution object too.
+      const cleanedAttribution = cleanStringRecord(attribution);
+      if (Object.keys(cleanedAttribution).length > 0) {
+        pendingDoc.attribution = cleanedAttribution;
+      }
+    }
+    if (typeof fbEventId === "string" && fbEventId.length > 0) {
+      pendingDoc.fbEventId = fbEventId;
+    }
     await pendingRef.set(pendingDoc);
 
     try {

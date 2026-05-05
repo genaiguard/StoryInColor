@@ -12,6 +12,7 @@ import {
   pickAffirmation,
   LOADER_SUBMESSAGES,
 } from "@/lib/quiz/types";
+import { getToolBySlug } from "@/lib/tools/registry";
 import {
   trackQuizStarted,
   trackQuizQuestionAnswered,
@@ -141,6 +142,10 @@ export default function QuizFlow({ config }: QuizFlowProps) {
       </header>
 
       <main className="relative z-10 flex flex-1 flex-col justify-center px-5 pb-12 md:px-10">
+        {state.screen === "intro" ? (
+          <IntroScreen config={config} onBegin={advance} />
+        ) : null}
+
         {currentQuestion ? (
           <QuestionScreen question={currentQuestion} onSelect={onSelect} />
         ) : null}
@@ -198,6 +203,76 @@ function pickQuestionForScreen(
     default:
       return null;
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Intro screen — shows sample output + value prop before quiz begins.        */
+/* Pattern from Nebula / BetterMe / FunnelFox 2026 web2app teardowns: opening */
+/* with the artifact preview + "you'll get…" before the first quiz screen    */
+/* lifts completion vs. cold-starting on a question.                         */
+/* -------------------------------------------------------------------------- */
+
+function IntroScreen({
+  config,
+  onBegin,
+}: {
+  config: QuizConfig;
+  onBegin: () => void;
+}) {
+  const tool = getToolBySlug(config.slug);
+  const sample = tool?.seo?.sampleImage;
+  const whatYouGet = tool?.seo?.whatYouGet ?? [];
+  return (
+    <div className="mx-auto w-full max-w-3xl">
+      <div className="grid gap-8 md:grid-cols-2 md:items-center">
+        {/* Left: sample preview */}
+        {sample ? (
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={sample}
+              alt={`${tool?.name ?? config.slug} sample reading`}
+              className="block w-full"
+              loading="eager"
+            />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 text-[11px] uppercase tracking-wider text-white/70">
+              Sample reading · yours will be unique to your photo
+            </div>
+          </div>
+        ) : null}
+
+        {/* Right: value prop */}
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-white/50">
+            {tool?.name ?? "Your reading"}
+          </p>
+          <h1 className="mt-2 text-3xl font-light italic leading-tight tracking-tight md:text-4xl">
+            {tool?.tagline ?? "A reading made just for you."}
+          </h1>
+          {whatYouGet.length > 0 ? (
+            <ul className="mt-6 space-y-2.5 text-sm text-white/80">
+              {whatYouGet.slice(0, 4).map((line) => (
+                <li key={line} className="flex items-start gap-2">
+                  <span className="mt-[5px] inline-block h-1 w-1 flex-shrink-0 rounded-full bg-white/60" />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <button
+            type="button"
+            onClick={onBegin}
+            className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-white px-6 py-3.5 text-sm font-medium text-black hover:bg-white/90 md:w-auto md:px-8"
+          >
+            Create your own
+          </button>
+          <p className="mt-3 text-xs text-white/50">
+            8 quick questions · ~90 seconds
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* -------------------------------------------------------------------------- */
@@ -385,7 +460,12 @@ function LoaderScreen({
     let cancelled = false;
     (async () => {
       try {
-        const fn = httpsCallable(getFunctions(), "generateForToolUnauth");
+        // Bump callable timeout to 5 min — OpenAI generation can take
+        // 30–90s and the Firebase default (70s) was throwing
+        // deadline-exceeded mid-generation on slow runs.
+        const fn = httpsCallable(getFunctions(), "generateForToolUnauth", {
+          timeout: 300000,
+        });
         const utm = readUtmFromUrl();
         const attribution = {
           ...utm,

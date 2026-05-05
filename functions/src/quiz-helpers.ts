@@ -27,6 +27,13 @@ export function makeExpiresAt(): admin.firestore.Timestamp {
  *
  * Implementation: count `pendingReadings` docs created in the last 24h
  * matching this IP hash. Cheap; bounded by RATE_LIMIT + 1 query.
+ *
+ * Failure mode: if the composite index isn't built yet, OR Firestore
+ * is transiently unavailable, we DO NOT block legitimate users —
+ * we log the error and fail open (allow the request). The downside is a
+ * brief window where rate limiting is bypassed; acceptable because (a)
+ * the failure is transient (index build minutes) and (b) the IP-rate
+ * limit is a soft mitigation, not a security boundary.
  */
 export async function checkAndIncrementIpRateLimit(
   db: admin.firestore.Firestore,
@@ -35,17 +42,26 @@ export async function checkAndIncrementIpRateLimit(
   const cutoff = admin.firestore.Timestamp.fromMillis(
     Date.now() - 24 * 60 * 60 * 1000,
   );
-  const snap = await db
-    .collection("pendingReadings")
-    .where("ipHash", "==", ipHash)
-    .where("createdAt", ">=", cutoff)
-    .limit(RATE_LIMIT_PER_IP_PER_DAY + 1)
-    .get();
-  const recentCount = snap.size;
-  return {
-    allowed: recentCount < RATE_LIMIT_PER_IP_PER_DAY,
-    recentCount,
-  };
+  try {
+    const snap = await db
+      .collection("pendingReadings")
+      .where("ipHash", "==", ipHash)
+      .where("createdAt", ">=", cutoff)
+      .limit(RATE_LIMIT_PER_IP_PER_DAY + 1)
+      .get();
+    const recentCount = snap.size;
+    return {
+      allowed: recentCount < RATE_LIMIT_PER_IP_PER_DAY,
+      recentCount,
+    };
+  } catch (err) {
+    // Most common reason: composite index still building. Log and fail open.
+    console.warn(
+      "[QuizRateLimit] degraded — proceeding without IP rate check:",
+      err instanceof Error ? err.message : err,
+    );
+    return { allowed: true, recentCount: 0 };
+  }
 }
 
 /** Validate token format (UUID-like, lowercase hex + dashes). */

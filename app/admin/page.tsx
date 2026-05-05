@@ -243,6 +243,9 @@ export default function AdminPage() {
   const [sortBy, setSortBy] = useState<SortKey>("userCreatedAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [refreshKey, setRefreshKey] = useState(0);
+  // Default to 10 most-recent users; admin can expand via the dropdown.
+  // Per founder direction: don't load 'literally all customers' upfront.
+  const [pageSize, setPageSize] = useState<number>(10);
 
   const { user, initialized } = useFirebase() ?? {
     user: null,
@@ -610,10 +613,33 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Users list */}
+          {/* Users list — paginated. Default 10; admin can expand. */}
           {processedUsers.length > 0 ? (
             <div className="space-y-5">
-              {processedUsers.map((u) => (
+              <div className="flex items-center justify-between text-xs text-white/60">
+                <span>
+                  Showing {Math.min(pageSize, processedUsers.length)} of{" "}
+                  {processedUsers.length} matching users
+                </span>
+                <label className="flex items-center gap-2">
+                  <span>Show</span>
+                  <select
+                    value={pageSize === Number.POSITIVE_INFINITY ? "all" : String(pageSize)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setPageSize(v === "all" ? Number.POSITIVE_INFINITY : Number(v));
+                    }}
+                    className="rounded-md border border-white/15 bg-black px-2 py-1 text-xs text-white focus:border-white/35 focus:outline-none"
+                  >
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="all">All</option>
+                  </select>
+                </label>
+              </div>
+              {processedUsers.slice(0, pageSize).map((u) => (
                 <UserDetailCard key={u.id} userData={u} />
               ))}
             </div>
@@ -802,26 +828,21 @@ function UserDetailCard({ userData }: { userData: EnrichedUser }) {
         </div>
       </div>
 
-      {/* Attribution — first-touch + last-touch + linked tracker IDs.
-          Hidden when the user has no attribution record at all (legacy
-          accounts created before capture was deployed). */}
+      {/* Attribution — first-touch only (per founder direction; last-touch
+          dropped to keep the card readable). Hidden when no attribution
+          record exists (legacy accounts pre-capture). */}
       {userData.attribution &&
         (userData.attribution.firstTouch ||
-          userData.attribution.lastTouch ||
           userData.attribution.gaClientId ||
           userData.attribution.fbp) && (
           <div className="border-b border-white/5 p-5">
             <h4 className="mb-3 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
               Attribution
             </h4>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-1">
               <AttributionTouchBlock
                 label="First touch"
                 touch={userData.attribution.firstTouch}
-              />
-              <AttributionTouchBlock
-                label="Last touch"
-                touch={userData.attribution.lastTouch}
               />
             </div>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500">

@@ -6,6 +6,7 @@ import type { QuizConfig } from "@/lib/quiz/types";
 const STORAGE_KEY_PREFIX = "sic_quiz_state_v1_";
 
 export type QuizScreen =
+  | "intro"
   | "hook"
   | "identityA"
   | "identityB"
@@ -17,6 +18,7 @@ export type QuizScreen =
   | "reveal";
 
 export const SCREEN_SEQUENCE: QuizScreen[] = [
+  "intro",
   "hook",
   "identityA",
   "identityB",
@@ -71,7 +73,7 @@ export function useQuizState(config: QuizConfig) {
     if (existing) return existing;
     return {
       slug: config.slug,
-      screen: "hook",
+      screen: "intro",
       answers: {},
       startedAt: new Date().toISOString(),
     };
