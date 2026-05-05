@@ -1,25 +1,7 @@
-# StoryInColor — robots.txt
-# https://storyincolor.com
-
-User-agent: *
+User-Agent: *
 Allow: /
+Disallow: /quiz/
+Disallow: /admin/
+Disallow: /dashboard/
 
 Sitemap: https://storyincolor.com/sitemap.xml
-
-# Auth-gated user surfaces — keep crawlers out
-Disallow: /admin/
-Disallow: /admin
-Disallow: /dashboard/
-Disallow: /dashboard
-Disallow: /login/
-Disallow: /login
-Disallow: /credits/
-Disallow: /credits
-
-# Per-job result pages are user-private; the page also sets
-# noindex meta as a belt-and-braces measure
-Disallow: /readings/*/result
-Disallow: /readings/*/result/
-
-# Next.js internals — never index these
-Disallow: /_next/
