@@ -266,8 +266,11 @@ function IntroScreen({
           >
             Create your own
           </button>
+          {/* Per category research (Noom, BetterMe, Nebula, Flo, Truity all
+              hide quiz length on entry): we replace the time-disclosure
+              line with a soft value signal rather than a question count. */}
           <p className="mt-3 text-xs text-white/50">
-            8 quick questions · ~90 seconds
+            Personalized to you · Free to try
           </p>
         </div>
       </div>

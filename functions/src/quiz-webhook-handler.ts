@@ -46,6 +46,7 @@ export async function handleQuizPurchase(
   const token = session.metadata?.pendingReadingToken;
   const tier = session.metadata?.tier as
     | "single"
+    | "two_pack"
     | "monthly"
     | "annual"
     | "trial_dollar"
@@ -134,8 +135,16 @@ export async function handleQuizPurchase(
 
     // userCredits — additive: existing pack-buyer fields preserved if present.
     const userCreditsSnap = await tx.get(userCreditsRef);
-    const isSubscription = tier === "monthly" || tier === "annual";
-    const allowance = tier === "monthly" ? 3 : tier === "annual" ? 4 : 0;
+    const isSubscription =
+      tier === "two_pack" || tier === "monthly" || tier === "annual";
+    const allowance =
+      tier === "two_pack"
+        ? 2
+        : tier === "monthly"
+          ? 3
+          : tier === "annual"
+            ? 4
+            : 0;
 
     if (!userCreditsSnap.exists) {
       tx.set(userCreditsRef, {

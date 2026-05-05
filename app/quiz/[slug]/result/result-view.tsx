@@ -23,7 +23,7 @@ type Props = {
 type Phase = "loading" | "reveal" | "paywall" | "checkout";
 
 const TIERS: Array<{
-  id: "monthly" | "annual";
+  id: "two_pack" | "monthly" | "annual";
   name: string;
   priceLabel: string;
   effectiveLabel?: string;
@@ -33,32 +33,48 @@ const TIERS: Array<{
   highlighted?: boolean;
   valueCents: number;
 }> = [
+  // Lower tier — Nebula-style cadence-naming. Per-reading cost ($4.00)
+  // is deliberately worse than the 3-reading tier ($5.00) so price-
+  // sensitive buyers naturally trade up.
+  {
+    id: "two_pack",
+    name: "Monthly · 2 readings",
+    priceLabel: "$7.99/mo",
+    bullets: [
+      "Includes today's reading (delivered immediately)",
+      "Plus 1 more reading this month",
+      "2 fresh readings every month after",
+      "Use them on any tool — palm, face, aura, more",
+      "Cancel anytime",
+    ],
+    valueCents: 799,
+  },
   {
     id: "monthly",
-    name: "Monthly Reading Plan",
+    name: "Monthly · 3 readings",
     priceLabel: "$14.99/mo",
     badge: "Most popular",
-    trial: "7-day free trial",
     bullets: [
-      "Unlock today's reading",
-      "Get 3 new visual readings each month",
-      "Receive Daily Reflections based on your Reading Profile",
-      "Keep everything in your private library",
+      "Includes today's reading (delivered immediately)",
+      "Plus 2 more readings this month",
+      "3 fresh readings every month after",
+      "Use them on any tool — palm, face, aura, more",
+      "Cancel anytime",
     ],
     highlighted: true,
     valueCents: 1499,
   },
   {
     id: "annual",
-    name: "Annual Reading Plan",
+    name: "Annual · 4 readings/mo",
     priceLabel: "$89.99/yr",
     effectiveLabel: "$7.50/mo · save 50%",
     bullets: [
-      "Unlock today's reading",
-      "Get 4 new visual readings each month",
-      "Receive Daily Reflections based on your Reading Profile",
-      "Keep everything in your private library",
+      "Includes today's reading (delivered immediately)",
+      "4 fresh readings every month after",
+      "Use them on any tool — palm, face, aura, more",
       "Early access to new reading types",
+      "Cancel anytime",
     ],
     valueCents: 8999,
   },
@@ -153,7 +169,7 @@ export default function ResultView({ slug, headlineFallback }: Props) {
   );
 
   const handleTierSelect = useCallback(
-    async (tierId: "monthly" | "annual", valueCents: number) => {
+    async (tierId: "two_pack" | "monthly" | "annual", valueCents: number) => {
       if (!token) return;
       setError(null);
       setSubmitting(true);
@@ -327,7 +343,7 @@ export default function ResultView({ slug, headlineFallback }: Props) {
             <div className="mt-6 space-y-2 text-xs text-white/50">
               <p className="flex items-center gap-2">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                30-day satisfaction guarantee · Cancel anytime
+                Cancel anytime · No commitment
               </p>
               <p>Trusted by 12,400+ readings generated</p>
             </div>

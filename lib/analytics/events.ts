@@ -456,7 +456,7 @@ export function trackQuizPaywallShown(opts: {
 export function trackQuizPaywallTierSelected(opts: {
   slug: string;
   pendingReadingToken: string;
-  tierId: "single" | "monthly" | "annual" | "trial_dollar";
+  tierId: "single" | "two_pack" | "monthly" | "annual" | "trial_dollar";
 }): string {
   return fire("QuizPaywallTierSelected", {
     custom: true,

@@ -486,10 +486,11 @@ function generateQuizReadingReadyTemplate({
   const safeHeadline = escapeHtml(headlineInsight);
   const safeToolName = escapeHtml(toolName);
   const wordmark = `<span style="font-weight:300;">Story</span><span style="font-weight:600;">In</span><span style="font-weight:300;">Color</span>`;
-  // Preheader text — preview snippet shown next to the subject in the
-  // inbox list. Hidden from the rendered email body.
+  // Preheader — curiosity-gap snippet shown next to the subject in inbox
+  // previews. Per category research (Nebula / Co-Star register): keep
+  // it cinematic + one fade/expiry beat, never describe the email.
   const preheader = escapeHtml(
-    `${headlineInsight} Tap to unlock your full ${toolName.toLowerCase()}.`,
+    `A quiet, editorial portrait of who you are right now — open before it fades.`,
   );
   return `<!DOCTYPE html>
 <html>
@@ -518,7 +519,7 @@ function generateQuizReadingReadyTemplate({
                   Your ${safeToolName.toLowerCase()}
                 </p>
                 <h1 style="margin:0 0 18px 0; font-size:28px; line-height:1.2; font-weight:300; font-style:italic; color:${INK};">
-                  Your reading is ready.
+                  The reading found you.
                 </h1>
                 <p style="margin:0 0 18px 0; font-size:16px; line-height:1.55; color:${INK_2};">${safeHeadline}</p>
               </td>
@@ -540,7 +541,7 @@ function generateQuizReadingReadyTemplate({
                   Unlock my reading
                 </a>
                 <p style="margin:14px 0 0 0; font-size:12px; line-height:1.55; color:${MUTED_2};">
-                  We saved this for you. The link expires in 24 hours.
+                  We'll hold your reading for 24 hours.
                 </p>
               </td>
             </tr>
@@ -583,7 +584,7 @@ function generateQuizReadingReadyText({
     "",
     `Unlock your reading: ${unlockUrl}`,
     "",
-    "We saved this for you. The link expires in 24 hours.",
+    "We'll hold your reading for 24 hours.",
     "",
     "—",
     "We don't share your email. We sent this once because you asked us to.",
@@ -631,11 +632,35 @@ export const sendQuizReadingReadyEmail = async ({
       headlineInsight,
       unlockUrl: trackedUnlockUrl,
     });
+    // Best-effort first name: derive from email's local part if it looks
+    // like a real name token (e.g. "jane.doe@x.com" -> "Jane"). Skip if
+    // the local part has no alpha or is generic ("info", "contact",
+    // "loop-test-1234"). Per category research: personalized subject
+    // beats generic by a meaningful margin.
+    const firstName = (() => {
+      const local = email.split("@")[0] || "";
+      const cleaned = local.replace(/[._-]/g, " ").trim();
+      const firstWord = cleaned.split(/\s+/)[0] || "";
+      if (firstWord.length < 2 || firstWord.length > 20) return "";
+      if (!/^[a-zA-Z]+$/.test(firstWord)) return "";
+      const generic = new Set([
+        "info", "hello", "support", "contact", "admin", "team", "loop",
+        "test", "noreply", "no", "demo", "sales", "billing",
+      ]);
+      if (generic.has(firstWord.toLowerCase())) return "";
+      return firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase();
+    })();
+    // Subject: "{Name}, your reading is ready" if we have a name; else
+    // "Your reading is ready". Drop the brand suffix — the From-name
+    // already says StoryInColor.
+    const subject = firstName
+      ? `${firstName}, your reading is ready`
+      : `Your reading is ready`;
     const params = {
       Source: senderEmail.value(),
       Destination: { ToAddresses: [email] },
       Message: {
-        Subject: { Data: `Your ${toolName} is ready · StoryInColor` },
+        Subject: { Data: subject },
         Body: {
           Html: { Data: html },
           // Plain-text MIME alternative — improves deliverability + a11y.

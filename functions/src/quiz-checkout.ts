@@ -64,6 +64,7 @@ const db = admin.firestore();
  */
 const QUIZ_PRICE_LOOKUP_KEYS = {
   single: "quiz_single_v2",
+  two_pack: "quiz_two_pack_v2",
   monthly: "quiz_monthly_v2",
   annual: "quiz_annual_v2",
   trial_dollar: "quiz_trial_dollar",
@@ -225,12 +226,19 @@ export const createQuizCheckoutSession = onCall(
       );
     }
 
-    const isSubscription = tier === "monthly" || tier === "annual";
+    const isSubscription =
+      tier === "two_pack" || tier === "monthly" || tier === "annual";
     const mode = isSubscription ? "subscription" : "payment";
 
     // Stripe Embedded Checkout per existing app pattern (API 2026-04-22.dahlia
     // renamed "embedded" → "embedded_page" — must match the value used in
     // functions/src/index.ts createCheckoutSession).
+    //
+    // Hard paywall — no trial_period_days. Per category research (RevenueCat
+    // 2026 hard-paywall data + founder direction): trial leaks conversions
+    // on a one-output product because a user can extract one reading and
+    // cancel before being charged. Hard paywall delivers 8x higher RPI
+    // at Day 60 in this niche.
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       ui_mode: "embedded_page",
       mode,
@@ -248,7 +256,6 @@ export const createQuizCheckoutSession = onCall(
       ...(isSubscription
         ? {
             subscription_data: {
-              trial_period_days: tier === "monthly" ? 7 : 0,
               metadata: {
                 pendingReadingToken: token,
                 tier,

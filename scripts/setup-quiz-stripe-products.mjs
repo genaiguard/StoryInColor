@@ -39,9 +39,21 @@ const PRODUCTS = [
     },
   },
   {
-    name: "StoryInColor — Monthly Reading Plan",
+    name: "StoryInColor — Two Readings",
     description:
-      "Unlock today's reading + 3 readings/mo + Daily Reflections. 7-day free trial.",
+      "Today's reading + 1 more this month, then 2 fresh readings every month. Cancel anytime.",
+    metadata: { source: "quiz_funnel", tier: "two_pack" },
+    price: {
+      lookup_key: "quiz_two_pack_v2",
+      unit_amount: 799, // $7.99/mo
+      currency: "usd",
+      recurring: { interval: "month", interval_count: 1 },
+    },
+  },
+  {
+    name: "StoryInColor — Three Readings",
+    description:
+      "Today's reading + 2 more this month, then 3 fresh readings every month + Daily Reflections. Cancel anytime.",
     metadata: { source: "quiz_funnel", tier: "monthly" },
     price: {
       lookup_key: "quiz_monthly_v2",
