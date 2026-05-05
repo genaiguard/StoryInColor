@@ -87,6 +87,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Quiz daily counters — server-only writes (admin SDK bypasses).
+    // Tracks the global daily ceiling for cost protection.
+    match /quizDailyCounters/{date} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
     // Reading Profile — owner reads + admin. Owner can update specific
     // user-editable fields (preferredTone, reflections cadence/enabled,
     // lastUpdatedAt) but NOT archetypes, readings, quizAnswers, or

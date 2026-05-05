@@ -79,7 +79,7 @@ const palmReadingQuiz: QuizConfig = {
   ]),
   reveal: {
     headlineInsight: "Your palm reads more strongly than 73% of the hands we analyze.",
-    blurStrength: 35,
+    blurStrength: 16,
     unlockCtaLabel: "Reveal my full palm reading",
   },
 };
@@ -150,7 +150,7 @@ const faceReadingQuiz: QuizConfig = {
   ]),
   reveal: {
     headlineInsight: "Your face reads in the top 12% for clarity of features.",
-    blurStrength: 35,
+    blurStrength: 16,
     unlockCtaLabel: "Reveal my Twelve Palaces report",
   },
 };
@@ -227,7 +227,7 @@ const beautyReportQuiz: QuizConfig = {
   reveal: {
     headlineInsight:
       "Your overall score is in the upper third of the photos we've analyzed.",
-    blurStrength: 35,
+    blurStrength: 16,
     unlockCtaLabel: "Reveal my full beauty report",
   },
 };
@@ -306,7 +306,7 @@ const auraReadingQuiz: QuizConfig = {
   ]),
   reveal: {
     headlineInsight: "Your reading sits in a less-common configuration.",
-    blurStrength: 35,
+    blurStrength: 16,
     unlockCtaLabel: "Reveal my aura reading",
   },
 };
@@ -378,7 +378,7 @@ const iridologyQuiz: QuizConfig = {
   ]),
   reveal: {
     headlineInsight: "Your iris pattern reads in a less-common configuration.",
-    blurStrength: 35,
+    blurStrength: 16,
     unlockCtaLabel: "Reveal my iris reading",
   },
 };
@@ -448,7 +448,7 @@ const handwritingQuiz: QuizConfig = {
   reveal: {
     headlineInsight:
       "Your handwriting archetype fits under 8% of writers cleanly.",
-    blurStrength: 35,
+    blurStrength: 16,
     unlockCtaLabel: "Reveal my handwriting read",
   },
 };
@@ -517,7 +517,7 @@ const styleAuditQuiz: QuizConfig = {
   ]),
   reveal: {
     headlineInsight: "Your archetype is one of the rarer four.",
-    blurStrength: 35,
+    blurStrength: 16,
     unlockCtaLabel: "Reveal my style audit",
   },
 };
@@ -588,7 +588,7 @@ const hairstyleAnalysisQuiz: QuizConfig = {
   reveal: {
     headlineInsight:
       "Three of the eight cuts read strongly on your face shape — and one is unexpected.",
-    blurStrength: 45, // grid output, needs heavier blur
+    blurStrength: 22, // grid output, needs heavier blur
     unlockCtaLabel: "See all 8 cuts on me",
   },
 };
@@ -660,7 +660,7 @@ const colorAnalysisQuiz: QuizConfig = {
   reveal: {
     headlineInsight:
       "Your undertone reads cleaner than most — and three palettes really light you up.",
-    blurStrength: 45, // grid output
+    blurStrength: 22, // grid output
     unlockCtaLabel: "See all 8 palettes on me",
   },
 };
@@ -732,7 +732,7 @@ const skincareGlowQuiz: QuizConfig = {
   reveal: {
     headlineInsight:
       "One zone of your face is doing more work than the others — and we have a routine for it.",
-    blurStrength: 35,
+    blurStrength: 16,
     unlockCtaLabel: "Reveal my skincare card",
   },
 };

@@ -119,23 +119,23 @@ export default function QuizFlow({ config }: QuizFlowProps) {
     <div className="relative flex min-h-screen flex-col bg-black text-white">
       <ProgressBar value={progressForScreen(state.screen)} />
 
-      <header className="px-4 py-3">
-        {state.screen !== "hook" && state.screen !== "loader" && state.screen !== "reveal" ? (
+      <header className="px-4 py-4 md:px-6">
+        {state.screen !== "intro" && state.screen !== "loader" && state.screen !== "reveal" ? (
           <button
             type="button"
             onClick={back}
-            className="liquid-glass inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs text-white/80 hover:text-white"
+            className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-white/40 transition-colors hover:text-white/80"
             aria-label="Go back"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeft className="h-3 w-3" />
             Back
           </button>
         ) : (
           <Link
             href="/"
-            className="liquid-glass inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs text-white/80 hover:text-white"
+            className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-white/40 transition-colors hover:text-white/80"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
+            <ArrowLeft className="h-3 w-3" />
             Exit
           </Link>
         )}

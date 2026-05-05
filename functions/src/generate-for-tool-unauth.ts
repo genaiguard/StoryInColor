@@ -23,6 +23,8 @@ import {
   hashIp,
   makeExpiresAt,
   checkAndIncrementIpRateLimit,
+  checkGlobalDailyCeiling,
+  incrementGlobalDailyCounter,
   isValidToken,
 } from "./quiz-helpers";
 import { isQuizFunnelEnabled } from "./quiz-types";
@@ -134,6 +136,21 @@ export const generateForToolUnauth = onCall(
       throw new HttpsError(
         "resource-exhausted",
         `Rate limit exceeded (${rateCheck.recentCount} readings in 24h). Try again tomorrow.`,
+      );
+    }
+
+    // Global daily ceiling — hard cost protection. If we've already
+    // burned through GLOBAL_DAILY_CEILING readings across all IPs in
+    // the last 24h, refuse new ones. Adjustable via QUIZ_GLOBAL_DAILY_CEILING
+    // env var.
+    const globalCheck = await checkGlobalDailyCeiling(db);
+    if (!globalCheck.allowed) {
+      console.warn(
+        `[QuizGlobalCap] tripped — usedToday=${globalCheck.usedToday} ceiling=${globalCheck.ceiling}`,
+      );
+      throw new HttpsError(
+        "resource-exhausted",
+        "We're at capacity for today. Please try again tomorrow.",
       );
     }
 
@@ -312,6 +329,10 @@ export const generateForToolUnauth = onCall(
         blurredStoragePath: blurredPath,
         blurredOutputDownloadUrl: blurredDownloadUrl,
       });
+
+      // 6) Increment global daily counter — only after successful gen
+      // (failed ones are refunded by not counting against the cap).
+      await incrementGlobalDailyCounter(db);
 
       return {
         success: true,

@@ -9,6 +9,41 @@ import type { Stripe } from "stripe/cjs/stripe.core.js";
 import { isQuizFunnelEnabled } from "./quiz-types";
 import { isValidEmail, isValidToken } from "./quiz-helpers";
 import type { PendingReadingDoc } from "./quiz-types";
+import { sendQuizReadingReadyEmail } from "./email-service";
+import { getServerToolConfig } from "./tool-prompts";
+
+const AWS_ACCESS_KEY_ID = defineSecret("AWS_ACCESS_KEY_ID");
+const AWS_SECRET_ACCESS_KEY = defineSecret("AWS_SECRET_ACCESS_KEY");
+const SENDER_EMAIL_ADDRESS = defineSecret("SENDER_EMAIL_ADDRESS");
+
+const TOOL_NAME_BY_ID: Record<string, string> = {
+  "palm-reading": "Palm Reading",
+  "face-reading": "Face Reading",
+  "beauty-report": "Beauty Report",
+  "aura-reading": "Aura Reading",
+  iridology: "Iridology Reading",
+  handwriting: "Handwriting Read",
+  "style-audit": "Style Audit",
+  "hairstyle-analysis": "Hairstyle Analysis",
+  "color-analysis": "Color Analysis",
+  "skincare-glow": "Skincare Glow",
+};
+
+const HEADLINE_FALLBACKS: Record<string, string> = {
+  "palm-reading": "Your palm reads more strongly than 73% of the hands we analyze.",
+  "face-reading": "Your face reads in the top 12% for clarity of features.",
+  "beauty-report": "Your overall score is in the upper third of the photos we've analyzed.",
+  "aura-reading": "Your reading sits in a less-common configuration.",
+  iridology: "Your iris pattern reads in a less-common configuration.",
+  handwriting: "Your handwriting archetype fits under 8% of writers cleanly.",
+  "style-audit": "Your archetype is one of the rarer four.",
+  "hairstyle-analysis":
+    "Three of the eight cuts read strongly on your face shape — and one is unexpected.",
+  "color-analysis":
+    "Your undertone reads cleaner than most — and three palettes really light you up.",
+  "skincare-glow":
+    "One zone of your face is doing more work than the others — and we have a routine for it.",
+};
 
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 
@@ -56,6 +91,7 @@ export const captureQuizEmail = onCall(
   {
     invoker: "public",
     timeoutSeconds: 30,
+    secrets: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, SENDER_EMAIL_ADDRESS],
   },
   async (request) => {
     if (!isQuizFunnelEnabled()) {
@@ -88,11 +124,37 @@ export const captureQuizEmail = onCall(
       return { success: true, alreadyClaimed: true };
     }
 
+    const alreadyHadEmail = !!pending.email;
     await ref.update({
       email,
       emailCapturedAt: admin.firestore.FieldValue.serverTimestamp(),
       marketingOptIn: !!marketingOptIn,
     });
+
+    // Send the "Your reading is ready" transactional email. Pattern from
+    // Nebula / Noom / Flo / Zoe — captures users who close the tab + acts
+    // as an email-validation signal. Non-fatal if it fails.
+    if (!alreadyHadEmail && pending.status === "ready") {
+      try {
+        const toolName =
+          TOOL_NAME_BY_ID[pending.toolId] ??
+          getServerToolConfig(pending.toolId)?.outputType ??
+          "Reading";
+        const headlineInsight =
+          HEADLINE_FALLBACKS[pending.toolId] ?? "Your reading is ready.";
+        // Build the resume URL the email links back to.
+        const unlockUrl = `https://storyincolor.com/quiz/${pending.toolId}/result?token=${token}`;
+        await sendQuizReadingReadyEmail({
+          email,
+          toolName,
+          headlineInsight,
+          unlockUrl,
+          blurredPreviewUrl: pending.blurredOutputDownloadUrl,
+        });
+      } catch (emailErr) {
+        console.warn("[CaptureQuizEmail] reading-ready email failed:", emailErr);
+      }
+    }
     return { success: true };
   },
 );

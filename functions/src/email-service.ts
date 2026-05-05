@@ -465,3 +465,191 @@ export const sendDailyReflectionEmail = async (
     return false;
   }
 };
+
+/* -------------------------------------------------------------------------- */
+/* Quiz "Your reading is ready" — transactional email at reveal-screen email  */
+/* capture. Per QUIZ-PIVOT-SPEC.md (industry standard: Nebula / Noom / Flo).  */
+/* Sent BEFORE payment. Re-engages tab-close users + validates the email.     */
+/* -------------------------------------------------------------------------- */
+
+function generateQuizReadingReadyTemplate({
+  toolName,
+  headlineInsight,
+  unlockUrl,
+  blurredPreviewUrl,
+}: {
+  toolName: string;
+  headlineInsight: string;
+  unlockUrl: string;
+  blurredPreviewUrl?: string;
+}): string {
+  const safeHeadline = escapeHtml(headlineInsight);
+  const safeToolName = escapeHtml(toolName);
+  const wordmark = `<span style="font-weight:300;">Story</span><span style="font-weight:600;">In</span><span style="font-weight:300;">Color</span>`;
+  // Preheader text — preview snippet shown next to the subject in the
+  // inbox list. Hidden from the rendered email body.
+  const preheader = escapeHtml(
+    `${headlineInsight} Tap to unlock your full ${toolName.toLowerCase()}.`,
+  );
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
+    <title>Your ${safeToolName} is ready</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:${PAGE_BG}; font-family:${FONT_STACK}; color:${INK_2};">
+    <!-- Preheader — inbox preview snippet, hidden in body. -->
+    <div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:${PAGE_BG};">${preheader}</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${PAGE_BG};">
+      <tr>
+        <td align="center" style="padding:48px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px; background-color:${CARD_BG}; border:1px solid ${RULE};">
+            <tr>
+              <td style="padding:22px 32px; border-bottom:1px solid ${RULE}; text-align:center;">
+                <span style="font-size:14px; letter-spacing:-0.02em; color:${INK};">${wordmark}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:36px 32px 8px 32px;">
+                <p style="margin:0 0 8px 0; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:${MUTED_2};">
+                  Your ${safeToolName.toLowerCase()}
+                </p>
+                <h1 style="margin:0 0 18px 0; font-size:28px; line-height:1.2; font-weight:300; font-style:italic; color:${INK};">
+                  Your reading is ready.
+                </h1>
+                <p style="margin:0 0 18px 0; font-size:16px; line-height:1.55; color:${INK_2};">${safeHeadline}</p>
+              </td>
+            </tr>
+            ${
+              blurredPreviewUrl
+                ? `<tr>
+              <td style="padding:0 32px 8px 32px;">
+                <a href="${unlockUrl}" target="_blank" style="display:block; line-height:0;">
+                  <img src="${blurredPreviewUrl}" alt="Your reading (preview)" style="display:block; width:100%; max-width:496px; border:1px solid ${RULE};" />
+                </a>
+              </td>
+            </tr>`
+                : ""
+            }
+            <tr>
+              <td style="padding:18px 32px 36px 32px;">
+                <a href="${unlockUrl}" target="_blank" style="display:inline-block; padding:13px 22px; background-color:${BTN_BG}; color:${BTN_TEXT}; text-decoration:none; font-size:14px; font-weight:500; letter-spacing:-0.01em;">
+                  Unlock my reading
+                </a>
+                <p style="margin:14px 0 0 0; font-size:12px; line-height:1.55; color:${MUTED_2};">
+                  We saved this for you. The link expires in 24 hours.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 32px 24px 32px; border-top:1px solid ${RULE};">
+                <p style="margin:0; font-size:11px; line-height:1.6; color:${MUTED_2};">
+                  We don't share your email. We sent this once because you
+                  asked us to. If you didn't, you can safely ignore it.
+                </p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:24px 0 0 0; font-size:11px; color:${MUTED_2}; line-height:1.6; max-width:560px;">
+            This mailbox is not monitored.
+            <br/>© ${new Date().getFullYear()} Story In Color
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+/** Plain-text alternative for the reading-ready email — best practice for
+ *  deliverability + accessibility. Spam filters score multipart/alternative
+ *  emails higher than HTML-only. */
+function generateQuizReadingReadyText({
+  toolName,
+  headlineInsight,
+  unlockUrl,
+}: {
+  toolName: string;
+  headlineInsight: string;
+  unlockUrl: string;
+}): string {
+  return [
+    `Your ${toolName.toLowerCase()} is ready.`,
+    "",
+    headlineInsight,
+    "",
+    `Unlock your reading: ${unlockUrl}`,
+    "",
+    "We saved this for you. The link expires in 24 hours.",
+    "",
+    "—",
+    "We don't share your email. We sent this once because you asked us to.",
+    "If you didn't, you can safely ignore it.",
+    "",
+    "© Story In Color · This mailbox is not monitored.",
+  ].join("\n");
+}
+
+/** Append UTM params to a URL for re-engagement tracking. */
+function withReadingReadyUtm(rawUrl: string): string {
+  const params = new URLSearchParams({
+    utm_source: "email",
+    utm_medium: "transactional",
+    utm_campaign: "quiz_reading_ready",
+  });
+  const sep = rawUrl.includes("?") ? "&" : "?";
+  return `${rawUrl}${sep}${params.toString()}`;
+}
+
+export const sendQuizReadingReadyEmail = async ({
+  email,
+  toolName,
+  headlineInsight,
+  unlockUrl,
+  blurredPreviewUrl,
+}: {
+  email: string;
+  toolName: string;
+  headlineInsight: string;
+  unlockUrl: string;
+  blurredPreviewUrl?: string;
+}): Promise<boolean> => {
+  try {
+    const ses = configureSES();
+    const trackedUnlockUrl = withReadingReadyUtm(unlockUrl);
+    const html = generateQuizReadingReadyTemplate({
+      toolName,
+      headlineInsight,
+      unlockUrl: trackedUnlockUrl,
+      blurredPreviewUrl,
+    });
+    const text = generateQuizReadingReadyText({
+      toolName,
+      headlineInsight,
+      unlockUrl: trackedUnlockUrl,
+    });
+    const params = {
+      Source: senderEmail.value(),
+      Destination: { ToAddresses: [email] },
+      Message: {
+        Subject: { Data: `Your ${toolName} is ready · StoryInColor` },
+        Body: {
+          Html: { Data: html },
+          // Plain-text MIME alternative — improves deliverability + a11y.
+          Text: { Data: text },
+        },
+      },
+    };
+    const result = await ses.send(new SendEmailCommand(params));
+    console.log(
+      `[AWS SES] Quiz reading-ready sent to ${email}, MessageId: ${result.MessageId}`,
+    );
+    return true;
+  } catch (err) {
+    console.error("[AWS SES] Quiz reading-ready send error:", err);
+    return false;
+  }
+};
