@@ -164,7 +164,7 @@ export default function FaceRatingResultView() {
           token,
           successUrl:
             typeof window !== "undefined"
-              ? `${window.location.origin}/face-rating/result`
+              ? `${window.location.origin}${window.location.pathname}`
               : "https://storyincolor.com/face-rating/result",
         });
         const data = res.data as { success: boolean; clientSecret?: string };
@@ -260,7 +260,7 @@ export default function FaceRatingResultView() {
         token,
         successUrl:
           typeof window !== "undefined"
-            ? `${window.location.origin}/face-rating/result`
+            ? `${window.location.origin}${window.location.pathname}`
             : "https://storyincolor.com/face-rating/result",
       });
       const data = res.data as { success: boolean; clientSecret?: string };

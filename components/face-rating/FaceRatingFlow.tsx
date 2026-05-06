@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Upload as UploadIcon, Check } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
@@ -54,6 +54,14 @@ const MAX_BYTES = 10 * 1024 * 1024;
 export default function FaceRatingFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  // The funnel can be mounted under /face-rating OR under /readings/{slug}
+  // (per the founder's "convert reading-by-reading" plan). Derive the
+  // result destination from the current pathname so the user stays in
+  // the same URL space.
+  const resultPath = pathname?.startsWith("/readings/")
+    ? `${pathname}/result`
+    : "/face-rating/result";
   const { initialized } = useFirebase();
   const { state, setState, advance, back } = useFaceRatingState();
   const [showAffirmation, setShowAffirmation] = useState(false);
@@ -269,7 +277,7 @@ export default function FaceRatingFlow() {
                 rememberOwnerSecret(state.pendingReadingToken, ownerSecret);
               }
               router.push(
-                `/face-rating/result?token=${state.pendingReadingToken}`,
+                `${resultPath}?token=${state.pendingReadingToken}`,
               );
             }}
             onFailed={(reason) => {

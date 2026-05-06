@@ -3,6 +3,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TOOLS, getToolBySlug } from "@/lib/tools/registry";
 import ResultView from "./result-view";
+import FaceRatingResultView from "@/app/face-rating/result/result-view";
+
+// Slugs migrated to the face-rating funnel — see app/readings/[slug]/page.tsx.
+const FACE_RATING_SLUGS = new Set<string>(["beauty-report"]);
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -29,6 +33,13 @@ export default async function Page({ params }: PageProps) {
   const { slug } = await params;
   const tool = getToolBySlug(slug);
   if (!tool) notFound();
+  if (FACE_RATING_SLUGS.has(slug)) {
+    return (
+      <Suspense fallback={<ResultFallback />}>
+        <FaceRatingResultView />
+      </Suspense>
+    );
+  }
   return (
     <Suspense fallback={<ResultFallback />}>
       <ResultView tool={tool} />
