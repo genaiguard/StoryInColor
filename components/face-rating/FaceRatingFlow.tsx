@@ -30,6 +30,10 @@ import {
   FrontFaceSilhouette,
   SideProfileSilhouette,
 } from "@/components/face-rating/FaceSilhouettes";
+import {
+  compressImage,
+  describeCompression,
+} from "@/lib/face-rating/compress-image";
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -606,37 +610,61 @@ function UploadScreen({
 }) {
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [busyStage, setBusyStage] = useState<"preparing" | "uploading" | null>(
+    null,
+  );
   const [err, setErr] = useState<string | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(
-    async (file: File | undefined | null) => {
-      if (!file) return;
-      // Validation that react-dropzone used to do for us.
-      if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+    async (rawFile: File | undefined | null) => {
+      if (!rawFile) return;
+      // Validation. Server-side ALSO enforces a 10MB cap.
+      if (!/^image\/(png|jpeg|webp)$/.test(rawFile.type)) {
         setErr("Please upload a JPG, PNG, or WEBP image.");
         return;
       }
-      if (file.size > MAX_BYTES) {
-        setErr("File too large — please use under 10MB.");
+      if (rawFile.size > MAX_BYTES) {
+        setErr(
+          "File too large — please use under 10MB. (Most modern phones export much smaller.)",
+        );
         return;
       }
       setErr(null);
       setBusy(true);
+      setBusyStage("preparing");
       setProgress(0);
       try {
+        // CLIENT-SIDE COMPRESSION:
+        // Resize to max 1600px long side + JPEG quality 0.88. This is
+        // already at or above the resolution the server downsamples to,
+        // so zero fidelity loss on the OpenAI side. Saves bandwidth +
+        // Storage cost. EXIF orientation is applied during decode so
+        // photos are upright when the model reads them.
+        const file = await compressImage(rawFile, {
+          maxDimension: 1600,
+          quality: 0.88,
+        });
+        if (file !== rawFile && process.env.NODE_ENV !== "production") {
+          // Dev-only log; harmless in prod (gated by check above).
+          console.info(
+            `[face-rating] photo compressed: ${describeCompression(rawFile, file)}`,
+          );
+        }
+
         const token = existingToken || uuidv4();
+        // Compressed output is always JPEG; if compression was skipped
+        // (already small), fall back to the original mime extension.
         const ext =
           file.type === "image/png"
             ? "png"
             : file.type === "image/webp"
               ? "webp"
               : "jpg";
-        // Unique filename per upload so re-uploads don't collide with the
-        // create-only storage rule.
         const subId = uuidv4().slice(0, 8);
         const path = `pending/${token}/input-${slot}-${subId}.${ext}`;
+        setBusyStage("uploading");
         const storage = await getConfiguredStorage();
         const { ref, uploadBytesResumable } = await import("firebase/storage");
         const storageRef = ref(storage, path);
@@ -658,6 +686,7 @@ function UploadScreen({
         setErr(e instanceof Error ? e.message : String(e));
       } finally {
         setBusy(false);
+        setBusyStage(null);
       }
     },
     [existingToken, onUploaded, slot],
@@ -728,7 +757,9 @@ function UploadScreen({
             <>
               <Loader2 className="h-6 w-6 animate-spin text-white/85" />
               <p className="text-sm text-white/85">
-                Uploading… {Math.round(progress * 100)}%
+                {busyStage === "preparing"
+                  ? "Preparing your photo…"
+                  : `Uploading… ${Math.round(progress * 100)}%`}
               </p>
             </>
           ) : (
