@@ -33,18 +33,19 @@ const TIERS: Array<{
   highlighted?: boolean;
   valueCents: number;
 }> = [
-  // Lower tier — Nebula-style cadence-naming. Per-reading cost ($4.00)
-  // is deliberately worse than the 3-reading tier ($5.00) so price-
-  // sensitive buyers naturally trade up.
+  // Outcome-driven bullets per category research — Nebula / BetterMe
+  // tier cards lead with what the user GETS in their life, not how
+  // many credits they've been allocated. The "today included + N more"
+  // disambiguation is preserved as the first bullet on every tier.
+  // Editorial cinematic register, never SaaS-pricing-table voice.
   {
     id: "two_pack",
     name: "Monthly · 2 readings",
     priceLabel: "$7.99/mo",
     bullets: [
-      "Includes today's reading (delivered immediately)",
-      "Plus 1 more reading this month",
-      "2 fresh readings every month after",
-      "Use them on any tool — palm, face, aura, more",
+      "Unlock today's reading right now",
+      "One more reading this month — try a different lens on yourself",
+      "Two fresh readings every month after",
       "Cancel anytime",
     ],
     valueCents: 799,
@@ -55,10 +56,10 @@ const TIERS: Array<{
     priceLabel: "$14.99/mo",
     badge: "Most popular",
     bullets: [
-      "Includes today's reading (delivered immediately)",
-      "Plus 2 more readings this month",
-      "3 fresh readings every month after",
-      "Use them on any tool — palm, face, aura, more",
+      "Unlock today's reading right now",
+      "Two more readings this month — palm, aura, hairstyle, beauty, your call",
+      "Three fresh readings every month — build a reading practice",
+      "Daily reflections drawn from your reading profile",
       "Cancel anytime",
     ],
     highlighted: true,
@@ -70,10 +71,10 @@ const TIERS: Array<{
     priceLabel: "$89.99/yr",
     effectiveLabel: "$7.50/mo · save 50%",
     bullets: [
-      "Includes today's reading (delivered immediately)",
-      "4 fresh readings every month after",
-      "Use them on any tool — palm, face, aura, more",
-      "Early access to new reading types",
+      "Unlock today's reading right now",
+      "Four fresh readings every month — explore every lens we offer",
+      "Daily reflections drawn from your reading profile",
+      "Early access to new readings before anyone else",
       "Cancel anytime",
     ],
     valueCents: 8999,
@@ -95,6 +96,29 @@ export default function ResultView({ slug, headlineFallback }: Props) {
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(
     null,
   );
+
+  // Pre-warm Stripe JS the moment we hit the reveal screen so by the
+  // time the user taps a tier the bundle is cached and initEmbeddedCheckout
+  // mounts in <500ms instead of cold-loading 200KB of JS.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { loadStripe } = await import("@stripe/stripe-js");
+        const pubKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+        if (pubKey && !cancelled) {
+          // Fire-and-forget: loadStripe caches the Stripe instance globally.
+          await loadStripe(pubKey);
+        }
+      } catch {
+        /* preload failure is non-fatal — initEmbeddedCheckout will retry */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Subscribe to pendingReadings/{token} status
   useEffect(() => {
@@ -226,24 +250,52 @@ export default function ResultView({ slug, headlineFallback }: Props) {
     );
   }
 
+  // Paywall layout shifts: on the reveal screen the blurred image is the
+  // hero; once the user submits email and we're on the paywall (or
+  // checkout) phase, the focal point shifts to the tier cards and the
+  // image becomes a small contextual reminder. Pattern from Nebula /
+  // Umax / BetterMe paywall teardowns: the curiosity gap is already
+  // established at this point — keep the image present so the user
+  // remembers what they're paying for, but don't make it compete with
+  // the decision UI.
+  const isRevealPhase = phase === "reveal";
+  const previewClass = isRevealPhase
+    ? "relative mt-6 overflow-hidden rounded-2xl border border-white/10"
+    : "relative mt-4 mx-auto overflow-hidden rounded-xl border border-white/10 max-w-[180px] aspect-[2/3]";
+
   return (
     <div className="relative flex min-h-screen flex-col bg-black text-white">
       <main className="mx-auto w-full max-w-2xl px-5 py-10 md:px-8">
-        <h1 className="text-3xl font-light italic leading-tight md:text-4xl">
+        <h1
+          className={`font-light italic leading-tight ${
+            isRevealPhase ? "text-3xl md:text-4xl" : "text-2xl md:text-3xl"
+          }`}
+        >
           Your reading is ready.
         </h1>
-        <p className="mt-3 text-base text-white/80">{headlineFallback}</p>
+        <p
+          className={`mt-3 text-white/80 ${
+            isRevealPhase ? "text-base" : "text-sm"
+          }`}
+        >
+          {headlineFallback}
+        </p>
 
         {blurredUrl ? (
-          <div className="relative mt-6 overflow-hidden rounded-2xl border border-white/10">
+          <div className={previewClass}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={blurredUrl}
               alt="Your reading preview (blurred)"
-              className="block w-full"
+              className="block w-full h-full object-cover"
               loading="eager"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent" />
+            {!isRevealPhase ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1 text-center text-[10px] uppercase tracking-[0.18em] text-white/70">
+                Locked
+              </div>
+            ) : null}
           </div>
         ) : null}
 

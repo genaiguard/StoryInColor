@@ -53,6 +53,10 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
+// Per-instance Stripe price-id cache. Eliminates a ~300-500ms
+// Stripe API roundtrip on warm checkout opens. See createQuizCheckoutSession.
+const priceCache = new Map<string, string>();
+
 /**
  * Quiz tier prices. Lookup keys must match the Stripe Price IDs created
  * in the Stripe dashboard. Update these once the founder runs the
@@ -170,6 +174,10 @@ export const createQuizCheckoutSession = onCall(
     secrets: [STRIPE_SECRET_KEY],
     invoker: "public",
     timeoutSeconds: 30,
+    // Speed comes from the per-instance price cache + the frontend's
+    // stripe.js preload (see result-view.tsx). Adding minInstances:1 would
+    // cost ~$5-8/mo always-on for the marginal cold-start savings — defer
+    // until conversion data shows it's worth it.
   },
   async (request) => {
     if (!isQuizFunnelEnabled()) {
@@ -211,20 +219,29 @@ export const createQuizCheckoutSession = onCall(
       apiVersion: "2026-04-22.dahlia",
     });
 
-    // Resolve price by lookup_key (so we don't hardcode price_xxxx)
+    // Resolve price by lookup_key. CACHED per-instance so warm hits skip
+    // the Stripe API roundtrip (~300-500ms saved on every checkout open).
+    // Prices are stable; if the founder rotates them via Stripe dashboard,
+    // they'll be picked up on next cold start.
     const lookupKey = QUIZ_PRICE_LOOKUP_KEYS[tier as QuizTier];
-    const prices = await stripe.prices.list({
-      lookup_keys: [lookupKey],
-      active: true,
-      limit: 1,
-    });
-    const price = prices.data[0];
-    if (!price) {
-      throw new HttpsError(
-        "failed-precondition",
-        `Stripe price with lookup_key=${lookupKey} not found. Configure in Stripe dashboard.`,
-      );
+    let priceId = priceCache.get(lookupKey);
+    if (!priceId) {
+      const prices = await stripe.prices.list({
+        lookup_keys: [lookupKey],
+        active: true,
+        limit: 1,
+      });
+      const found = prices.data[0];
+      if (!found) {
+        throw new HttpsError(
+          "failed-precondition",
+          `Stripe price with lookup_key=${lookupKey} not found. Configure in Stripe dashboard.`,
+        );
+      }
+      priceId = found.id;
+      priceCache.set(lookupKey, priceId);
     }
+    const price = { id: priceId };
 
     const isSubscription =
       tier === "two_pack" || tier === "monthly" || tier === "annual";
