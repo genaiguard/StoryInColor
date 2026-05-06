@@ -49,6 +49,7 @@ import {
   LockedRow,
   CompletionBadge,
   scoreColorClass,
+  topSubScoreKeys,
 } from "@/components/face-rating/FaceRatingViz";
 
 const STRIPE_PUBLISHABLE_KEY =
@@ -527,19 +528,28 @@ function PreviewView({
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-[11px] text-white/65">
             <Lock className="h-3 w-3 text-white/55" />
             <span>
-              <span className="text-white/85">9 of {TOTAL_SECTIONS} sections locked</span>
-              <span className="text-white/45"> · one-time $4.99 unlocks everything</span>
+              <span className="text-white/85">Preview only</span>
+              <span className="text-white/45"> · one-time $4.99 unlocks the full report</span>
             </span>
           </div>
         </div>
 
-        {/* SUB-SCORES — visible (the proof the engine is real) */}
-        <Section eyebrow="08 sub-scores · revealed" title="Calibrated sub-scores">
+        {/* SUB-SCORES — top 3 revealed, bottom 5 blurred (UMAX pattern). */}
+        <Section
+          eyebrow="08 sub-scores · top 3 revealed"
+          title="Calibrated sub-scores"
+          locked
+        >
           <p className="mb-4 text-sm text-white/55">
-            Eight calibrated dimensions, scored 0–10 against{" "}
-            {light.demographic_band?.label || "your demographic"}.
+            Your three strongest dimensions are revealed below. The remaining
+            five — including what&rsquo;s holding your score back — unlock with
+            the full report.
           </p>
-          <SubScoreGrid scores={light.sub_scores} reveal={true} />
+          <SubScoreGrid
+            scores={light.sub_scores ?? {}}
+            reveal={false}
+            revealedKeys={topSubScoreKeys(light.sub_scores, 3)}
+          />
         </Section>
 
         {/* ARCHETYPE — name visible, description blurred */}

@@ -278,16 +278,34 @@ export const getFaceFullReport = onCall(
       (pending.status === "ready" && pending.inviteUnlocked === true);
 
     if (!isPaid) {
-      // Detect a stale "score=0 refusal" cached light analysis
-      // (the OpenAI hedge pattern). If so, re-run Stage 1 NOW with the
-      // current prompt + retry guard. Affects users who hit a bad result
-      // before the prompt fix shipped.
-      const la = pending.lightAnalysis;
-      const stale =
+      // Detect a stale cached light analysis. Two cases:
+      //   A) The OpenAI refusal hedge: score=0 / tier=Subhuman/BelowTier.
+      //   B) Pre-schema-unification shape: only the original 4 fields,
+      //      missing sub_scores / archetype / strengths / etc.
+      // In either case, re-run Stage 1 with the current prompt + schema.
+      const la = pending.lightAnalysis as
+        | (PendingFaceReadingDoc["lightAnalysis"] & {
+            sub_scores?: Record<string, number>;
+            archetype?: { name?: string };
+            strengths?: unknown[];
+            areas_for_growth?: unknown[];
+          })
+        | undefined;
+      const isRefusalShape =
         la &&
         ((typeof la.overall_score === "number" && la.overall_score < 1) ||
           la.tier_label === "BelowTier" ||
           la.tier_label === "Subhuman");
+      const isOldSchema =
+        la &&
+        (!la.sub_scores ||
+          Object.keys(la.sub_scores || {}).length < 8 ||
+          !la.archetype?.name ||
+          !Array.isArray(la.strengths) ||
+          la.strengths.length === 0 ||
+          !Array.isArray(la.areas_for_growth) ||
+          la.areas_for_growth.length === 0);
+      const stale = isRefusalShape || isOldSchema;
       if (stale && pending.frontPhotoStoragePath) {
         try {
           await rerunStage1(token, pending);

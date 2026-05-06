@@ -263,10 +263,18 @@ export function SubScoreCard({
 export function SubScoreGrid({
   scores,
   reveal,
+  revealedKeys,
 }: {
   scores: Record<string, number>;
+  /** Master switch: if true, all 8 sub-scores are revealed regardless. */
   reveal: boolean;
+  /** Optional partial-reveal mode (used in the preview): only these keys
+   *  show their numeric value; the rest are blurred. Ignored when reveal
+   *  is true. */
+  revealedKeys?: SubScoreKey[];
 }) {
+  const allow = (k: SubScoreKey) =>
+    reveal || (revealedKeys?.includes(k) ?? false);
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       {SUB_SCORE_KEYS.map((k) => (
@@ -274,11 +282,23 @@ export function SubScoreGrid({
           key={k}
           feature={k}
           score={scores?.[k] ?? 0}
-          reveal={reveal}
+          reveal={allow(k)}
         />
       ))}
     </div>
   );
+}
+
+/** Pick the top N sub-score keys by score for partial reveal in the preview. */
+export function topSubScoreKeys(
+  scores: Record<string, number> | undefined,
+  n: number = 3,
+): SubScoreKey[] {
+  if (!scores) return [];
+  return SUB_SCORE_KEYS.slice()
+    .filter((k) => typeof scores[k] === "number")
+    .sort((a, b) => (scores[b] ?? 0) - (scores[a] ?? 0))
+    .slice(0, n);
 }
 
 /* ------------------------------------------------------------------ */
