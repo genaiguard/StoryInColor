@@ -160,3 +160,39 @@ html[data-tool-auth="loading"]    [data-tool-workflow] { display: none; }
 html[data-tool-auth="loading"]    [data-tool-marketing] { display: block; }
 html[data-tool-auth="signed-in"]  [data-tool-marketing] { display: none; }
 html[data-tool-auth="signed-in"]  [data-tool-workflow] { display: block; }
+
+/* ============================================================
+   Face-rating upload silhouette — pseudo-3D rotation in CSS.
+   The SVG silhouettes already render as nicely-shaped editorial
+   line art; the rotation gives them depth + life without the
+   cost (and fragility) of a full WebGL stack. preserve-3d on
+   the parent makes the SVG occlusion read like an actual rotating
+   3D object inside a perspective box.
+   ============================================================ */
+
+@keyframes face-rating-spin-front-keyframes {
+  0%   { transform: rotateY(-12deg) rotateX(2deg); }
+  50%  { transform: rotateY(12deg) rotateX(-2deg); }
+  100% { transform: rotateY(-12deg) rotateX(2deg); }
+}
+
+@keyframes face-rating-spin-side-keyframes {
+  0%   { transform: rotateY(-22deg) rotateX(1deg); }
+  50%  { transform: rotateY(22deg) rotateX(-1deg); }
+  100% { transform: rotateY(-22deg) rotateX(1deg); }
+}
+
+.face-rating-spin-front {
+  animation: face-rating-spin-front-keyframes 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+.face-rating-spin-side {
+  animation: face-rating-spin-side-keyframes 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .face-rating-spin-front,
+  .face-rating-spin-side { animation: none; }
+}
