@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -34,6 +35,14 @@ import {
   compressImage,
   describeCompression,
 } from "@/lib/face-rating/compress-image";
+
+// 3D head — lazy-loaded so the ~250KB three.js + 400KB GLB only ship
+// on the upload screens that actually render it. SSR off because R3F
+// needs window/canvas APIs.
+const Head3D = dynamic(() => import("@/components/face-rating/Head3D"), {
+  ssr: false,
+  loading: () => null,
+});
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -737,18 +746,28 @@ function UploadScreen({
           }}
         />
 
-        {/* Silhouette — front face or side profile. Fades + shrinks while
-            uploading so the progress UI takes focus. */}
+        {/* 3D rotating head — replaces the static SVG silhouette. The
+            wireframe scan aesthetic communicates "AI is reading a face"
+            without being cartoony. Fades + shrinks while uploading so the
+            progress UI takes focus. SVG silhouette stays mounted underneath
+            as the loading-state placeholder (Head3D is dynamic-imported). */}
         <div
           className={`flex h-full w-full items-center justify-center text-white/85 transition-all duration-300 ${
             busy ? "scale-75 opacity-30" : "opacity-100 group-hover:opacity-95"
           }`}
         >
-          {silhouette === "front" ? (
-            <FrontFaceSilhouette className="h-[62%] w-auto" />
-          ) : (
-            <SideProfileSilhouette className="h-[62%] w-auto" />
-          )}
+          <div className="relative h-[78%] w-[78%]">
+            {/* Fallback while the 3D bundle + GLB load (typically <1s) */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              {silhouette === "front" ? (
+                <FrontFaceSilhouette className="h-full w-auto opacity-30" />
+              ) : (
+                <SideProfileSilhouette className="h-full w-auto opacity-30" />
+              )}
+            </div>
+            {/* The actual 3D head, layered on top */}
+            <Head3D variant={silhouette} className="absolute inset-0" />
+          </div>
         </div>
 
         {/* Action overlay — sits over the silhouette */}
