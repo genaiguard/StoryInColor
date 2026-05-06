@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -34,6 +35,14 @@ import {
   compressImage,
   describeCompression,
 } from "@/lib/face-rating/compress-image";
+
+// 3D rotating head — vanilla three.js (no R3F, no reconciler). Lazy-
+// loaded so the ~150KB three.js bundle + 400KB GLB only ship on the
+// upload screens that actually mount the component.
+const Head3D = dynamic(() => import("@/components/face-rating/Head3D"), {
+  ssr: false,
+  loading: () => null,
+});
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -737,29 +746,26 @@ function UploadScreen({
           }}
         />
 
-        {/* Silhouette — front face or side profile. Wrapped in a CSS 3D
-            perspective container that gently rotates the SVG to convey
-            depth without the cost / fragility of a full WebGL renderer.
-            Fades + shrinks while uploading so the progress UI takes focus. */}
+        {/* 3D rotating head + SVG fallback layered underneath.
+            three.js mounts and gradually overdraws the static SVG. Both
+            fade + shrink while uploading so the progress UI takes focus. */}
         <div
-          className={`flex h-full w-full items-center justify-center text-white/85 transition-all duration-300 ${
+          className={`relative flex h-full w-full items-center justify-center text-white/85 transition-all duration-300 ${
             busy ? "scale-75 opacity-30" : "opacity-100 group-hover:opacity-95"
           }`}
-          style={{ perspective: "900px" }}
         >
-          <div
-            className={
-              silhouette === "front"
-                ? "face-rating-spin-front"
-                : "face-rating-spin-side"
-            }
-            style={{ transformStyle: "preserve-3d" }}
-          >
-            {silhouette === "front" ? (
-              <FrontFaceSilhouette className="h-[180px] w-auto md:h-[220px]" />
-            ) : (
-              <SideProfileSilhouette className="h-[180px] w-auto md:h-[220px]" />
-            )}
+          <div className="relative h-[260px] w-[260px] md:h-[300px] md:w-[300px]">
+            {/* SVG fallback — visible during the lazy three.js load. Also
+                visible if WebGL fails on the device. */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              {silhouette === "front" ? (
+                <FrontFaceSilhouette className="h-[78%] w-auto opacity-40" />
+              ) : (
+                <SideProfileSilhouette className="h-[78%] w-auto opacity-40" />
+              )}
+            </div>
+            {/* Real 3D head, layers on top once three.js is loaded. */}
+            <Head3D variant={silhouette} className="absolute inset-0" />
           </div>
         </div>
 
