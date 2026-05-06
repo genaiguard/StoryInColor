@@ -210,6 +210,8 @@ export const createFaceRatingCheckoutSession = onCall(
       priceCache.set(FACE_RATING_LOOKUP_KEY, priceId);
     }
 
+    // Match the legacy createCreditCheckout branding so the embedded
+    // iframe doesn't show the default white background.
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       ui_mode: "embedded_page",
       mode: "payment",
@@ -217,6 +219,18 @@ export const createFaceRatingCheckoutSession = onCall(
       customer_email: pending.email,
       return_url: `${successUrl || "https://storyincolor.com/face-rating/result"}?token=${token}&session_id={CHECKOUT_SESSION_ID}`,
       redirect_on_completion: "if_required",
+      branding_settings: {
+        display_name: "StoryInColor",
+        background_color: "#0a0a0a",
+        button_color: "#ffffff",
+        font_family: "inter",
+        border_style: "rounded",
+      },
+      payment_method_options: {
+        card: {
+          request_three_d_secure: "automatic",
+        },
+      },
       metadata: {
         type: "face_rating_purchase",
         pendingReadingToken: token,

@@ -106,6 +106,7 @@ export default function FaceRatingResultView() {
           fullAnalysis?: FaceFullAnalysis;
           shareEnabled?: boolean;
           shareId?: string;
+          emailCaptured?: boolean;
         };
         if (data.lightAnalysis) setLight(data.lightAnalysis);
         if (data.status === "unlocked" && data.fullAnalysis) {
@@ -115,14 +116,17 @@ export default function FaceRatingResultView() {
             setShareUrl(`https://storyincolor.com/r?id=${data.shareId}`);
           }
           setPhase("full");
-          // Note: we don't clearFaceRatingState() here — the user may
-          // refresh the page and need ownerSecret + token to re-fetch.
-          // M4 follow-up: ownerSecret persists in a separate keyed store.
         } else if (sessionId) {
           // Just returned from Stripe; poll for Stage 2 completion.
           setPhase("polling");
         } else if (data.lightAnalysis) {
-          setPhase("preview");
+          // If email already captured (e.g. user came back from email link),
+          // skip the email-gate and go straight to paywall.
+          if (data.emailCaptured) {
+            setPhase("paywall");
+          } else {
+            setPhase("preview");
+          }
         } else {
           setErrMsg("This reading wasn't found. Please start over.");
         }
@@ -130,7 +134,41 @@ export default function FaceRatingResultView() {
         setErrMsg(e instanceof Error ? e.message : String(e));
       }
     })();
-  }, [initialized, token, sessionId]);
+  }, [initialized, token, sessionId, ownerSecret]);
+
+  // PRE-CREATE the Stripe session as soon as the user reaches the paywall
+  // phase, so clicking "Unlock full reading" feels instant. The session is
+  // valid for 24h, so a paywall-bounce + return is fine.
+  useEffect(() => {
+    if (phase !== "paywall") return;
+    if (stripeClientSecret) return; // already pre-created
+    let cancelled = false;
+    (async () => {
+      try {
+        const fn = httpsCallable(getFunctions(), "createFaceRatingCheckoutSession");
+        const res = await fn({
+          token,
+          successUrl:
+            typeof window !== "undefined"
+              ? `${window.location.origin}/face-rating/result`
+              : "https://storyincolor.com/face-rating/result",
+        });
+        const data = res.data as {
+          success: boolean;
+          clientSecret?: string;
+        };
+        if (!cancelled && data.success && data.clientSecret) {
+          setStripeClientSecret(data.clientSecret);
+        }
+      } catch {
+        /* user-initiated retry will happen on click */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   // Polling loop — post-checkout. L5: cap at 30 attempts (~90s).
   useEffect(() => {
@@ -195,16 +233,25 @@ export default function FaceRatingResultView() {
     }
   }, [emailValue, token]);
 
-  /* ---------- Stripe checkout ---------- */
+  /* ---------- Stripe checkout ----------
+   * Session is pre-created as soon as the user enters the paywall phase
+   * (see the useEffect above), so the click handler usually just flips
+   * phase and the iframe is already warm. Falls back to lazy-create.
+   */
   const startCheckout = useCallback(async () => {
     setErrMsg(null);
+    if (stripeClientSecret) {
+      setPhase("checkout");
+      return;
+    }
     try {
       const fn = httpsCallable(getFunctions(), "createFaceRatingCheckoutSession");
       const res = await fn({
         token,
-        successUrl: typeof window !== "undefined"
-          ? `${window.location.origin}/face-rating/result`
-          : "https://storyincolor.com/face-rating/result",
+        successUrl:
+          typeof window !== "undefined"
+            ? `${window.location.origin}/face-rating/result`
+            : "https://storyincolor.com/face-rating/result",
       });
       const data = res.data as {
         success: boolean;
@@ -219,7 +266,7 @@ export default function FaceRatingResultView() {
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : String(e));
     }
-  }, [token]);
+  }, [token, stripeClientSecret]);
 
   /* ---------- invite-3 ---------- */
   const startInvitePath = useCallback(async () => {
