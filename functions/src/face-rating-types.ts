@@ -3,11 +3,18 @@
 // Per PIVOT-2.md.
 
 export type Gender = "male" | "female" | "other";
+export type AgeRange = "18-24" | "25-34" | "35-44" | "45+";
 export type GoalChip =
-  | "find-strengths"
-  | "see-potential"
-  | "compare-celebrities"
+  | "psl-tier"
+  | "biggest-strength"
+  | "score-blocker"
   | "glow-up-plan";
+export type ComplimentsFreq =
+  | "never"
+  | "rarely"
+  | "sometimes"
+  | "often"
+  | "very-often";
 
 export const PSL_TIERS = [
   { min: 9.0, max: 10.0, label: "Chadpreet" },
@@ -96,7 +103,13 @@ export interface PendingFaceReadingDoc {
     | "expired";
   ipHash: string;
   gender?: Gender;
+  ageRange?: AgeRange;
   goal?: GoalChip;
+  /** User's pre-analysis self-rating (1–10). Calibration prior. */
+  selfRate?: number;
+  /** "How often do strangers compliment your looks?" — calibration prior. */
+  complimentsFreq?: ComplimentsFreq;
+  /** Legacy field — kept for backward compat. */
   countryCode?: string;
   frontPhotoStoragePath: string;
   sidePhotoStoragePath?: string;

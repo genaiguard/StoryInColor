@@ -5,7 +5,9 @@ import {
   FACE_RATING_SCREEN_SEQUENCE,
   type FaceRatingScreen,
   type Gender,
+  type AgeRange,
   type GoalChip,
+  type ComplimentsFreq,
   type FaceLightAnalysis,
 } from "@/lib/face-rating/types";
 
@@ -15,8 +17,10 @@ const SECRETS_KEY = "sic_face_rating_secrets_v1"; // map<token, ownerSecret>
 export interface FaceRatingState {
   screen: FaceRatingScreen;
   gender?: Gender;
+  ageRange?: AgeRange;
   goal?: GoalChip;
-  countryCode?: string;
+  selfRate?: number;
+  complimentsFreq?: ComplimentsFreq;
   pendingReadingToken?: string;
   frontPhotoStoragePath?: string;
   sidePhotoStoragePath?: string;
@@ -24,8 +28,7 @@ export interface FaceRatingState {
   startedAt: string;
   lightAnalysis?: FaceLightAnalysis;
   /** Owner secret returned by analyzeFaceUnauth — required on sensitive
-   *  callables (delete photo, share toggle, invite create, getFaceFullReport
-   *  for paid/unlocked tokens). Per BUG-REVIEW.md C1+C2. */
+   *  callables. */
   ownerSecret?: string;
 }
 

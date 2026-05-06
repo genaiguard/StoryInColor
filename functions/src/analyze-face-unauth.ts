@@ -50,9 +50,13 @@ interface AnalyzeFaceUnauthRequest {
   frontPhotoStoragePath?: string;
   sidePhotoStoragePath?: string;
   gender?: string;
+  ageRange?: string;
   goal?: string;
+  selfRate?: number;
+  complimentsFreq?: string;
+  /** Legacy. */
   countryCode?: string;
-  inviteCode?: string; // friend's invite code, if redeeming
+  inviteCode?: string;
   attribution?: PendingFaceReadingDoc["attribution"];
   fbEventId?: string;
 }
@@ -95,7 +99,10 @@ export const analyzeFaceUnauth = onCall(
       frontPhotoStoragePath,
       sidePhotoStoragePath,
       gender,
+      ageRange,
       goal,
+      selfRate,
+      complimentsFreq,
       countryCode,
       inviteCode,
       attribution,
@@ -163,7 +170,16 @@ export const analyzeFaceUnauth = onCall(
       initialDoc.sidePhotoStoragePath = sidePhotoStoragePath;
     }
     if (typeof gender === "string" && gender.length) initialDoc.gender = gender;
+    if (typeof ageRange === "string" && ageRange.length) {
+      initialDoc.ageRange = ageRange;
+    }
     if (typeof goal === "string" && goal.length) initialDoc.goal = goal;
+    if (typeof selfRate === "number" && Number.isFinite(selfRate)) {
+      initialDoc.selfRate = Math.max(1, Math.min(10, selfRate));
+    }
+    if (typeof complimentsFreq === "string" && complimentsFreq.length) {
+      initialDoc.complimentsFreq = complimentsFreq;
+    }
     if (typeof countryCode === "string" && countryCode.length) {
       initialDoc.countryCode = countryCode;
     }
@@ -224,7 +240,16 @@ export const analyzeFaceUnauth = onCall(
 
       // 2) Stage 1 — gpt-4o-mini vision with strict Structured Output.
       const userContent: Array<Record<string, unknown>> = [
-        { type: "text", text: STAGE_1_USER_PROMPT({ gender, goal, countryCode }) },
+        {
+          type: "text",
+          text: STAGE_1_USER_PROMPT({
+            gender,
+            ageRange,
+            goal,
+            selfRate,
+            complimentsFreq,
+          }),
+        },
         {
           type: "image_url",
           image_url: { url: frontDataUrl, detail: "high" },

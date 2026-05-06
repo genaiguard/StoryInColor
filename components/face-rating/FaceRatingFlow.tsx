@@ -8,12 +8,17 @@ import { v4 as uuidv4 } from "uuid";
 import {
   GOAL_OPTIONS,
   GENDER_OPTIONS,
+  AGE_OPTIONS,
+  COMPLIMENTS_OPTIONS,
   FACE_LOADER_STEPS,
   FACE_LOADER_SUBMESSAGES,
   pickFaceAffirmation,
   progressForFaceScreen,
+  selfRateLabelFor,
   type Gender,
+  type AgeRange,
   type GoalChip,
+  type ComplimentsFreq,
 } from "@/lib/face-rating/types";
 import { ProgressBar } from "@/components/quiz/primitives/ProgressBar";
 import { Affirmation } from "@/components/quiz/primitives/Affirmation";
@@ -33,33 +38,6 @@ const ACCEPTED: Record<string, string[]> = {
 };
 const MAX_BYTES = 10 * 1024 * 1024;
 
-// Country list — short. Most face-rating users globally fall in these
-// English-speaking + EU countries. Server uses this as a calibration hint
-// for the demographic_band; uncommon countries map to "global" silently.
-const COUNTRIES = [
-  { code: "US", name: "United States" },
-  { code: "CA", name: "Canada" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "AU", name: "Australia" },
-  { code: "NZ", name: "New Zealand" },
-  { code: "IE", name: "Ireland" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "IT", name: "Italy" },
-  { code: "ES", name: "Spain" },
-  { code: "NL", name: "Netherlands" },
-  { code: "SE", name: "Sweden" },
-  { code: "NO", name: "Norway" },
-  { code: "DK", name: "Denmark" },
-  { code: "TR", name: "Turkey" },
-  { code: "BR", name: "Brazil" },
-  { code: "MX", name: "Mexico" },
-  { code: "IN", name: "India" },
-  { code: "JP", name: "Japan" },
-  { code: "KR", name: "South Korea" },
-  { code: "OTHER", name: "Other / global" },
-];
-
 export default function FaceRatingFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -77,11 +55,17 @@ export default function FaceRatingFlow() {
     }
   }, [searchParams, setState]);
 
-  // M4: If the saved state has a completed lightAnalysis, the user already
-  // ran a reading. Don't resume the old token — start fresh on the intro
-  // screen but keep `inviteCodeRedeemed` if present.
+  // If the saved state has a completed lightAnalysis OR is from the
+  // pre-rewrite 8-screen flow (no ageRange field, "ready" in screen
+  // sequence), reset to fresh intro. Keeps inviteCodeRedeemed if present.
   useEffect(() => {
-    if (state.lightAnalysis || state.pendingReadingToken) {
+    const isStale =
+      state.lightAnalysis ||
+      state.pendingReadingToken ||
+      // Catch sessions that were on the old "ready" / "country" screens.
+      (state.screen as string) === "ready" ||
+      (state.screen as string) === "country";
+    if (isStale) {
       setState((s) => ({
         screen: "intro",
         inviteCodeRedeemed: s.inviteCodeRedeemed,
@@ -151,17 +135,9 @@ export default function FaceRatingFlow() {
       <main className="relative z-10 flex flex-1 flex-col justify-center px-5 pb-12 md:px-10">
         {state.screen === "intro" && <IntroScreen onBegin={advance} />}
 
-        {state.screen === "ready" && (
-          <ReadyScreen
-            onYes={advanceWithMaybeAffirmation}
-            onLater={() => router.push("/")}
-          />
-        )}
-
         {state.screen === "gender" && (
-          <ChipScreen
-            title="First, who are we reading?"
-            subtitle="Pick one — your reading will be more accurate."
+          <PromiseChipScreen
+            title="Who are we reading?"
             options={GENDER_OPTIONS}
             onSelect={(id) => {
               setState((s) => ({ ...s, gender: id as Gender }));
@@ -170,10 +146,22 @@ export default function FaceRatingFlow() {
           />
         )}
 
+        {state.screen === "age" && (
+          <ChipScreen
+            title="What's your age range?"
+            subtitle="Different ages read differently."
+            options={AGE_OPTIONS}
+            onSelect={(id) => {
+              setState((s) => ({ ...s, ageRange: id as AgeRange }));
+              advanceWithMaybeAffirmation();
+            }}
+          />
+        )}
+
         {state.screen === "goal" && (
           <ChipScreen
-            title="What are you hoping to find out?"
-            subtitle="Pick one — your reading will lean here."
+            title="What do you want to know first?"
+            subtitle="Your reading will lean here."
             options={GOAL_OPTIONS}
             onSelect={(id) => {
               setState((s) => ({ ...s, goal: id as GoalChip }));
@@ -182,17 +170,33 @@ export default function FaceRatingFlow() {
           />
         )}
 
-        {state.screen === "country" && (
+        {state.screen === "self-rate" && (
+          <SelfRateScreen
+            initial={state.selfRate ?? 5}
+            onContinue={(v) => {
+              setState((s) => ({ ...s, selfRate: v }));
+              advance();
+            }}
+          />
+        )}
+
+        {state.screen === "mission" && (
+          <MissionScreen onContinue={advance} />
+        )}
+
+        {state.screen === "compliments" && (
           <ChipScreen
-            title="Where are you?"
-            subtitle="So your reading compares you against the right group."
-            options={COUNTRIES.map((c) => ({ id: c.code, label: c.name }))}
+            title="How often do strangers compliment your looks?"
+            subtitle="Helps us read against your real-world feedback."
+            options={COMPLIMENTS_OPTIONS}
             onSelect={(id) => {
-              setState((s) => ({ ...s, countryCode: id }));
+              setState((s) => ({ ...s, complimentsFreq: id as ComplimentsFreq }));
               advanceWithMaybeAffirmation();
             }}
           />
         )}
+
+        {state.screen === "lockin" && <LockInScreen onCommit={advance} />}
 
         {state.screen === "front-photo" && (
           <UploadScreen
@@ -232,8 +236,10 @@ export default function FaceRatingFlow() {
             frontPath={state.frontPhotoStoragePath}
             sidePath={state.sidePhotoStoragePath}
             gender={state.gender}
+            ageRange={state.ageRange}
             goal={state.goal}
-            countryCode={state.countryCode}
+            selfRate={state.selfRate}
+            complimentsFreq={state.complimentsFreq}
             inviteCode={state.inviteCodeRedeemed}
             eventId={eventId}
             onReady={(lightAnalysis, ownerSecret) => {
@@ -301,10 +307,10 @@ function IntroScreen({ onBegin }: { onBegin: () => void }) {
             onClick={onBegin}
             className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-white px-6 py-3.5 text-sm font-medium text-black hover:bg-white/90 md:w-auto md:px-8"
           >
-            Get my rating
+            Get my honest rating
           </button>
           <p className="mt-3 text-xs text-white/50">
-            One-time · $4.99 to unlock full report
+            Honest means honest. We don&rsquo;t inflate. · $4.99 one-time to unlock.
           </p>
         </div>
       </div>
@@ -312,39 +318,225 @@ function IntroScreen({ onBegin }: { onBegin: () => void }) {
   );
 }
 
-/* ---------- Ready (reverse-psychology gate) ---------- */
+/* ---------- PromiseChipScreen — UMAX-style chip-as-character-voice ---------- */
 
-function ReadyScreen({
-  onYes,
-  onLater,
+function PromiseChipScreen<T extends string>({
+  title,
+  options,
+  onSelect,
 }: {
-  onYes: () => void;
-  onLater: () => void;
+  title: string;
+  options: { id: T; label: string; promise?: string }[];
+  onSelect: (id: T) => void;
 }) {
   return (
-    <div className="mx-auto w-full max-w-xl text-center">
-      <h1 className="text-4xl font-light italic leading-tight tracking-tight md:text-5xl">
-        Are you ready for an honest score?
+    <div className="mx-auto w-full max-w-xl">
+      <h1 className="text-3xl font-light italic leading-tight tracking-tight md:text-5xl">
+        {title}
       </h1>
-      <p className="mt-4 text-sm text-white/60">
-        Honest means honest. We don&rsquo;t inflate.
+      <div className="mt-8 flex flex-col gap-3">
+        {options.map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onSelect(opt.id)}
+            className="flex w-full flex-col gap-1 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/30 hover:bg-white/[0.06]"
+          >
+            <span className="text-base text-white">{opt.label}</span>
+            {opt.promise && (
+              <span className="text-xs text-white/55">{opt.promise}</span>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- SelfRateScreen — UMAX self-rating slider, the key commitment ---------- */
+
+function SelfRateScreen({
+  initial,
+  onContinue,
+}: {
+  initial: number;
+  onContinue: (value: number) => void;
+}) {
+  const [v, setV] = useState(initial);
+  const label = selfRateLabelFor(v);
+  return (
+    <div className="mx-auto w-full max-w-xl text-center">
+      <h1 className="text-3xl font-light italic leading-tight tracking-tight md:text-4xl">
+        How would you rate yourself right now?
+      </h1>
+      <p className="mt-3 text-sm text-white/60">
+        Be honest. This is just for you. We&rsquo;ll compare your view to ours.
       </p>
-      <div className="mt-10 flex flex-col gap-3 md:flex-row md:justify-center">
+      <div className="mt-12">
+        <div className="text-7xl font-light tracking-tight">
+          {v.toFixed(1)}
+          <span className="text-2xl text-white/40">/10</span>
+        </div>
+        <div className="mt-3 text-base font-light italic text-white/85">
+          {label}
+        </div>
+      </div>
+      <div className="mt-10 px-2">
+        <input
+          type="range"
+          min={1}
+          max={10}
+          step={0.1}
+          value={v}
+          onChange={(e) => setV(Number(e.target.value))}
+          className="w-full accent-white"
+          aria-label="Self-rating from 1 to 10"
+        />
+        <div className="mt-1 flex justify-between text-[10px] uppercase tracking-wider text-white/40">
+          <span>1</span>
+          <span>5</span>
+          <span>10</span>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onContinue(v)}
+        className="mt-10 inline-flex items-center justify-center rounded-full bg-white px-8 py-3.5 text-sm font-medium text-black hover:bg-white/90"
+      >
+        Continue
+      </button>
+    </div>
+  );
+}
+
+/* ---------- MissionScreen — narrative lock ---------- */
+
+function MissionScreen({ onContinue }: { onContinue: () => void }) {
+  return (
+    <div className="mx-auto w-full max-w-xl text-center">
+      <p className="text-xs uppercase tracking-[0.18em] text-white/40">
+        Our job is simple
+      </p>
+      <h1 className="mt-6 text-3xl font-light italic leading-tight tracking-tight md:text-5xl">
+        Give you the honest read no friend will give you —
+      </h1>
+      <p className="mt-4 text-2xl font-light italic text-white/85 md:text-3xl">
+        and the plan to act on it.
+      </p>
+      <button
+        type="button"
+        onClick={onContinue}
+        className="mt-12 inline-flex items-center justify-center rounded-full bg-white px-8 py-3.5 text-sm font-medium text-black hover:bg-white/90"
+      >
+        I&rsquo;m in
+      </button>
+    </div>
+  );
+}
+
+/* ---------- LockInScreen — UMAX press-and-hold commitment ritual ---------- */
+
+function LockInScreen({ onCommit }: { onCommit: () => void }) {
+  const [holdMs, setHoldMs] = useState(0);
+  const startRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const HOLD_TARGET = 2000; // 2s hold
+
+  const stop = useCallback(() => {
+    startRef.current = null;
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    setHoldMs(0);
+  }, []);
+
+  const tick = useCallback(() => {
+    if (startRef.current == null) return;
+    const elapsed = Date.now() - startRef.current;
+    setHoldMs(elapsed);
+    if (elapsed >= HOLD_TARGET) {
+      // Commit
+      startRef.current = null;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      onCommit();
+      return;
+    }
+    rafRef.current = requestAnimationFrame(tick);
+  }, [onCommit]);
+
+  const start = useCallback(() => {
+    if (startRef.current != null) return;
+    startRef.current = Date.now();
+    rafRef.current = requestAnimationFrame(tick);
+  }, [tick]);
+
+  const pct = Math.min(1, holdMs / HOLD_TARGET);
+  const radius = 60;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - pct);
+
+  return (
+    <div className="mx-auto w-full max-w-xl text-center">
+      <h1 className="text-3xl font-light italic leading-tight tracking-tight md:text-5xl">
+        Time to lock in.
+      </h1>
+      <p className="mt-3 text-sm text-white/60">
+        Press and hold to start your reading.
+      </p>
+      <div className="mt-12 flex justify-center">
         <button
           type="button"
-          onClick={onYes}
-          className="inline-flex items-center justify-center rounded-full bg-white px-8 py-3.5 text-sm font-medium text-black hover:bg-white/90"
+          onMouseDown={start}
+          onMouseUp={stop}
+          onMouseLeave={stop}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            start();
+          }}
+          onTouchEnd={stop}
+          onTouchCancel={stop}
+          className="relative h-40 w-40 select-none rounded-full bg-white/[0.04] outline-none"
+          aria-label="Press and hold to commit"
         >
-          Yes, I&rsquo;m ready
-        </button>
-        <button
-          type="button"
-          onClick={onLater}
-          className="inline-flex items-center justify-center rounded-full border border-white/15 px-8 py-3.5 text-sm font-medium text-white/70 hover:bg-white/5"
-        >
-          Maybe later
+          <svg
+            width="160"
+            height="160"
+            viewBox="0 0 160 160"
+            className="absolute inset-0"
+          >
+            <circle
+              cx="80"
+              cy="80"
+              r={radius}
+              fill="none"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth="3"
+            />
+            <circle
+              cx="80"
+              cy="80"
+              r={radius}
+              fill="none"
+              stroke="white"
+              strokeWidth="3"
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              strokeLinecap="round"
+              transform="rotate(-90 80 80)"
+              style={{ transition: holdMs === 0 ? "stroke-dashoffset 0.2s" : undefined }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-xs uppercase tracking-[0.18em] text-white/70">
+              {pct >= 1 ? "Locked" : pct > 0 ? "Hold…" : "Press"}
+            </span>
+          </div>
         </button>
       </div>
+      <p className="mt-8 text-xs text-white/40">
+        2 seconds.
+      </p>
     </div>
   );
 }
@@ -544,8 +736,10 @@ function LoaderScreen({
   frontPath,
   sidePath,
   gender,
+  ageRange,
   goal,
-  countryCode,
+  selfRate,
+  complimentsFreq,
   inviteCode,
   eventId,
   onReady,
@@ -555,8 +749,10 @@ function LoaderScreen({
   frontPath: string;
   sidePath?: string;
   gender?: string;
+  ageRange?: string;
   goal?: string;
-  countryCode?: string;
+  selfRate?: number;
+  complimentsFreq?: string;
   inviteCode?: string;
   eventId: string;
   onReady: (lightAnalysis: any, ownerSecret?: string) => void;
@@ -583,8 +779,10 @@ function LoaderScreen({
           frontPhotoStoragePath: frontPath,
           sidePhotoStoragePath: sidePath,
           gender,
+          ageRange,
           goal,
-          countryCode,
+          selfRate,
+          complimentsFreq,
           inviteCode,
           attribution,
           fbEventId: eventId,

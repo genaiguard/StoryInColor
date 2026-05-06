@@ -117,8 +117,10 @@ export async function runFaceStage2ForToken(token: string): Promise<{
         type: "text",
         text: STAGE_2_USER_PROMPT({
           gender: pending.gender,
+          ageRange: pending.ageRange,
           goal: pending.goal,
-          countryCode: pending.countryCode,
+          selfRate: pending.selfRate,
+          complimentsFreq: pending.complimentsFreq,
           hasSidePhoto: !!sideDataUrl,
           lightAnalysis: pending.lightAnalysis
             ? {
@@ -418,8 +420,10 @@ async function rerunStage1(
       type: "text",
       text: STAGE_1_USER_PROMPT({
         gender: pending.gender,
+        ageRange: pending.ageRange,
         goal: pending.goal,
-        countryCode: pending.countryCode,
+        selfRate: pending.selfRate,
+        complimentsFreq: pending.complimentsFreq,
       }),
     },
     {

@@ -45,19 +45,23 @@ OUTPUT: strict valid JSON matching the supplied schema. No prose outside the JSO
 
 export const STAGE_1_USER_PROMPT = (ctx: {
   gender?: string;
+  ageRange?: string;
   goal?: string;
-  countryCode?: string;
+  selfRate?: number;
+  complimentsFreq?: string;
 }) => `Analyze the supplied face photo and return a LIGHT analysis for the free preview tier.
 
 Context:
 - Self-reported gender: ${ctx.gender || "unspecified"}
+- Self-reported age range: ${ctx.ageRange || "unspecified"}
 - User's stated goal: ${ctx.goal || "general rating"}
-- User's country: ${ctx.countryCode || "unspecified"}
+- User's self-rating (1–10, calibration prior): ${typeof ctx.selfRate === "number" ? ctx.selfRate : "unspecified"}
+- How often strangers compliment them: ${ctx.complimentsFreq || "unspecified"}
 
 Return:
-- overall_score (0.0–10.0, one decimal)
+- overall_score (0.0–10.0, one decimal). Calibrate against the demographic band implied by gender + ageRange.
 - tier_label (one of: Chadpreet, Chad, Chadlite, High Tier Normie, Mid Tier Normie, Low Tier Normie, BelowTier)
-- demographic_band: a short label (e.g. "men, 25-34, North America") and percentile (0-100)
+- demographic_band: a short label (e.g. "men, 25-34") and percentile (0-100)
 - strongest_feature: ONE feature key from {facial_harmony, facial_symmetry, jawline_definition, eye_area, skin_quality, smile, photogenic_score, expression} plus a 1-2 sentence specific observation.
 
 Output strict JSON only.`;
@@ -120,8 +124,10 @@ export const STAGE_1_SCHEMA = {
 
 export const STAGE_2_USER_PROMPT = (ctx: {
   gender?: string;
+  ageRange?: string;
   goal?: string;
-  countryCode?: string;
+  selfRate?: number;
+  complimentsFreq?: string;
   hasSidePhoto: boolean;
   lightAnalysis?: { overall_score?: number; tier_label?: string };
 }) => `Generate the FULL face-rating report (paid tier).
@@ -130,8 +136,10 @@ ${ctx.hasSidePhoto ? "TWO photos provided: front + side profile." : "ONE photo p
 
 Context:
 - Gender: ${ctx.gender || "unspecified"}
+- Age range: ${ctx.ageRange || "unspecified"}
 - Goal: ${ctx.goal || "general rating"}
-- Country: ${ctx.countryCode || "unspecified"}
+- Self-rating: ${typeof ctx.selfRate === "number" ? ctx.selfRate : "unspecified"}
+- Compliments frequency: ${ctx.complimentsFreq || "unspecified"}
 ${
   ctx.lightAnalysis
     ? `- Stage 1 light analysis already returned overall_score=${ctx.lightAnalysis.overall_score}, tier_label=${ctx.lightAnalysis.tier_label}. Stay consistent with that score (±0.2 max drift).`
