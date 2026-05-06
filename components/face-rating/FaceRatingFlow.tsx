@@ -21,8 +21,8 @@ import {
   type GoalChip,
   type ComplimentsFreq,
 } from "@/lib/face-rating/types";
-import { ProgressBar } from "@/components/quiz/primitives/ProgressBar";
-import { Affirmation } from "@/components/quiz/primitives/Affirmation";
+import { ProgressBar } from "@/components/face-rating/primitives/ProgressBar";
+import { Affirmation } from "@/components/face-rating/primitives/Affirmation";
 import {
   useFaceRatingState,
   rememberOwnerSecret,

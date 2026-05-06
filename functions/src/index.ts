@@ -14,24 +14,17 @@ import { sendWelcomeEmail, sendContactFormEmail } from './email-service';
 import { CREDIT_PACKAGES } from './credit-packages';
 import { dispatchServerConversion } from './conversions/dispatch';
 import type { ServerUserData } from './conversions/types';
-import { handleQuizPurchase } from './quiz-webhook-handler';
 import { handleFaceRatingPurchase } from './face-rating-webhook-handler';
 
-// Quiz funnel callables (additive — see QUIZ-PIVOT-SPEC.md §8.1).
-// Re-exporting from index so `firebase deploy --only functions` picks them up.
-export { generateForToolUnauth } from './generate-for-tool-unauth';
-export {
-  captureQuizEmail,
-  createQuizCheckoutSession,
-  getQuizPaywallStatus,
-} from './quiz-checkout';
+// Shared infrastructure — same Firestore TTL cleanup is used for the
+// face-rating pendingReadings docs.
 export { cleanupExpiredPendingReadings } from './cleanup-pending-readings';
 export {
   dispatchDailyReflections,
   generateReflectionPreview,
 } from './daily-reflections';
 
-// Face Rating callables (PIVOT-2.md — replaces /quiz funnel).
+// Face Rating callables (PIVOT-2.md — the unauth $4.99 face-rating funnel).
 export { analyzeFaceUnauth } from './analyze-face-unauth';
 export { getFaceFullReport } from './analyze-face-full';
 export {
@@ -42,6 +35,7 @@ export {
   getOrCreateFaceRatingInviteCode,
   redeemFaceRatingInvite,
   deleteFaceRatingPhoto,
+  claimFaceRatingAccount,
 } from './face-rating-checkout';
 
 // Version log - update this to verify deployments
@@ -314,27 +308,6 @@ export const stripeWebhook = onRequest(
                   // Acknowledge receipt of the event
                   res.status(200).send({ received: true, type: 'credit_purchase' });
                   return;
-              } else if (session.metadata?.type === 'quiz_purchase') {
-                  // Quiz funnel purchase (per QUIZ-PIVOT-SPEC.md §3.3.4).
-                  // Materializes account, claims pending reading, grants
-                  // sub allowance or one-time credit. Idempotent on event.id.
-                  console.log(`[Webhook] Processing quiz_purchase`);
-                  try {
-                      const handlerResult = await handleQuizPurchase({
-                          event,
-                          session,
-                          stripe,
-                      });
-                      console.log(`[QuizWebhook] result:`, JSON.stringify(handlerResult));
-                      res.status(200).send({ received: true, type: 'quiz_purchase', ...handlerResult });
-                      return;
-                  } catch (qpErr) {
-                      console.error(`[QuizWebhook Error]`, qpErr);
-                      // Return 500 so Stripe retries — handleQuizPurchase
-                      // is idempotent on Stripe event id.
-                      res.status(500).send({ received: false, error: 'Transient failure processing quiz purchase; please retry.' });
-                      return;
-                  }
               } else if (session.metadata?.type === 'face_rating_purchase') {
                   // Face Rating purchase (PIVOT-2.md). Materializes account,
                   // claims pending reading, kicks off Stage 2 analysis.
@@ -359,21 +332,6 @@ export const stripeWebhook = onRequest(
                   res.status(200).send({ received: true, type: 'unknown' });
                   return;
               }
-          } else if (
-              event.type === 'customer.subscription.updated' ||
-              event.type === 'customer.subscription.deleted' ||
-              event.type === 'invoice.paid'
-          ) {
-              // Quiz funnel subscription lifecycle (per QUIZ-PIVOT-SPEC.md §17.6, §8.7).
-              // Lazy-imported so the file doesn't grow unbounded; pure additive branch.
-              try {
-                  const { handleSubscriptionLifecycleEvent } = await import('./quiz-subscription-events');
-                  await handleSubscriptionLifecycleEvent(event);
-              } catch (subErr) {
-                  console.warn('[Webhook] Subscription lifecycle handler failed (non-fatal):', subErr);
-              }
-              res.status(200).send({ received: true, type: event.type });
-              return;
           } else {
               // Other event types can be handled here if needed
               console.log(`[Webhook] Received non-checkout event: ${event.type}`);
@@ -896,18 +854,6 @@ interface AdminDashboardData {
   aggregatedStats: AggregatedStats;
   users: EnrichedUser[];
   sourceBreakdown: SourceFunnelRow[];
-  /** Quiz funnel rollup. Per QUIZ-PIVOT-SPEC.md §9.2. */
-  quizFunnel?: {
-    pendingReadingsByStatus: Record<string, number>;
-    /** Last 7 days only — keeps the count meaningful as the corpus grows. */
-    last7DaysCount: number;
-    /** Distinct toolIds seen in last 7 days. */
-    last7DaysByTool: Record<string, number>;
-    /** Activated subscriptions (status=active|trialing). */
-    activeSubscribers: number;
-    /** Total subscribers with subscription field set (any status). */
-    totalSubscribersEver: number;
-  };
 }
 
 // --- Admin Dashboard Data Function (getAdminDashboardData - Enhanced) ---
@@ -1107,41 +1053,6 @@ export const getAdminDashboardData = onCall(
 
       console.log("[Admin Dashboard] Aggregation and data preparation complete.");
 
-      // --- Quiz funnel rollup (additive, per QUIZ-PIVOT-SPEC.md §9.2) ---
-      const quizFunnel: AdminDashboardData['quizFunnel'] = {
-        pendingReadingsByStatus: {},
-        last7DaysCount: 0,
-        last7DaysByTool: {},
-        activeSubscribers: 0,
-        totalSubscribersEver: 0,
-      };
-      try {
-        const sevenDaysAgo = admin.firestore.Timestamp.fromMillis(Date.now() - 7 * 24 * 3600 * 1000);
-        const pendingSnap = await db.collection('pendingReadings').limit(2000).get();
-        for (const d of pendingSnap.docs) {
-          const data = d.data() as { status?: string; toolId?: string; createdAt?: admin.firestore.Timestamp };
-          const status = data.status || 'unknown';
-          quizFunnel.pendingReadingsByStatus[status] = (quizFunnel.pendingReadingsByStatus[status] || 0) + 1;
-          if (data.createdAt && data.createdAt.toMillis() >= sevenDaysAgo.toMillis()) {
-            quizFunnel.last7DaysCount++;
-            const tool = data.toolId || 'unknown';
-            quizFunnel.last7DaysByTool[tool] = (quizFunnel.last7DaysByTool[tool] || 0) + 1;
-          }
-        }
-        // Subscribers count: re-walk userCredits we already loaded
-        userCreditsSnapshot.forEach(doc => {
-          const data = doc.data() as { subscription?: { status?: string } };
-          if (data.subscription) {
-            quizFunnel.totalSubscribersEver++;
-            if (data.subscription.status === 'active' || data.subscription.status === 'trialing') {
-              quizFunnel.activeSubscribers++;
-            }
-          }
-        });
-      } catch (qfErr) {
-        console.warn('[Admin Dashboard] quizFunnel rollup failed (non-fatal):', qfErr);
-      }
-
       // 4. Return Data
       return {
         success: true,
@@ -1155,7 +1066,6 @@ export const getAdminDashboardData = onCall(
         },
         users: enrichedUsers,
         sourceBreakdown,
-        quizFunnel,
       };
 
     } catch (error: any) {

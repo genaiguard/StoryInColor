@@ -94,8 +94,14 @@ export async function handleFaceRatingPurchase(
       });
     }
 
-    // Per-user face-readings ledger (lighter than userCredits — face rating
-    // is a one-time SKU, no balance/subscription concept).
+    // Credit ledger integration:
+    //   1. Grant 1 credit (the face-rating purchase IS a 1-credit pack)
+    //   2. Immediately deduct 1 credit (the reading is being delivered now)
+    //   3. Net balance change: 0
+    //   4. used: +1
+    //   5. purchaseHistory entry recorded for the $4.99 charge
+    // This keeps the credit ledger as the single source of truth across
+    // face-rating + legacy /readings/* purchases.
     const userCreditsRef = db.collection("userCredits").doc(uid);
     const userCreditsSnap = await tx.get(userCreditsRef);
     const purchaseEntry = {
@@ -109,18 +115,55 @@ export async function handleFaceRatingPurchase(
     };
     if (!userCreditsSnap.exists) {
       tx.set(userCreditsRef, {
-        balance: 0,
-        used: 0,
+        balance: 0, // 1 granted, 1 spent on this reading = 0 net
+        used: 1,
         purchaseHistory: [purchaseEntry],
         lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
       });
     } else {
       tx.update(userCreditsRef, {
+        // balance unchanged (granted 1, spent 1)
+        used: admin.firestore.FieldValue.increment(1),
         purchaseHistory:
           admin.firestore.FieldValue.arrayUnion(purchaseEntry),
         lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
+
+    // Write a job + generation record so /dashboard renders this face-rating
+    // alongside the user's image-based readings. The dashboard subscribes
+    // to users/{uid}/jobs — same collection that generateForTool writes
+    // to — so we use the same shape with a `kind: "face-rating"`
+    // discriminator. The dashboard card looks at `kind` and renders
+    // either an image (legacy) or a tier-label card (face-rating).
+    const generationId = `face-rating-${token}`;
+    const jobRef = db
+      .collection("users")
+      .doc(uid)
+      .collection("jobs")
+      .doc(generationId);
+    const genRef = db
+      .collection("users")
+      .doc(uid)
+      .collection("generations")
+      .doc(generationId);
+    const baseRecord = {
+      generationId,
+      jobId: generationId,
+      userId: uid,
+      toolId: "face-rating",
+      kind: "face-rating",
+      pendingReadingToken: token,
+      // Snapshot of the score at purchase time, so dashboard can render
+      // the card without reading pendingReadings.
+      tierLabel: pending.lightAnalysis?.tier_label || null,
+      overallScore: pending.lightAnalysis?.overall_score ?? null,
+      sourceFlow: "face_rating",
+      status: "complete" as const,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    tx.set(jobRef, baseRecord);
+    tx.set(genRef, baseRecord);
 
     // Mark pending claimed.
     tx.update(pendingRef, {

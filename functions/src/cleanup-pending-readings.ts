@@ -6,7 +6,7 @@
 
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as admin from "firebase-admin";
-import { isQuizFunnelEnabled } from "./quiz-types";
+import { isFaceRatingEnabled } from "./face-rating-types";
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -27,8 +27,8 @@ export const cleanupExpiredPendingReadings = onSchedule(
     memory: "1GiB",
   },
   async () => {
-    if (!isQuizFunnelEnabled()) {
-      console.log("[Cleanup] Quiz funnel disabled — skipping.");
+    if (!isFaceRatingEnabled()) {
+      console.log("[Cleanup] Face rating disabled — skipping.");
       return;
     }
     const now = admin.firestore.Timestamp.now();

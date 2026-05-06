@@ -15,7 +15,7 @@ import * as admin from "firebase-admin";
 import * as crypto from "crypto";
 import StripeImport from "stripe";
 import type { Stripe } from "stripe/cjs/stripe.core.js";
-import { isValidEmail, isValidToken } from "./quiz-helpers";
+import { isValidEmail, isValidToken } from "./face-rating-helpers";
 import { isFaceRatingEnabled } from "./face-rating-types";
 import type { PendingFaceReadingDoc } from "./face-rating-types";
 import { sendFaceRatingReadyEmail } from "./email-service";
@@ -554,6 +554,91 @@ export const redeemFaceRatingInvite = onCall(
       };
     });
     return result;
+  },
+);
+
+/* -------------------------------------------------------------------- */
+/* claimFaceRatingAccount — set a password on the user's Auth account    */
+/* after they've paid for a face-rating. Lets them sign in to /dashboard */
+/* and see their face-rating alongside other readings.                   */
+/* SECURITY: requires ownerSecret + the pending must be claimed.         */
+/* -------------------------------------------------------------------- */
+
+interface ClaimAccountRequest {
+  token?: string;
+  ownerSecret?: string;
+  password?: string;
+}
+
+export const claimFaceRatingAccount = onCall(
+  {
+    invoker: "public",
+    timeoutSeconds: 30,
+  },
+  async (request) => {
+    const { token, ownerSecret, password } = (request.data ??
+      {}) as ClaimAccountRequest;
+    if (typeof token !== "string" || !isValidToken(token)) {
+      throw new HttpsError("invalid-argument", "Invalid token.");
+    }
+    if (typeof password !== "string" || password.length < 8) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Password must be at least 8 characters.",
+      );
+    }
+    if (password.length > 200) {
+      throw new HttpsError("invalid-argument", "Password too long.");
+    }
+    const ref = db.collection("pendingReadings").doc(token);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "Reading not found.");
+    }
+    const pending = snap.data() as PendingFaceReadingDoc;
+    if (!isFaceRatingDoc(pending)) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This token is not a face-rating reading.",
+      );
+    }
+    requireOwnerSecret(pending, ownerSecret);
+    if (pending.status !== "claimed" || !pending.claimedByUid) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Account claim is only available after the reading has been unlocked.",
+      );
+    }
+    const uid = pending.claimedByUid;
+    const email = pending.email;
+    if (!email) {
+      throw new HttpsError(
+        "failed-precondition",
+        "No email associated with this reading.",
+      );
+    }
+
+    try {
+      // Set the password on the existing Firebase Auth user. The webhook
+      // already created the user (no password) — we're just adding one.
+      await admin.auth().updateUser(uid, {
+        password,
+        emailVerified: true, // they got a working email link / paid invoice
+      });
+    } catch (err) {
+      console.error("[claimFaceRatingAccount] updateUser failed:", err);
+      throw new HttpsError(
+        "internal",
+        "Could not set password on the account. Try again or contact support.",
+      );
+    }
+
+    // Mark the pending doc so we know the user has claimed.
+    await ref.update({
+      accountClaimedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { success: true, email };
   },
 );
 

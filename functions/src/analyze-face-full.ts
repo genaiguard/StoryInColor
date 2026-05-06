@@ -28,7 +28,7 @@ import {
   STAGE_2_USER_PROMPT,
   STAGE_2_SCHEMA,
 } from "./face-rating-prompts";
-import { isValidToken } from "./quiz-helpers";
+import { isValidToken } from "./face-rating-helpers";
 import type { FaceLightAnalysis } from "./face-rating-types";
 
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");

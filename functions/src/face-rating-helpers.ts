@@ -1,20 +1,21 @@
-// Helper functions shared across the quiz Cloud Functions.
+// Helper functions for the face-rating Cloud Functions (and any other
+// future unauth funnel surfaces). Renamed from quiz-helpers.ts when the
+// legacy quiz funnel was retired — same logic, neutral name.
+//
+// Env-var toggles (set in functions/.env or via firebase functions:secrets):
+//   QUIZ_RATE_LIMIT_BYPASS=true       → fail-open on per-IP + global checks
+//   QUIZ_RATE_LIMIT_PER_IP_PER_DAY=N  → per-IP cap (default 3)
+//   QUIZ_GLOBAL_DAILY_CEILING=N       → global cap (default 60)
 
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
 
 const PENDING_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
-// Rate-limit toggles. Set these env vars in functions/.env for the deployed
-// runtime, or via `firebase functions:config:set` style overrides.
-//   QUIZ_RATE_LIMIT_BYPASS=true       → fail-open on per-IP + global checks
-//   QUIZ_RATE_LIMIT_PER_IP_PER_DAY=N  → per-IP cap (default 3)
-//   QUIZ_GLOBAL_DAILY_CEILING=N       → global cap (default 60)
 const RATE_LIMIT_BYPASS = process.env.QUIZ_RATE_LIMIT_BYPASS === "true";
 const RATE_LIMIT_PER_IP_PER_DAY = Number(
   process.env.QUIZ_RATE_LIMIT_PER_IP_PER_DAY || "3",
 );
-// Global daily ceiling — hard upper bound on cost across ALL IPs.
 const GLOBAL_DAILY_CEILING = Number(
   process.env.QUIZ_GLOBAL_DAILY_CEILING || "60",
 );
@@ -35,18 +36,9 @@ export function makeExpiresAt(): admin.firestore.Timestamp {
 }
 
 /**
- * Per-IP rate limiter for the unauth quiz generate path.
- * Returns true if allowed, false if rate-limited.
- *
- * Implementation: count `pendingReadings` docs created in the last 24h
- * matching this IP hash. Cheap; bounded by RATE_LIMIT + 1 query.
- *
- * Failure mode: if the composite index isn't built yet, OR Firestore
- * is transiently unavailable, we DO NOT block legitimate users —
- * we log the error and fail open (allow the request). The downside is a
- * brief window where rate limiting is bypassed; acceptable because (a)
- * the failure is transient (index build minutes) and (b) the IP-rate
- * limit is a soft mitigation, not a security boundary.
+ * Per-IP rate limiter for the unauth generate path. Soft mitigation —
+ * not a security boundary. Fails open if the composite index isn't
+ * ready (transient build window) so legitimate users aren't blocked.
  */
 export async function checkAndIncrementIpRateLimit(
   db: admin.firestore.Firestore,
@@ -71,9 +63,8 @@ export async function checkAndIncrementIpRateLimit(
       recentCount,
     };
   } catch (err) {
-    // Most common reason: composite index still building. Log and fail open.
     console.warn(
-      "[QuizRateLimit] degraded — proceeding without IP rate check:",
+      "[FaceRateLimit] degraded — proceeding without IP rate check:",
       err instanceof Error ? err.message : err,
     );
     return { allowed: true, recentCount: 0 };
@@ -81,14 +72,8 @@ export async function checkAndIncrementIpRateLimit(
 }
 
 /**
- * Global daily ceiling check — hard upper bound on the number of
- * unauth generations that will run in a 24h window across ALL IPs.
- * This is the production cost-protection lever: at $0.06–$0.25 per
- * OpenAI call, an abuse vector that gets past the per-IP limit can't
- * exceed GLOBAL_DAILY_CEILING × $0.25 ≈ $15 worst case.
- *
- * Counts via a tiny daily counter doc rather than re-scanning
- * pendingReadings (cheaper at scale).
+ * Global daily ceiling — hard cost cap across ALL IPs. Fails CLOSED on
+ * counter read errors (refuses generation rather than risk uncapped spend).
  */
 export async function checkGlobalDailyCeiling(
   db: admin.firestore.Firestore,
@@ -110,9 +95,7 @@ export async function checkGlobalDailyCeiling(
       ceiling: GLOBAL_DAILY_CEILING,
     };
   } catch (err) {
-    // Fail closed if the counter read itself errors — better to refuse
-    // than to risk uncapped spend on a transient outage.
-    console.error("[QuizGlobalCap] read failed; refusing to proceed:", err);
+    console.error("[FaceGlobalCap] read failed; refusing to proceed:", err);
     return { allowed: false, usedToday: -1, ceiling: GLOBAL_DAILY_CEILING };
   }
 }
@@ -127,7 +110,7 @@ export async function incrementGlobalDailyCounter(
       return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
     })();
     const ref = db.collection("quizDailyCounters").doc(todayKey);
-    // 30-day TTL on the counter docs so they auto-clean.
+    // 30-day TTL so the counter docs auto-clean.
     const expireAt = admin.firestore.Timestamp.fromMillis(
       Date.now() + 30 * 24 * 60 * 60 * 1000,
     );
@@ -141,12 +124,12 @@ export async function incrementGlobalDailyCounter(
       { merge: true },
     );
   } catch (err) {
-    console.warn("[QuizGlobalCap] increment failed (non-fatal):", err);
+    console.warn("[FaceGlobalCap] increment failed (non-fatal):", err);
   }
 }
 
-/** Validate token format (UUID-like, lowercase hex + dashes).
- *  M2: case-sensitive — Firestore doc ids ARE case-sensitive, so allowing
+/** Validate token format (UUID v4-ish, lowercase hex + dashes).
+ *  Case-sensitive — Firestore doc ids ARE case-sensitive, so allowing
  *  uppercase here would create false positives that 404 downstream. */
 export function isValidToken(token: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
@@ -155,8 +138,8 @@ export function isValidToken(token: string): boolean {
 }
 
 /**
- * Cheap email validation. Not RFC-perfect; just rejects obvious junk
- * before calling Stripe / writing to Firestore.
+ * Cheap email validation. Not RFC-perfect; rejects obvious junk before
+ * calling Stripe / writing to Firestore.
  */
 export function isValidEmail(email: string): boolean {
   if (typeof email !== "string") return false;

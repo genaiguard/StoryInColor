@@ -21,27 +21,30 @@ export interface CreditPackage {
 // Pricing model: 1 credit == 1 reading. Single-issue is the headline price;
 // trio + set discount per-reading. The coloring page is free (creditCost 0
 // in the registry) and is not represented as a pack.
+//
+// Anchored at $4.99 / credit — matches the face-rating one-time product
+// on /face-rating. Pack discount ladder (~0% / 20% / 33%) preserved.
 export const CREDIT_PACKAGES: CreditPackage[] = [
   {
     id: 'single',
     credits: 1,
-    price: 999, // $9.99
-    pricePerCredit: 999,
+    price: 499, // $4.99
+    pricePerCredit: 499,
     discountPercentage: 0,
   },
   {
     id: 'trio',
     credits: 3,
-    price: 2400, // $24.00
-    pricePerCredit: 800,
+    price: 1199, // $11.99
+    pricePerCredit: 400,
     discountPercentage: 20,
   },
   {
     id: 'set',
     credits: 6,
-    price: 3900, // $39.00
-    pricePerCredit: 650,
-    discountPercentage: 35,
+    price: 1999, // $19.99
+    pricePerCredit: 333,
+    discountPercentage: 33,
   },
 ];
 

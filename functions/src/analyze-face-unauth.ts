@@ -19,7 +19,7 @@ import {
   checkGlobalDailyCeiling,
   incrementGlobalDailyCounter,
   isValidToken,
-} from "./quiz-helpers";
+} from "./face-rating-helpers";
 import {
   isFaceRatingEnabled,
   tierForScore,

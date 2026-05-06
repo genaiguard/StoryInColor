@@ -34,9 +34,16 @@ interface JobDoc {
   generationId?: string;
   jobId: string;
   toolId: string;
+  /** Discriminator. "face-rating" jobs render a tier-label card and
+   *  link to /face-rating/result?token=... rather than an inline image. */
+  kind?: "face-rating" | "image";
   status?: "processing" | "complete" | "failed";
   outputStoragePath?: string;
   outputDownloadUrl?: string;
+  /** Snapshot fields for face-rating jobs (no image to render). */
+  tierLabel?: string | null;
+  overallScore?: number | null;
+  pendingReadingToken?: string;
   error?: string;
   refunded?: boolean;
   createdAt?: any;
@@ -479,9 +486,13 @@ export default function DashboardPage() {
               generationId: data.generationId,
               jobId: data.jobId || d.id,
               toolId: data.toolId || "",
+              kind: data.kind,
               status: data.status,
               outputStoragePath: data.outputStoragePath,
               outputDownloadUrl: data.outputDownloadUrl,
+              tierLabel: data.tierLabel,
+              overallScore: data.overallScore,
+              pendingReadingToken: data.pendingReadingToken,
               error: data.error,
               refunded: data.refunded,
               createdAt: data.createdAt,
@@ -733,6 +744,50 @@ export default function DashboardPage() {
             ) : (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5 lg:grid-cols-4">
                 {generations.map((gen) => {
+                  // Face-rating jobs render a tier-label card and link
+                  // to /face-rating/result?token=... rather than the
+                  // image-based reading flow.
+                  if (gen.kind === "face-rating" && gen.pendingReadingToken) {
+                    const score =
+                      typeof gen.overallScore === "number"
+                        ? gen.overallScore.toFixed(1)
+                        : "—";
+                    return (
+                      <Link
+                        key={gen.jobId}
+                        href={`/face-rating/result?token=${encodeURIComponent(gen.pendingReadingToken)}`}
+                        className="group block overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] shadow-[0_8px_24px_-12px_rgba(0,0,0,0.6)] transition-all hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.04] hover:shadow-[0_16px_32px_-12px_rgba(0,0,0,0.7)]"
+                      >
+                        <div className="relative flex aspect-[2/3] flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-4">
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-white/40">
+                            Face Rating
+                          </p>
+                          <div className="mt-2 text-5xl font-light tracking-tight text-white tabular-nums">
+                            {score}
+                            <span className="text-xl text-white/40">/10</span>
+                          </div>
+                          {gen.tierLabel && (
+                            <div className="mt-2 text-base font-light italic text-white/85">
+                              {gen.tierLabel}
+                            </div>
+                          )}
+                          <div className="mt-6 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-white/65">
+                            View report →
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <div className="truncate text-sm font-medium text-white">
+                            Face Rating
+                          </div>
+                          <div className="mt-0.5 text-xs text-gray-500">
+                            {formatRelative(gen.createdAt)}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  }
+
+                  // Legacy image-based readings.
                   const tool = getToolById(gen.toolId);
                   const href = tool
                     ? `/readings/${tool.slug}/result?jobId=${encodeURIComponent(gen.jobId)}`

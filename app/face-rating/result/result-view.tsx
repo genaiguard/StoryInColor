@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Loader2,
@@ -389,6 +389,7 @@ export default function FaceRatingResultView() {
       <FullReportView
         full={full}
         token={token}
+        ownerSecret={ownerSecret}
         shareEnabled={shareEnabled}
         shareUrl={shareUrl}
         onToggleShare={toggleShare}
@@ -882,6 +883,7 @@ function Section({
 function FullReportView({
   full,
   token,
+  ownerSecret,
   shareEnabled,
   shareUrl,
   onToggleShare,
@@ -889,6 +891,7 @@ function FullReportView({
 }: {
   full: FaceFullAnalysis;
   token: string;
+  ownerSecret?: string;
   shareEnabled: boolean;
   shareUrl: string | null;
   onToggleShare: () => void;
@@ -926,6 +929,10 @@ function FullReportView({
         <div className="mx-auto mt-8 flex justify-center">
           <CompletionBadge current={TOTAL_SECTIONS} total={TOTAL_SECTIONS} reveal={true} />
         </div>
+
+        {/* ACCOUNT CLAIM — optional. User can save the reading + see all
+            their reports on /dashboard by setting a password. Skippable. */}
+        <AccountClaimCard token={token} ownerSecret={ownerSecret} />
 
         {/* DISTRIBUTION */}
         <FullSection eyebrow="Distribution" title="Where you sit">
@@ -1237,6 +1244,179 @@ function FullSection({
     <section className="mx-auto mt-12 max-w-xl">
       <SectionHeader eyebrow={eyebrow} title={title} />
       {children}
+    </section>
+  );
+}
+
+/* ============================================================ */
+/* ACCOUNT CLAIM — optional password capture post-purchase.       */
+/* Once claimed, user can sign into /dashboard and see this        */
+/* face-rating alongside any other readings they own.              */
+/* ============================================================ */
+
+function AccountClaimCard({
+  token,
+  ownerSecret,
+}: {
+  token: string;
+  ownerSecret?: string;
+}) {
+  const router = useRouter();
+  const { user } = useFirebase();
+  const [phase, setPhase] = useState<
+    "collapsed" | "form" | "submitting" | "success" | "dismissed"
+  >("collapsed");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+
+  // If the user is already signed in OR they've dismissed, hide entirely.
+  if (user) return null;
+  if (phase === "dismissed") return null;
+
+  const submit = async () => {
+    setErr(null);
+    if (password.length < 8) {
+      setErr("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setErr("Passwords don't match.");
+      return;
+    }
+    if (!ownerSecret) {
+      setErr(
+        "Session secret missing. Please refresh the page and try again.",
+      );
+      return;
+    }
+    setPhase("submitting");
+    try {
+      const fn = httpsCallable(getFunctions(), "claimFaceRatingAccount");
+      const res = await fn({ token, ownerSecret, password });
+      const data = res.data as { success: boolean; email: string };
+      if (!data.success || !data.email) {
+        throw new Error("Could not set password.");
+      }
+      // Sign in client-side with the freshly-set password.
+      const { getAuth, signInWithEmailAndPassword } = await import(
+        "firebase/auth"
+      );
+      await signInWithEmailAndPassword(getAuth(), data.email, password);
+      setPhase("success");
+    } catch (e) {
+      console.error("[AccountClaim] failed:", e);
+      setErr(
+        e instanceof Error ? e.message : "Could not set up your account.",
+      );
+      setPhase("form");
+    }
+  };
+
+  return (
+    <section className="mx-auto mt-10 max-w-xl">
+      {phase === "success" ? (
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.04] p-5">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-emerald-300/85">
+            <Check className="h-3 w-3" />
+            Account saved
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-white/85">
+            Your reading is saved. You can come back any time and re-rate
+            yourself, or buy more readings.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="mt-4 inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-xs font-medium uppercase tracking-[0.16em] text-black hover:bg-white/90"
+          >
+            Open dashboard →
+          </button>
+        </div>
+      ) : phase === "collapsed" ? (
+        <div className="rounded-2xl border border-white/15 bg-gradient-to-b from-white/[0.05] to-white/[0.01] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-white/45">
+                Save your reading
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-white/85">
+                Set a password to keep this reading + access more readings on
+                your dashboard. Optional.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPhase("dismissed")}
+              className="text-[11px] uppercase tracking-[0.16em] text-white/35 hover:text-white/60"
+              aria-label="Dismiss account claim"
+            >
+              Skip
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPhase("form")}
+            className="mt-4 inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-xs font-medium uppercase tracking-[0.16em] text-black hover:bg-white/90"
+          >
+            Set a password
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-white/15 bg-gradient-to-b from-white/[0.05] to-white/[0.01] p-5">
+          <p className="text-[10px] uppercase tracking-[0.22em] text-white/45">
+            Save your reading
+          </p>
+          <p className="mt-2 text-sm text-white/65">
+            Pick a password — you&rsquo;ll sign in with this email + password
+            from now on.
+          </p>
+          <input
+            type="password"
+            placeholder="Password (8+ characters)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={phase === "submitting"}
+            className="mt-3 w-full rounded-lg border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-white/40 focus:outline-none"
+            autoComplete="new-password"
+          />
+          <input
+            type="password"
+            placeholder="Confirm password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            disabled={phase === "submitting"}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+            }}
+            className="mt-2 w-full rounded-lg border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-white/40 focus:outline-none"
+            autoComplete="new-password"
+          />
+          {err && (
+            <p role="alert" className="mt-3 text-xs text-rose-300">
+              {err}
+            </p>
+          )}
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={submit}
+              disabled={phase === "submitting"}
+              className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-xs font-medium uppercase tracking-[0.16em] text-black hover:bg-white/90 disabled:opacity-50"
+            >
+              {phase === "submitting" ? "Saving…" : "Save & sign in"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPhase("dismissed")}
+              disabled={phase === "submitting"}
+              className="text-[11px] uppercase tracking-[0.16em] text-white/35 hover:text-white/60"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
