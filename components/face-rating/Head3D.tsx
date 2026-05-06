@@ -2,38 +2,58 @@
 
 /**
  * 3D rotating head for the upload screens. Vanilla three.js — no
- * react-three-fiber, no react-reconciler, no JSX namespace augmentation.
- * Just a useEffect that mounts a three.js scene into a div ref.
+ * react-three-fiber, so it's immune to the React-version mismatch
+ * that broke the R3F attempt.
  *
- * three.js is a pure canvas-rendering library; it doesn't touch React
- * internals at all. So this approach is immune to the React-version
- * mismatch that broke the R3F attempt.
+ * Two models, swapped by user-selected gender:
+ *   - Male / unspecified → LeePerrySmith.glb (public-domain photoscan
+ *     used in the three.js example gallery for years).
+ *   - Female → Nefertiti.glb (the famous Egyptian queen bust, also
+ *     public domain, also from three.js examples). Distinct silhouette
+ *     with a headpiece that reads as an elaborate hairline.
+ *
+ * Both rendered as alabaster sculptures with museum-style overhead key
+ * lighting. Reads as editorial art-object portraits, not Pixar
+ * cartoons or wireframe scan visualizations.
  *
  * Lazy-loaded via next/dynamic in the call site so the ~150KB three.js
- * bundle and 400KB GLB only ship on the upload screens that mount it.
+ * bundle and ~400KB–1.2MB GLBs only ship on the upload screens.
  */
 
 import { useEffect, useRef } from "react";
-// Types only — actual three.js is loaded lazily inside the useEffect
-// below via dynamic import().
 import type * as THREE from "three";
 
 interface Head3DProps {
   /** Front variant rocks gently side-to-side; side variant orbits the
    *  90° profile anchor. */
   variant: "front" | "side";
+  /** User-selected gender. Female loads Nefertiti; everything else
+   *  (male, "prefer not to say", unspecified) loads LeePerrySmith. */
+  gender?: "male" | "female" | "other";
   className?: string;
 }
 
-const HEAD_URL = "/face-rating/head.glb";
+const MALE_HEAD_URL = "/face-rating/head-male.glb";
+const FEMALE_HEAD_URL = "/face-rating/head-female.glb";
 
-export default function Head3D({ variant, className = "" }: Head3DProps) {
+export default function Head3D({
+  variant,
+  gender,
+  className = "",
+}: Head3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const container = containerRef.current;
     if (!container) return;
+
+    const headUrl = gender === "female" ? FEMALE_HEAD_URL : MALE_HEAD_URL;
+    // Female model (Nefertiti) is taller than the male head — needs a
+    // smaller scale to fit the same canvas. Y-offset compensates so
+    // both center vertically.
+    const headScale = gender === "female" ? 0.04 : 0.16;
+    const headYOffset = gender === "female" ? -0.5 : -0.05;
 
     let cancelled = false;
     let cleanup: (() => void) | null = null;
@@ -62,59 +82,55 @@ export default function Head3D({ variant, className = "" }: Head3DProps) {
       renderer.domElement.style.display = "block";
       container.appendChild(renderer.domElement);
 
-      // Editorial sculpture lighting:
-      //  - very low ambient so the form reads as carved-from-shadow
-      //  - strong cool rim from behind+above to halo the silhouette
-      //  - soft warm key from front-right for facial form
-      //  - gentle front fill so features don't disappear into black
-      scene.add(new THREE.AmbientLight(0xffffff, 0.18));
-      const key = new THREE.DirectionalLight(0xfff2e0, 0.85);
-      key.position.set(2.5, 2.2, 3);
+      // Museum-style alabaster lighting.
+      //   - Slightly cool ambient lift so shadows don't go pure black on
+      //     the white material.
+      //   - Strong overhead key (slightly warm) — like a gallery spotlight.
+      //   - Soft front fill so eye sockets / facial concavities don't
+      //     disappear into shadow.
+      //   - Subtle cool back-fill for depth separation.
+      scene.add(new THREE.AmbientLight(0xeae6ff, 0.35));
+      const key = new THREE.DirectionalLight(0xfff4e0, 1.4);
+      key.position.set(0.8, 4, 2.5);
       scene.add(key);
-      const rim = new THREE.DirectionalLight(0xc8d6ff, 1.6);
-      rim.position.set(-1.5, 2.5, -3);
-      scene.add(rim);
-      const fill = new THREE.DirectionalLight(0xffffff, 0.18);
-      fill.position.set(0, -0.5, 4);
-      scene.add(fill);
+      const front = new THREE.DirectionalLight(0xffffff, 0.55);
+      front.position.set(0.5, 0.5, 4);
+      scene.add(front);
+      const back = new THREE.DirectionalLight(0xc8d0ff, 0.45);
+      back.position.set(-1.5, 1.5, -3);
+      scene.add(back);
 
-      // Load the head.
       const loader = new GLTFLoader();
       const headGroup = new THREE.Group();
       try {
-        const gltf = await loader.loadAsync(HEAD_URL);
+        const gltf = await loader.loadAsync(headUrl);
         if (cancelled) return;
         gltf.scene.traverse((child) => {
           const maybeMesh = child as THREE.Mesh;
           if (maybeMesh.isMesh) {
-            // Smooth dark matte. Reads as a sculptural editorial bust —
-            // not a wireframe scan. Rim light picks up the silhouette
-            // edge for that magazine-portrait feel.
+            // Warm off-white alabaster. Reads as a marble bust under
+            // museum lighting. Not chalky, not metallic — sculptural.
             maybeMesh.material = new THREE.MeshStandardMaterial({
-              color: new THREE.Color("#0e0e10"),
-              roughness: 0.62,
-              metalness: 0.15,
-              emissive: new THREE.Color("#101015"),
-              emissiveIntensity: 0.6,
+              color: new THREE.Color("#f0e9dc"),
+              roughness: 0.55,
+              metalness: 0.05,
+              emissive: new THREE.Color("#fff4e6"),
+              emissiveIntensity: 0.04,
             });
-            // Make sure normals are smooth (avoid faceted look).
             if (maybeMesh.geometry && !maybeMesh.geometry.attributes.normal) {
               maybeMesh.geometry.computeVertexNormals();
             }
           }
         });
-        gltf.scene.scale.setScalar(0.16);
-        gltf.scene.position.y = -0.05;
+        gltf.scene.scale.setScalar(headScale);
+        gltf.scene.position.y = headYOffset;
         headGroup.add(gltf.scene);
         scene.add(headGroup);
       } catch (err) {
-        // Loading failed — give up silently. Fallback SVG underneath
-        // remains visible to the user.
-        console.warn("[Head3D] failed to load head.glb:", err);
+        console.warn("[Head3D] failed to load head GLB:", err);
         return;
       }
 
-      // Animate.
       const startMs = performance.now();
       let raf = 0;
       const animate = () => {
@@ -133,7 +149,6 @@ export default function Head3D({ variant, className = "" }: Head3DProps) {
       };
       animate();
 
-      // Resize handler.
       const onResize = () => {
         if (!container) return;
         const w = Math.max(1, container.clientWidth);
@@ -144,13 +159,11 @@ export default function Head3D({ variant, className = "" }: Head3DProps) {
       };
       window.addEventListener("resize", onResize);
 
-      // Pause animation when not visible (saves battery on mobile).
       let visible = true;
       const onVisibility = () => {
         const wasVisible = visible;
         visible = document.visibilityState === "visible";
         if (!wasVisible && visible) {
-          // Resume.
           raf = requestAnimationFrame(animate);
         }
         if (wasVisible && !visible) {
@@ -184,7 +197,7 @@ export default function Head3D({ variant, className = "" }: Head3DProps) {
       cancelled = true;
       cleanup?.();
     };
-  }, [variant]);
+  }, [variant, gender]);
 
   return <div ref={containerRef} className={className} aria-hidden="true" />;
 }

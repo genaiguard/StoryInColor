@@ -216,6 +216,7 @@ export default function FaceRatingFlow() {
             title="Front photo."
             hint="Look straight at the camera. Good lighting. No filter."
             silhouette="front"
+            gender={state.gender}
             existingToken={state.pendingReadingToken}
             slot="front"
             onUploaded={({ token, path }) => {
@@ -234,6 +235,7 @@ export default function FaceRatingFlow() {
             title="Now your side profile."
             hint="Turn 90° to your left or right. This adds jawline + structure depth — but you can skip if you'd rather not."
             silhouette="side"
+            gender={state.gender}
             existingToken={state.pendingReadingToken}
             slot="side"
             allowSkip
@@ -598,6 +600,7 @@ function UploadScreen({
   title,
   hint,
   silhouette,
+  gender,
   existingToken,
   slot,
   allowSkip,
@@ -607,6 +610,7 @@ function UploadScreen({
   title: string;
   hint: string;
   silhouette: "front" | "side";
+  gender?: Gender;
   existingToken?: string;
   slot: "front" | "side";
   allowSkip?: boolean;
@@ -754,6 +758,7 @@ function UploadScreen({
         >
           <Head3D
             variant={silhouette}
+            gender={gender}
             className="h-[260px] w-[260px] md:h-[300px] md:w-[300px]"
           />
         </div>
