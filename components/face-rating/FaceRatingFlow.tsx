@@ -28,10 +28,6 @@ import {
   rememberOwnerSecret,
 } from "@/components/face-rating/useFaceRatingState";
 import {
-  FrontFaceSilhouette,
-  SideProfileSilhouette,
-} from "@/components/face-rating/FaceSilhouettes";
-import {
   compressImage,
   describeCompression,
 } from "@/lib/face-rating/compress-image";
@@ -746,27 +742,20 @@ function UploadScreen({
           }}
         />
 
-        {/* 3D rotating head + SVG fallback layered underneath.
-            three.js mounts and gradually overdraws the static SVG. Both
-            fade + shrink while uploading so the progress UI takes focus. */}
+        {/* 3D rotating head — sculptural editorial bust. Fades + shrinks
+            while uploading so the upload progress UI takes focus. No SVG
+            fallback layered underneath — Head3D shows nothing until
+            three.js + the GLB are ready (typically <1s on a warm cache),
+            which is cleaner than a flickering double image. */}
         <div
-          className={`relative flex h-full w-full items-center justify-center text-white/85 transition-all duration-300 ${
+          className={`flex h-full w-full items-center justify-center text-white/85 transition-all duration-300 ${
             busy ? "scale-75 opacity-30" : "opacity-100 group-hover:opacity-95"
           }`}
         >
-          <div className="relative h-[260px] w-[260px] md:h-[300px] md:w-[300px]">
-            {/* SVG fallback — visible during the lazy three.js load. Also
-                visible if WebGL fails on the device. */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              {silhouette === "front" ? (
-                <FrontFaceSilhouette className="h-[78%] w-auto opacity-40" />
-              ) : (
-                <SideProfileSilhouette className="h-[78%] w-auto opacity-40" />
-              )}
-            </div>
-            {/* Real 3D head, layers on top once three.js is loaded. */}
-            <Head3D variant={silhouette} className="absolute inset-0" />
-          </div>
+          <Head3D
+            variant={silhouette}
+            className="h-[260px] w-[260px] md:h-[300px] md:w-[300px]"
+          />
         </div>
 
         {/* Action overlay — sits over the silhouette */}

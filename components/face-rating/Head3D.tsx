@@ -62,16 +62,20 @@ export default function Head3D({ variant, className = "" }: Head3DProps) {
       renderer.domElement.style.display = "block";
       container.appendChild(renderer.domElement);
 
-      // Soft three-point editorial lighting.
-      scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-      const key = new THREE.DirectionalLight(0xffffff, 0.6);
-      key.position.set(3, 2, 4);
+      // Editorial sculpture lighting:
+      //  - very low ambient so the form reads as carved-from-shadow
+      //  - strong cool rim from behind+above to halo the silhouette
+      //  - soft warm key from front-right for facial form
+      //  - gentle front fill so features don't disappear into black
+      scene.add(new THREE.AmbientLight(0xffffff, 0.18));
+      const key = new THREE.DirectionalLight(0xfff2e0, 0.85);
+      key.position.set(2.5, 2.2, 3);
       scene.add(key);
-      const rim = new THREE.DirectionalLight(0xdde6ff, 0.35);
-      rim.position.set(-3, 1, -2);
+      const rim = new THREE.DirectionalLight(0xc8d6ff, 1.6);
+      rim.position.set(-1.5, 2.5, -3);
       scene.add(rim);
-      const fill = new THREE.PointLight(0xffffff, 0.2);
-      fill.position.set(0, 0, 3);
+      const fill = new THREE.DirectionalLight(0xffffff, 0.18);
+      fill.position.set(0, -0.5, 4);
       scene.add(fill);
 
       // Load the head.
@@ -83,16 +87,20 @@ export default function Head3D({ variant, className = "" }: Head3DProps) {
         gltf.scene.traverse((child) => {
           const maybeMesh = child as THREE.Mesh;
           if (maybeMesh.isMesh) {
-            // Wireframe + soft fill — reads as a face-mesh scan, not a
-            // photorealistic stranger.
+            // Smooth dark matte. Reads as a sculptural editorial bust —
+            // not a wireframe scan. Rim light picks up the silhouette
+            // edge for that magazine-portrait feel.
             maybeMesh.material = new THREE.MeshStandardMaterial({
-              color: new THREE.Color("#1a1a1a"),
-              emissive: new THREE.Color("#ffffff"),
-              emissiveIntensity: 0.04,
-              wireframe: true,
-              transparent: true,
-              opacity: 0.85,
+              color: new THREE.Color("#0e0e10"),
+              roughness: 0.62,
+              metalness: 0.15,
+              emissive: new THREE.Color("#101015"),
+              emissiveIntensity: 0.6,
             });
+            // Make sure normals are smooth (avoid faceted look).
+            if (maybeMesh.geometry && !maybeMesh.geometry.attributes.normal) {
+              maybeMesh.geometry.computeVertexNormals();
+            }
           }
         });
         gltf.scene.scale.setScalar(0.16);
