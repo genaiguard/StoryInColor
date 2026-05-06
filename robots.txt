@@ -1,6 +1,5 @@
 User-Agent: *
 Allow: /
-Disallow: /quiz/
 Disallow: /face-rating
 Disallow: /r
 Disallow: /admin/
