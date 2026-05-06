@@ -26,6 +26,10 @@ import {
   useFaceRatingState,
   rememberOwnerSecret,
 } from "@/components/face-rating/useFaceRatingState";
+import {
+  FrontFaceSilhouette,
+  SideProfileSilhouette,
+} from "@/components/face-rating/FaceSilhouettes";
 import { useFirebase } from "@/app/firebase/firebase-provider";
 import { getConfiguredStorage } from "@/app/firebase/storage-helpers";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -201,7 +205,8 @@ export default function FaceRatingFlow() {
         {state.screen === "front-photo" && (
           <UploadScreen
             title="Front photo."
-            hint="Looking straight at the camera. Good lighting. No filter."
+            hint="Look straight at the camera. Good lighting. No filter."
+            silhouette="front"
             existingToken={state.pendingReadingToken}
             slot="front"
             onUploaded={({ token, path }) => {
@@ -217,8 +222,9 @@ export default function FaceRatingFlow() {
 
         {state.screen === "side-photo" && (
           <UploadScreen
-            title="Side profile (optional)."
-            hint="Profile shot — left or right. Adds jawline + structure depth. Skippable."
+            title="Now your side profile."
+            hint="Turn 90° to your left or right. This adds jawline + structure depth — but you can skip if you'd rather not."
+            silhouette="side"
             existingToken={state.pendingReadingToken}
             slot="side"
             allowSkip
@@ -582,6 +588,7 @@ function ChipScreen<T extends string>({
 function UploadScreen({
   title,
   hint,
+  silhouette,
   existingToken,
   slot,
   allowSkip,
@@ -590,6 +597,7 @@ function UploadScreen({
 }: {
   title: string;
   hint: string;
+  silhouette: "front" | "side";
   existingToken?: string;
   slot: "front" | "side";
   allowSkip?: boolean;
@@ -657,6 +665,9 @@ function UploadScreen({
 
   // Native label+input pattern — far more reliable than react-dropzone's
   // synthetic click. Drag + drop preserved with separate handlers.
+  // The silhouette SVG (front or side) sits at the visual center of the
+  // dropzone so the user immediately knows which photo is being asked
+  // for, without reading the headline.
   return (
     <div className="mx-auto w-full max-w-xl">
       <h1 className="text-3xl font-light italic leading-tight tracking-tight md:text-5xl">
@@ -677,10 +688,10 @@ function UploadScreen({
           const f = e.dataTransfer.files?.[0];
           if (f) void handleFile(f);
         }}
-        className={`mt-8 flex aspect-square w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors ${
+        className={`group relative mt-8 flex aspect-square w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-colors ${
           isDragActive
             ? "border-white bg-white/[0.06]"
-            : "border-white/20 bg-white/[0.02] hover:border-white/40"
+            : "border-white/20 bg-gradient-to-b from-white/[0.04] to-white/[0.01] hover:border-white/40"
         }`}
       >
         <input
@@ -696,21 +707,48 @@ function UploadScreen({
             e.target.value = "";
           }}
         />
-        {busy ? (
-          <div className="flex flex-col items-center gap-3 text-white/70">
-            <Loader2 className="h-7 w-7 animate-spin" />
-            <p className="text-sm">Uploading… {Math.round(progress * 100)}%</p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-3 text-white/70">
-            <UploadIcon className="h-7 w-7" />
-            <p className="text-sm">
-              {isDragActive ? "Drop here" : "Tap to choose, or drag & drop"}
-            </p>
-            <p className="text-xs text-white/40">JPG, PNG, WEBP — up to 10MB</p>
-          </div>
-        )}
+
+        {/* Silhouette — front face or side profile. Fades + shrinks while
+            uploading so the progress UI takes focus. */}
+        <div
+          className={`flex h-full w-full items-center justify-center text-white/85 transition-all duration-300 ${
+            busy ? "scale-75 opacity-30" : "opacity-100 group-hover:opacity-95"
+          }`}
+        >
+          {silhouette === "front" ? (
+            <FrontFaceSilhouette className="h-[62%] w-auto" />
+          ) : (
+            <SideProfileSilhouette className="h-[62%] w-auto" />
+          )}
+        </div>
+
+        {/* Action overlay — sits over the silhouette */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 pb-6">
+          {busy ? (
+            <>
+              <Loader2 className="h-6 w-6 animate-spin text-white/85" />
+              <p className="text-sm text-white/85">
+                Uploading… {Math.round(progress * 100)}%
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.16em] text-white/85 backdrop-blur-sm transition-colors group-hover:bg-white/15">
+                <UploadIcon className="h-3.5 w-3.5" />
+                {isDragActive
+                  ? "Drop your photo"
+                  : silhouette === "front"
+                    ? "Tap to choose front photo"
+                    : "Tap to choose side profile"}
+              </div>
+              <p className="text-[11px] text-white/45">
+                JPG · PNG · WEBP · up to 10MB
+              </p>
+            </>
+          )}
+        </div>
       </label>
+
       {err && (
         <p role="alert" className="mt-4 text-sm text-rose-300">
           {err}
@@ -722,7 +760,7 @@ function UploadScreen({
           onClick={onSkip}
           className="mt-4 w-full rounded-full border border-white/10 px-6 py-3 text-xs uppercase tracking-[0.18em] text-white/50 hover:bg-white/[0.04]"
         >
-          Skip — front only
+          Skip — front photo is enough
         </button>
       )}
     </div>
