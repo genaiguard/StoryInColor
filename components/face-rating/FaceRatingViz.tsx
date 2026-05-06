@@ -366,9 +366,12 @@ export function SectionHeader({
             </span>
           )}
           {locked && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-white/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-white/55">
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-white/45"
+              title="Available in the full reading"
+            >
               <Lock className="h-2.5 w-2.5" />
-              $4.99
+              Locked
             </span>
           )}
         </div>

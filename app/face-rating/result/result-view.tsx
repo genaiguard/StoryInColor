@@ -524,7 +524,13 @@ function PreviewView({
         )}
 
         <div className="mx-auto mt-8 flex max-w-xl justify-center">
-          <CompletionBadge current={2} total={TOTAL_SECTIONS} reveal={false} />
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-[11px] text-white/65">
+            <Lock className="h-3 w-3 text-white/55" />
+            <span>
+              <span className="text-white/85">9 of {TOTAL_SECTIONS} sections locked</span>
+              <span className="text-white/45"> · one-time $4.99 unlocks everything</span>
+            </span>
+          </div>
         </div>
 
         {/* SUB-SCORES — visible (the proof the engine is real) */}
@@ -724,15 +730,16 @@ function PreviewView({
           <div className="rounded-2xl border border-white/15 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-6">
             <div className="text-center">
               <p className="text-[10px] uppercase tracking-[0.22em] text-white/45">
-                Unlock the full report
+                One purchase, full report
               </p>
               <h3 className="mt-2 text-2xl font-light italic md:text-3xl">
-                One-time · $4.99
+                $4.99 · one-time
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-white/65">
-                {TOTAL_SECTIONS} sections — sub-scores, archetype, strengths,
-                growth areas, celebrity matches, potential, glow-up plan, share
-                card. Same photo. Deeper analysis. No subscription.
+                Unlocks all {TOTAL_SECTIONS} sections — archetype, all 8
+                sub-score observations, strengths, growth plan, celebrity
+                matches, potential, full glow-up plan. No subscription.
+                No upsells.
               </p>
             </div>
 
