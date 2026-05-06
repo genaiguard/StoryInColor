@@ -44,15 +44,8 @@ export const SUB_SCORE_KEYS = [
   "expression",
 ] as const;
 
-/** Stage 1 output schema — small, fast, drives the email-capture hook. */
-export interface FaceLightAnalysis {
-  overall_score: number;
-  tier_label: string;
-  demographic_band: { label: string; percentile: number };
-  strongest_feature: { feature: string; observation: string };
-}
-
-/** Stage 2 output schema — full report, paid. */
+/** Stage 2 output schema — full report. Stage 1 reuses the same shape
+ *  with brief content (preview tier). */
 export interface FaceFullAnalysis {
   overall_score: number;
   tier_label: string;
@@ -88,6 +81,9 @@ export interface FaceFullAnalysis {
   };
   re_rate: { next_recommended_at_days: number };
 }
+
+/** Stage 1 alias. */
+export type FaceLightAnalysis = FaceFullAnalysis;
 
 /** Pending face-rating doc — extends the existing pendingReadings collection
  *  with a discriminator (`type: "face-rating"`) so we can distinguish from

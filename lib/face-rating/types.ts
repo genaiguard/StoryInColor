@@ -107,12 +107,6 @@ export interface ReRate {
   next_recommended_at_days: number;
 }
 
-export interface FaceLightAnalysis {
-  overall_score: number;
-  tier_label: string;
-  demographic_band: DemographicBand;
-  strongest_feature: { feature: string; observation: string };
-}
 
 export interface FaceFullAnalysis {
   overall_score: number;
@@ -127,6 +121,13 @@ export interface FaceFullAnalysis {
   glow_up_plan: GlowUpPlan;
   re_rate: ReRate;
 }
+
+/**
+ * Stage 1 (preview) and Stage 2 (full report) now share the same schema
+ * shape. The difference is content depth — Stage 1 returns brief
+ * teaser-level content; Stage 2 returns deep, actionable detail.
+ */
+export type FaceLightAnalysis = FaceFullAnalysis;
 
 /** 12-screen sequence per COMPETITOR-FLOWS.md. */
 export type FaceRatingScreen =

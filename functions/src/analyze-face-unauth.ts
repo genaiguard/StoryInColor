@@ -25,7 +25,7 @@ import {
   tierForScore,
 } from "./face-rating-types";
 import type {
-  FaceLightAnalysis,
+  FaceFullAnalysis,
   PendingFaceReadingDoc,
 } from "./face-rating-types";
 import {
@@ -287,7 +287,7 @@ export const analyzeFaceUnauth = onCall(
               type: "json_schema",
               json_schema: STAGE_1_SCHEMA,
             },
-            max_tokens: 800,
+            max_tokens: 2200,
           }),
         });
         if (!resp.ok) {
@@ -299,7 +299,7 @@ export const analyzeFaceUnauth = onCall(
         };
         const c = respJson.choices?.[0]?.message?.content;
         if (!c) throw new Error("OpenAI returned no content");
-        return JSON.parse(c) as FaceLightAnalysis;
+        return JSON.parse(c) as FaceFullAnalysis;
       };
 
       let parsed = await callOpenAI(null);
@@ -323,6 +323,47 @@ export const analyzeFaceUnauth = onCall(
       const score = clamp(parsed.overall_score, 0, 10);
       parsed.overall_score = round1(score);
       parsed.tier_label = surfaceTierLabel(parsed.tier_label, score);
+
+      // Sanitize sub_scores + potential.
+      if (parsed.sub_scores) {
+        for (const k of Object.keys(parsed.sub_scores)) {
+          const v = parsed.sub_scores[k];
+          parsed.sub_scores[k] = round1(
+            clamp(typeof v === "number" ? v : 0, 0, 10),
+          );
+        }
+      }
+      if (parsed.potential) {
+        parsed.potential.current_score = round1(
+          clamp(parsed.potential.current_score, 0, 10),
+        );
+        parsed.potential.optimized_score = round1(
+          clamp(parsed.potential.optimized_score, 0, 10),
+        );
+        if (parsed.potential.optimized_score < parsed.potential.current_score) {
+          parsed.potential.optimized_score = Math.min(
+            10,
+            parsed.potential.current_score + 0.5,
+          );
+        }
+      }
+      // Trim arrays to spec.
+      if (parsed.strengths?.length > 5) {
+        parsed.strengths = parsed.strengths.slice(0, 5);
+      }
+      if (parsed.areas_for_growth?.length > 6) {
+        parsed.areas_for_growth = parsed.areas_for_growth.slice(0, 6);
+      }
+      if (parsed.celebrity_archetype?.matches?.length > 5) {
+        parsed.celebrity_archetype.matches =
+          parsed.celebrity_archetype.matches.slice(0, 5);
+      }
+      if (
+        !parsed.re_rate ||
+        typeof parsed.re_rate.next_recommended_at_days !== "number"
+      ) {
+        parsed.re_rate = { next_recommended_at_days: 14 };
+      }
 
       // 3) Save to pendingReadings.
       await pendingRef.update({

@@ -8,7 +8,7 @@
 //   - Each property must have an explicit `type`
 //   - Nullables go via `type: ["string", "null"]`
 
-import { SUB_SCORE_KEYS } from "./face-rating-types";
+// SUB_SCORE_KEYS is referenced inline in the schemas below.
 
 /* -------------------------------------------------------------------- */
 /* SYSTEM PROMPT (consent-framed; same for both stages)                  */
@@ -40,7 +40,9 @@ HARD RULES:
 OUTPUT: strict valid JSON matching the supplied schema. No prose outside the JSON. No apology, no disclaimer text inside fields.`;
 
 /* -------------------------------------------------------------------- */
-/* STAGE 1 — Light analysis (free hook)                                  */
+/* STAGE 1 — Preview teaser (free hook). Returns the FULL schema with    */
+/* BRIEF content so the paywall page can show the size + shape of what  */
+/* the user is paying for. Stage 2 replaces with deep detail.            */
 /* -------------------------------------------------------------------- */
 
 export const STAGE_1_USER_PROMPT = (ctx: {
@@ -49,74 +51,37 @@ export const STAGE_1_USER_PROMPT = (ctx: {
   goal?: string;
   selfRate?: number;
   complimentsFreq?: string;
-}) => `Analyze the supplied face photo and return a LIGHT analysis for the free preview tier.
+}) => `Analyze the supplied face photo and return a TEASER analysis for the free preview screen. The user has not yet paid, so observations should be SHORT (one sentence each). The paywall page will show this data with strategic masking, and Stage 2 will regenerate the same schema with deeper detail after payment.
 
 Context:
 - Self-reported gender: ${ctx.gender || "unspecified"}
 - Self-reported age range: ${ctx.ageRange || "unspecified"}
 - User's stated goal: ${ctx.goal || "general rating"}
-- User's self-rating (1–10, calibration prior): ${typeof ctx.selfRate === "number" ? ctx.selfRate : "unspecified"}
+- User's self-rating (1–10, calibration prior — they said this about themselves): ${typeof ctx.selfRate === "number" ? ctx.selfRate : "unspecified"}
 - How often strangers compliment them: ${ctx.complimentsFreq || "unspecified"}
 
-Return:
-- overall_score (0.0–10.0, one decimal). Calibrate against the demographic band implied by gender + ageRange.
-- tier_label (one of: Chadpreet, Chad, Chadlite, High Tier Normie, Mid Tier Normie, Low Tier Normie, BelowTier)
-- demographic_band: a short label (e.g. "men, 25-34") and percentile (0-100)
-- strongest_feature: ONE feature key from {facial_harmony, facial_symmetry, jawline_definition, eye_area, skin_quality, smile, photogenic_score, expression} plus a 1-2 sentence specific observation.
+Required output (strict JSON):
 
-Output strict JSON only.`;
+1. overall_score (0.0–10.0, one decimal). Calibrate against the demographic band implied by gender + ageRange. Use the calibration scale in the system prompt — DO NOT default to the middle.
+2. tier_label (one of the 7 PSL labels).
+3. demographic_band {label like "men, 25–34", percentile 0–100}.
+4. archetype: name (one of: "The Hunter" / "The Romantic" / "The Classic" / "The Sculpted" / "The Striking" / "The Approachable" / "The Familiar" / "The Aristocrat" / "The Rebel" or similar) plus a ONE-sentence description.
+5. sub_scores: real 0–10 numbers for all 8 features (facial_harmony, facial_symmetry, jawline_definition, eye_area, skin_quality, smile, photogenic_score, expression). These will be SHOWN to the user in the preview — calibrate carefully.
+6. strengths: EXACTLY 3 — the 3 highest-scoring sub-scores. Each: feature, score (matches sub_scores), percentile_in_demographic (0–100), observation (ONE short sentence — the deeper observation comes in Stage 2).
+7. areas_for_growth: EXACTLY 3 — concrete fixable areas. Each: area (e.g. "skin_texture", "expression_neutral", "eye_brightness"), score (0–10), specific_observation (ONE sentence), actionable (ONE sentence — non-surgical only).
+8. celebrity_archetype.matches: 1 to 3 entries if you can identify clear matches; empty array otherwise (do NOT fabricate). Each: name (real public figure), match_pct (0–100), shared_features (short phrase).
+9. potential: {current_score (= overall_score), optimized_score (current + 0.4 to 1.0 lift), gap_drivers: 2–4 area names from areas_for_growth}.
+10. glow_up_plan: ONE-sentence recommendations for haircut, grooming, skincare, photography, expression. NO surgical recommendations.
+11. re_rate.next_recommended_at_days: 14.
 
-export const STAGE_1_SCHEMA = {
-  name: "face_light_analysis",
-  strict: true as const,
-  schema: {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      overall_score: { type: "number" },
-      tier_label: {
-        type: "string",
-        enum: [
-          "Chadpreet",
-          "Chad",
-          "Chadlite",
-          "High Tier Normie",
-          "Mid Tier Normie",
-          "Low Tier Normie",
-          "BelowTier",
-          "Subhuman",
-        ],
-      },
-      demographic_band: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          label: { type: "string" },
-          percentile: { type: "number" },
-        },
-        required: ["label", "percentile"],
-      },
-      strongest_feature: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          feature: {
-            type: "string",
-            enum: [...SUB_SCORE_KEYS],
-          },
-          observation: { type: "string" },
-        },
-        required: ["feature", "observation"],
-      },
-    },
-    required: [
-      "overall_score",
-      "tier_label",
-      "demographic_band",
-      "strongest_feature",
-    ],
-  },
-};
+Output strict JSON only. Brief but real — every field must be specifically grounded in the photo.`;
+
+// Stage 1 reuses Stage 2's schema (full analysis shape) — defined at the
+// bottom of this file as STAGE_2_SCHEMA. Re-exported with a different
+// name for the OpenAI Structured Output `name` field. Assignment happens
+// at the bottom after STAGE_2_SCHEMA is declared.
+// eslint-disable-next-line prefer-const, @typescript-eslint/no-explicit-any
+export let STAGE_1_SCHEMA: any;
 
 /* -------------------------------------------------------------------- */
 /* STAGE 2 — Full report (paid)                                          */
@@ -146,21 +111,45 @@ ${
     : ""
 }
 
-Return the full structured report:
+This is the PAID FULL REPORT. The user just paid $4.99 for it. Stage 1 already gave them a brief teaser of every section; you are now replacing that teaser with DEEP, SPECIFIC, ACTIONABLE content for every field. Their patience is at its peak — give them a report that feels worth re-reading and screenshotting.
+
+Required output (strict JSON):
 
 1. overall_score (0.0–10.0). Match Stage 1 ±0.2 if given.
-2. tier_label (one of the 7 PSL labels above).
-3. demographic_band {label, percentile}.
-4. archetype {name (e.g. "The Hunter" / "The Romantic" / "The Classic" / "The Sculpted" / "The Striking" / "The Approachable" / "The Familiar" / "The Aristocrat" / "The Rebel"), description (2-3 sentences)}.
-5. sub_scores: 8 numerical fields (0-10), one per: facial_harmony, facial_symmetry, jawline_definition, eye_area, skin_quality, smile, photogenic_score, expression.
-6. strengths: EXACTLY 3 entries — pick the 3 highest-scoring features. Each: feature (sub-score key), score, percentile_in_demographic, observation (1-2 sentences).
-7. areas_for_growth: 3 to 5 entries. Each: area (free-form name like "skin_texture"), score, specific_observation, actionable (NO surgery — only skincare, haircut, beard, glasses, grooming, expression, lighting, photography).
-8. celebrity_archetype.matches: 0 to 3 entries. Each: name (real public figure), match_pct (0-100), shared_features. If you cannot confidently identify celebrity look-alikes, return an empty matches array — do NOT fabricate.
-9. potential: {current_score (= overall_score), optimized_score (current + 0.5 to 1.0 lift), gap_drivers (list of 2-4 area names that would close the gap)}.
-10. glow_up_plan: 5 specific, actionable bullets — haircut, grooming, skincare, photography, expression. Each 1-2 sentences. NO SURGICAL recommendations.
+2. tier_label (one of the 7 PSL labels).
+3. demographic_band {label like "men, 25–34", percentile 0–100}.
+4. archetype:
+   - name: a memorable archetype the user can identify with — pick from {"The Hunter", "The Romantic", "The Classic", "The Sculpted", "The Striking", "The Approachable", "The Familiar", "The Aristocrat", "The Rebel", "The Scholar", "The Charmer", "The Wolf"} or coin a clearly-fitting alternative.
+   - description: 3–4 sentences. What people FEEL when they look at this face. Include: dominant first-impression read, secondary feature that complicates the read, and how this archetype tends to land socially.
+5. sub_scores: real 0–10 numbers for all 8 features (facial_harmony, facial_symmetry, jawline_definition, eye_area, skin_quality, smile, photogenic_score, expression). Match Stage 1 ±0.3 to maintain consistency.
+6. strengths: EXACTLY 3 entries — the 3 highest sub-scores. Each:
+   - feature: sub-score key.
+   - score: matches sub_scores.
+   - percentile_in_demographic: 0–100.
+   - observation: 2–3 sentences. WHY this feature is strong (specific anatomical/visual reasons), what it signals to viewers, and how it COMPOUNDS with the user's other features.
+7. areas_for_growth: 3 to 5 entries. Each:
+   - area: free-form name like "skin_texture", "expression_neutral_default", "eye_brightness", "jaw_definition_in_profile".
+   - score: 0–10.
+   - specific_observation: 2 sentences. What specifically drags this score down, and how it impacts the overall read.
+   - actionable: 2–3 sentences with concrete steps. Reference real products / techniques / habits where helpful (e.g. "niacinamide serum AM", "edge-up trim every 3 weeks", "45° lighting from the brighter side"). NO surgery, fillers, or invasive procedures — only skincare, haircut, beard, glasses, grooming, expression, lighting, photography.
+8. celebrity_archetype.matches: 1 to 3 entries IF you can confidently identify clear matches. Empty array if not. Each:
+   - name: real public figure.
+   - match_pct: 0–100.
+   - shared_features: 1–2 sentences explaining what specifically makes this match — bone structure, eye shape, energy, expression archetype, etc.
+9. potential:
+   - current_score (= overall_score).
+   - optimized_score (current + 0.5 to 1.2 lift — what they could realistically reach in 90 days).
+   - gap_drivers: 2–4 area names from areas_for_growth, ordered by lift potential.
+10. glow_up_plan: each field 2–3 sentences with SPECIFIC instructions. Not "consider better skincare" but "AM: cleanser → niacinamide 5% → SPF 50; PM: cleanser → retinaldehyde 0.05% twice a week, alternating with azelaic acid". For:
+    - haircut: shape, length, texture, what to ask for at the barber.
+    - grooming: brows, beard/shave, nasal/ear hair, nails.
+    - skincare: AM and PM routine with concrete actives.
+    - photography: angle, lighting, lens, distance — three specific photo settings that read best for this face.
+    - expression: micro-changes to neutral expression, smile training, eye softening.
+    NO SURGICAL recommendations under any circumstance.
 11. re_rate.next_recommended_at_days: 14.
 
-Output strict JSON only.`;
+Output strict JSON only. Detailed but real — every recommendation must be grounded in specific visible features.`;
 
 export const STAGE_2_SCHEMA = {
   name: "face_full_analysis",
@@ -330,3 +319,8 @@ export const STAGE_2_SCHEMA = {
     ],
   },
 };
+
+// Stage 1 uses the same schema shape — different `name` for clarity in
+// OpenAI logs. Both stages return FaceFullAnalysis; only the prompt
+// (brief vs deep) differs.
+STAGE_1_SCHEMA = { ...STAGE_2_SCHEMA, name: "face_teaser_analysis" };

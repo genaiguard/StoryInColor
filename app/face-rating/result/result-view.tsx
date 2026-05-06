@@ -1,22 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Loader2,
   Lock,
-  Sparkles,
   Users,
   Share2,
-  Check,
   Trash2,
   Copy,
+  Check,
+  Sparkles,
+  Scissors,
+  Wind,
+  Droplets,
+  Camera,
+  Smile,
+  TrendingUp,
+  Calendar,
+  ChevronRight,
 } from "lucide-react";
-import {
-  loadStripe,
-  type Stripe as StripeJS,
-} from "@stripe/stripe-js";
+import { loadStripe, type Stripe as StripeJS } from "@stripe/stripe-js";
 import {
   EmbeddedCheckoutProvider,
   EmbeddedCheckout,
@@ -34,27 +39,38 @@ import {
   loadFaceRatingState,
   recallOwnerSecret,
 } from "@/components/face-rating/useFaceRatingState";
+import {
+  AnimatedScore,
+  BellCurve,
+  SubScoreGrid,
+  MaskedText,
+  BlurredBlock,
+  SectionHeader,
+  LockedRow,
+  CompletionBadge,
+  scoreColorClass,
+} from "@/components/face-rating/FaceRatingViz";
 
 const STRIPE_PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 
-// Eager load Stripe — saves ~1s when user reaches the paywall.
 const stripePromise: Promise<StripeJS | null> = STRIPE_PUBLISHABLE_KEY
   ? loadStripe(STRIPE_PUBLISHABLE_KEY)
   : Promise.resolve(null);
 
 type Phase =
   | "loading"
-  | "preview" // show light analysis + email gate
-  | "email-gate" // capturing email
-  | "paywall" // showing paywall + checkout option
-  | "checkout" // Stripe iframe
-  | "polling" // post-checkout, waiting for Stage 2
-  | "full"; // unlocked
+  | "preview"
+  | "email-gate"
+  | "paywall"
+  | "checkout"
+  | "polling"
+  | "full";
+
+const TOTAL_SECTIONS = 11;
 
 export default function FaceRatingResultView() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const { initialized } = useFirebase();
   const token = searchParams.get("token") || "";
   const sessionId = searchParams.get("session_id") || "";
@@ -67,16 +83,16 @@ export default function FaceRatingResultView() {
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [emailValue, setEmailValue] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
-  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(
+    null,
+  );
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [inviteRedemptions, setInviteRedemptions] = useState<number>(0);
   const [inviteUnlocked, setInviteUnlocked] = useState<boolean>(false);
-  // Owner secret loaded from localStorage state (set by analyze-face-unauth).
-  // Required for any sensitive call after claim.
   const [ownerSecret, setOwnerSecret] = useState<string | undefined>(undefined);
+
+  // Recall owner secret on mount.
   useEffect(() => {
-    // Prefer the secret stored against THIS specific token. Fall back to
-    // the most recent in-flow state.
     if (token) {
       const recalled = recallOwnerSecret(token);
       if (recalled) {
@@ -88,7 +104,7 @@ export default function FaceRatingResultView() {
     if (s?.ownerSecret) setOwnerSecret(s.ownerSecret);
   }, [token]);
 
-  // Initial fetch — figure out which phase we're in.
+  // Initial fetch.
   useEffect(() => {
     if (!initialized) return;
     if (!token) {
@@ -98,7 +114,6 @@ export default function FaceRatingResultView() {
     (async () => {
       try {
         const fn = httpsCallable(getFunctions(), "getFaceFullReport");
-        // Pass ownerSecret if we have it — server requires it for paid/unlocked.
         const res = await fn({ token, ownerSecret });
         const data = res.data as {
           status: "locked" | "unlocked";
@@ -117,11 +132,8 @@ export default function FaceRatingResultView() {
           }
           setPhase("full");
         } else if (sessionId) {
-          // Just returned from Stripe; poll for Stage 2 completion.
           setPhase("polling");
         } else if (data.lightAnalysis) {
-          // If email already captured (e.g. user came back from email link),
-          // skip the email-gate and go straight to paywall.
           if (data.emailCaptured) {
             setPhase("paywall");
           } else {
@@ -136,16 +148,17 @@ export default function FaceRatingResultView() {
     })();
   }, [initialized, token, sessionId, ownerSecret]);
 
-  // PRE-CREATE the Stripe session as soon as the user reaches the paywall
-  // phase, so clicking "Unlock full reading" feels instant. The session is
-  // valid for 24h, so a paywall-bounce + return is fine.
+  // Pre-create Stripe session as soon as the user reaches the paywall.
   useEffect(() => {
     if (phase !== "paywall") return;
-    if (stripeClientSecret) return; // already pre-created
+    if (stripeClientSecret) return;
     let cancelled = false;
     (async () => {
       try {
-        const fn = httpsCallable(getFunctions(), "createFaceRatingCheckoutSession");
+        const fn = httpsCallable(
+          getFunctions(),
+          "createFaceRatingCheckoutSession",
+        );
         const res = await fn({
           token,
           successUrl:
@@ -153,15 +166,12 @@ export default function FaceRatingResultView() {
               ? `${window.location.origin}/face-rating/result`
               : "https://storyincolor.com/face-rating/result",
         });
-        const data = res.data as {
-          success: boolean;
-          clientSecret?: string;
-        };
+        const data = res.data as { success: boolean; clientSecret?: string };
         if (!cancelled && data.success && data.clientSecret) {
           setStripeClientSecret(data.clientSecret);
         }
       } catch {
-        /* user-initiated retry will happen on click */
+        /* ignore — lazy-create on click */
       }
     })();
     return () => {
@@ -170,7 +180,7 @@ export default function FaceRatingResultView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  // Polling loop — post-checkout. L5: cap at 30 attempts (~90s).
+  // Polling loop post-checkout.
   useEffect(() => {
     if (phase !== "polling") return;
     let cancelled = false;
@@ -191,7 +201,8 @@ export default function FaceRatingResultView() {
         if (data.status === "unlocked" && data.fullAnalysis) {
           setFull(data.fullAnalysis);
           setShareEnabled(!!data.shareEnabled);
-          if (data.shareId) setShareUrl(`https://storyincolor.com/r?id=${data.shareId}`);
+          if (data.shareId)
+            setShareUrl(`https://storyincolor.com/r?id=${data.shareId}`);
           setPhase("full");
           return;
         }
@@ -201,7 +212,7 @@ export default function FaceRatingResultView() {
       if (!cancelled) {
         if (attempts >= MAX_ATTEMPTS) {
           setErrMsg(
-            "Generation is taking longer than usual. Please refresh in a minute or contact support if this persists.",
+            "Generation is taking longer than usual. Please refresh in a minute.",
           );
           return;
         }
@@ -233,11 +244,6 @@ export default function FaceRatingResultView() {
     }
   }, [emailValue, token]);
 
-  /* ---------- Stripe checkout ----------
-   * Session is pre-created as soon as the user enters the paywall phase
-   * (see the useEffect above), so the click handler usually just flips
-   * phase and the iframe is already warm. Falls back to lazy-create.
-   */
   const startCheckout = useCallback(async () => {
     setErrMsg(null);
     if (stripeClientSecret) {
@@ -245,7 +251,10 @@ export default function FaceRatingResultView() {
       return;
     }
     try {
-      const fn = httpsCallable(getFunctions(), "createFaceRatingCheckoutSession");
+      const fn = httpsCallable(
+        getFunctions(),
+        "createFaceRatingCheckoutSession",
+      );
       const res = await fn({
         token,
         successUrl:
@@ -253,10 +262,7 @@ export default function FaceRatingResultView() {
             ? `${window.location.origin}/face-rating/result`
             : "https://storyincolor.com/face-rating/result",
       });
-      const data = res.data as {
-        success: boolean;
-        clientSecret?: string;
-      };
+      const data = res.data as { success: boolean; clientSecret?: string };
       if (data.success && data.clientSecret) {
         setStripeClientSecret(data.clientSecret);
         setPhase("checkout");
@@ -268,10 +274,12 @@ export default function FaceRatingResultView() {
     }
   }, [token, stripeClientSecret]);
 
-  /* ---------- invite-3 ---------- */
   const startInvitePath = useCallback(async () => {
     try {
-      const fn = httpsCallable(getFunctions(), "getOrCreateFaceRatingInviteCode");
+      const fn = httpsCallable(
+        getFunctions(),
+        "getOrCreateFaceRatingInviteCode",
+      );
       const res = await fn({ token, ownerSecret });
       const data = res.data as {
         inviteCode: string;
@@ -287,15 +295,11 @@ export default function FaceRatingResultView() {
     }
   }, [token, ownerSecret]);
 
-  /* ---------- share toggle (option C) ---------- */
   const toggleShare = useCallback(async () => {
     try {
       const fn = httpsCallable(getFunctions(), "setFaceRatingShareEnabled");
       const res = await fn({ token, enabled: !shareEnabled, ownerSecret });
-      const data = res.data as {
-        success: boolean;
-        shareUrl?: string;
-      };
+      const data = res.data as { success: boolean; shareUrl?: string };
       if (data.success) {
         setShareEnabled(!shareEnabled);
         if (!shareEnabled && data.shareUrl) setShareUrl(data.shareUrl);
@@ -306,9 +310,9 @@ export default function FaceRatingResultView() {
     }
   }, [shareEnabled, token, ownerSecret]);
 
-  /* ---------- delete photos ---------- */
   const deletePhotos = useCallback(async () => {
-    if (!confirm("Delete uploaded photos from our servers? Cannot be undone.")) return;
+    if (!confirm("Delete uploaded photos from our servers? Cannot be undone."))
+      return;
     try {
       const fn = httpsCallable(getFunctions(), "deleteFaceRatingPhoto");
       await fn({ token, ownerSecret });
@@ -318,7 +322,7 @@ export default function FaceRatingResultView() {
     }
   }, [token, ownerSecret]);
 
-  /* ---------- render ---------- */
+  /* ---------- Render ---------- */
 
   if (errMsg) {
     return (
@@ -344,10 +348,15 @@ export default function FaceRatingResultView() {
 
   if (phase === "polling") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-black text-white">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-black px-6 text-center text-white">
         <Loader2 className="h-7 w-7 animate-spin" />
         <p className="text-sm text-white/70">
           Generating your full reading… (~30s)
+        </p>
+        <p className="max-w-md text-xs text-white/40">
+          Stage 2 runs a deeper model on your photo. This is the heavy
+          computation that produces your detailed observations and glow-up
+          plan.
         </p>
       </div>
     );
@@ -378,7 +387,6 @@ export default function FaceRatingResultView() {
     return (
       <FullReportView
         full={full}
-        light={light}
         token={token}
         shareEnabled={shareEnabled}
         shareUrl={shareUrl}
@@ -388,9 +396,8 @@ export default function FaceRatingResultView() {
     );
   }
 
-  // Default: preview + email gate or paywall
   return (
-    <PreviewPaywallView
+    <PreviewView
       phase={phase}
       light={light}
       onSubmitEmail={submitEmail}
@@ -408,10 +415,10 @@ export default function FaceRatingResultView() {
 }
 
 /* ============================================================ */
-/* PREVIEW + PAYWALL                                              */
+/* PREVIEW + PAYWALL VIEW                                         */
 /* ============================================================ */
 
-function PreviewPaywallView({
+function PreviewView({
   phase,
   light,
   onSubmitEmail,
@@ -446,6 +453,11 @@ function PreviewPaywallView({
         : null,
     [inviteCode],
   );
+  // Whether the user has reached the paywall step (email gate cleared).
+  const showPaywallCTA = phase === "paywall";
+  // We show much MORE in the preview now — partial reveal of every
+  // section so the user knows what they're paying for.
+  const reveal = false;
 
   if (!light) {
     return (
@@ -455,169 +467,403 @@ function PreviewPaywallView({
     );
   }
 
+  const topPercent = Math.max(1, 100 - (light.demographic_band?.percentile ?? 50));
+
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-3xl px-5 py-12 md:px-8">
-        {/* Hero — score + tier */}
+        {/* Hero */}
         <div className="text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-white/40">
+          <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">
+            StoryInColor · Face Rating
+          </p>
+          <h1 className="mt-3 text-2xl font-light italic md:text-3xl">
             Your honest face rating
-          </p>
-          <div className="mt-4 text-7xl font-light tracking-tight md:text-8xl">
-            {light.overall_score.toFixed(1)}
-            <span className="text-3xl text-white/40">/10</span>
+          </h1>
+          <div className="mt-8">
+            <AnimatedScore value={light.overall_score} size="lg" />
           </div>
-          <div className="mt-3 text-2xl font-light italic md:text-3xl">
-            {light.tier_label}
-          </div>
-          <div className="mt-1 text-xs text-white/50">
-            {light.demographic_band.label} · top {Math.max(1, 100 - light.demographic_band.percentile)}%
+          <div
+            className={`mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-sm ${scoreColorClass(
+              light.overall_score,
+            )}`}
+          >
+            <span className="font-medium">{light.tier_label}</span>
+            <span className="text-white/30">·</span>
+            <span className="text-white/65">
+              Top {topPercent}% in {light.demographic_band?.label || "your demographic"}
+            </span>
           </div>
         </div>
 
-        {/* Strongest feature observation (free) */}
-        <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/50">
-            <Sparkles className="h-3 w-3" />
-            One thing we noticed
-          </div>
-          <p className="mt-3 text-sm leading-relaxed text-white/85">
-            {light.strongest_feature.observation}
+        {/* Distribution chart */}
+        <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-5">
+          <p className="mb-3 text-[10px] uppercase tracking-[0.22em] text-white/40">
+            Where you sit
+          </p>
+          <BellCurve value={light.overall_score} />
+          <p className="mt-3 text-center text-xs text-white/50">
+            You scored {light.overall_score.toFixed(1)} — calibrated against{" "}
+            {light.demographic_band?.label || "your demographic"}.
           </p>
         </div>
 
-        {/* Locked sections (blurred preview of what's behind paywall) */}
-        <div className="mt-12 grid gap-4 md:grid-cols-2">
-          {[
-            "8 calibrated sub-scores",
-            "Your archetype",
-            "Top 3 strengths",
-            "Areas for growth",
-            "Celebrity look-alikes",
-            "Your potential score",
-            "Glow-up plan",
-          ].map((label, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-5 py-4 text-sm text-white/55"
-            >
-              <span className="flex items-center gap-2">
-                <Lock className="h-3.5 w-3.5" />
-                {label}
-              </span>
-              <span className="text-white/30">—</span>
+        {/* The hook — one observation visible (from the top strength) */}
+        {light.strengths?.[0]?.observation && (
+          <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.04] p-5">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-emerald-300/85">
+              <Sparkles className="h-3 w-3" />
+              First thing we noticed —{" "}
+              {SUB_SCORE_LABELS[light.strengths[0].feature as SubScoreKey] ||
+                light.strengths[0].feature}
             </div>
-          ))}
+            <p className="mt-3 text-sm leading-relaxed text-white/85 md:text-base">
+              {light.strengths[0].observation}
+            </p>
+          </div>
+        )}
+
+        <div className="mx-auto mt-8 flex max-w-xl justify-center">
+          <CompletionBadge current={2} total={TOTAL_SECTIONS} reveal={false} />
         </div>
 
-        {/* CTA(s) */}
-        <div className="mx-auto mt-12 max-w-xl">
-          {phase === "preview" && (
-            <button
-              type="button"
-              onClick={goToEmail}
-              className="block w-full rounded-full bg-white px-6 py-4 text-sm font-medium text-black hover:bg-white/90"
-            >
-              Show me my full reading
-            </button>
-          )}
+        {/* SUB-SCORES — visible (the proof the engine is real) */}
+        <Section eyebrow="08 sub-scores · revealed" title="Calibrated sub-scores">
+          <p className="mb-4 text-sm text-white/55">
+            Eight calibrated dimensions, scored 0–10 against{" "}
+            {light.demographic_band?.label || "your demographic"}.
+          </p>
+          <SubScoreGrid scores={light.sub_scores} reveal={true} />
+        </Section>
 
-          {phase === "email-gate" && (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="text-sm text-white/80">
-                Enter your email to see your full reading.
-              </p>
-              <input
-                type="email"
-                inputMode="email"
-                placeholder="you@example.com"
-                value={emailValue}
-                onChange={(e) => setEmailValue(e.target.value)}
-                className="mt-3 w-full rounded-lg border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-white/40 focus:outline-none"
+        {/* ARCHETYPE — name visible, description blurred */}
+        <Section
+          eyebrow="Your archetype"
+          title={
+            light.archetype?.name ? (
+              <>{light.archetype.name}</>
+            ) : (
+              "—"
+            )
+          }
+          locked
+        >
+          <div
+            className="rounded-xl border border-white/10 bg-white/[0.03] p-5 text-sm leading-relaxed text-white/30"
+            style={{ filter: "blur(5px)" }}
+            aria-hidden="true"
+          >
+            {light.archetype?.description ||
+              "Detailed archetype description revealed in the full report — what people feel when they look at you, the secondary feature that complicates the read, and how this archetype tends to land socially."}
+          </div>
+        </Section>
+
+        {/* STRENGTHS — top features visible, observations locked */}
+        <Section
+          eyebrow={`${light.strengths?.length || 3} strengths identified`}
+          title="Your standout features"
+          locked
+        >
+          <ul className="space-y-3">
+            {(light.strengths || []).slice(0, 3).map((s, i) => (
+              <LockedRow
+                key={i}
+                label={
+                  SUB_SCORE_LABELS[s.feature as SubScoreKey] || s.feature
+                }
+                score={s.score}
+                tone="emerald"
+                reveal={false}
+                observation={
+                  s.observation ||
+                  "Specific anatomical reasons this feature reads strong, what it signals to viewers, and how it compounds with the rest of your face."
+                }
               />
-              <button
-                type="button"
-                disabled={emailBusy}
-                onClick={onSubmitEmail}
-                className="mt-3 block w-full rounded-full bg-white px-6 py-3.5 text-sm font-medium text-black hover:bg-white/90 disabled:opacity-50"
-              >
-                {emailBusy ? "Saving…" : "See my full reading →"}
-              </button>
-              <p className="mt-3 text-[11px] text-white/40">
-                We&rsquo;ll email your reading link too.
-              </p>
-            </div>
-          )}
+            ))}
+          </ul>
+        </Section>
 
-          {phase === "paywall" && (
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={onStartCheckout}
-                className="block w-full rounded-full bg-white px-6 py-4 text-sm font-medium text-black hover:bg-white/90"
-              >
-                Unlock full reading — $4.99
-              </button>
+        {/* AREAS FOR GROWTH — count visible, content locked */}
+        <Section
+          eyebrow={`${light.areas_for_growth?.length || 3} areas to grow`}
+          title="What's holding your score back"
+          locked
+        >
+          <ul className="space-y-3">
+            {(light.areas_for_growth || []).slice(0, 4).map((g, i) => (
+              <LockedRow
+                key={i}
+                label={g.area || `area_${i + 1}`}
+                score={g.score}
+                tone={i === 0 ? "rose" : "amber"}
+                reveal={false}
+                observation={
+                  g.specific_observation ||
+                  "Specific cause unlocked in the full report — what drags this score down and how it impacts the overall read."
+                }
+                actionable={
+                  g.actionable ||
+                  "Concrete plan with products, techniques, and habits you can start today."
+                }
+              />
+            ))}
+          </ul>
+        </Section>
 
-              {/* Invite-3-friends alternative */}
-              {!inviteCode ? (
-                <button
-                  type="button"
-                  onClick={onStartInvitePath}
-                  className="block w-full rounded-full border border-white/15 px-6 py-4 text-sm text-white/85 hover:bg-white/[0.04]"
+        {/* CELEBRITY LOOK-ALIKES — partially revealed */}
+        {light.celebrity_archetype?.matches?.length ? (
+          <Section
+            eyebrow={`${light.celebrity_archetype.matches.length} celebrity matches`}
+            title="You read like…"
+            locked
+          >
+            <div className="grid gap-3 sm:grid-cols-3">
+              {light.celebrity_archetype.matches.slice(0, 3).map((m, i) => (
+                <div
+                  key={i}
+                  className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center"
                 >
-                  Or invite 3 friends to unlock free
-                </button>
-              ) : (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/50">
-                    <Users className="h-3 w-3" />
-                    {inviteUnlocked
-                      ? "Unlocked! Refresh to view your reading."
-                      : `Invite friends — ${inviteRedemptions} of 3`}
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg font-light text-white/85">
+                    {m.name?.charAt(0) || "?"}
                   </div>
-                  <div className="mt-3 flex items-center gap-2 rounded-lg bg-black/40 px-3 py-2">
-                    <input
-                      readOnly
-                      value={inviteUrl || ""}
-                      className="flex-1 bg-transparent text-xs text-white/90 outline-none"
-                    />
-                    <button
-                      onClick={() => {
-                        if (!inviteUrl) return;
-                        navigator.clipboard.writeText(inviteUrl).catch(() => {});
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 1500);
-                      }}
-                      className="rounded-md bg-white/10 px-2 py-1 text-[11px] text-white hover:bg-white/20"
-                    >
-                      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    </button>
+                  <div className="mt-3 text-sm text-white/85">
+                    <MaskedText text={m.name || "Hidden Hidden"} reveal={false} visibleChars={1} />
                   </div>
-                  <p className="mt-2 text-[11px] text-white/40">
-                    Each friend who completes their rating counts. Three = free unlock for you.
+                  <div className="mt-1 inline-flex items-center gap-1 text-xs text-white/45">
+                    <Lock className="h-3 w-3" />
+                    <span className="select-none blur-[5px]" aria-hidden="true">
+                      {m.match_pct || 75}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        ) : (
+          <Section
+            eyebrow="Celebrity look-alikes"
+            title="You read like…"
+            locked
+          >
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5 text-sm text-white/45">
+              Up to 3 celebrity matches with shared-feature analysis — unlocked
+              in the full report.
+            </div>
+          </Section>
+        )}
+
+        {/* POTENTIAL — current visible, optimized blurred */}
+        <Section eyebrow="Your potential" title="Where you could be in 90 days" locked>
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-white/45">
+                  Now
+                </div>
+                <div className="mt-1 text-4xl font-light tabular-nums">
+                  {(light.potential?.current_score ?? light.overall_score).toFixed(1)}
+                </div>
+              </div>
+              <TrendingUp className="h-5 w-5 text-white/30" />
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-emerald-300/80">
+                  Optimized
+                </div>
+                <div
+                  className="mt-1 text-4xl font-light tabular-nums text-emerald-200/70 select-none"
+                  style={{ filter: "blur(8px)" }}
+                  aria-hidden="true"
+                >
+                  {(light.potential?.optimized_score ?? light.overall_score + 0.8).toFixed(1)}
+                </div>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-white/45">
+              {(light.potential?.gap_drivers?.length || 3)} gap drivers
+              identified — unlock to see which features close the gap.
+            </p>
+          </div>
+        </Section>
+
+        {/* GLOW-UP PLAN — categories visible, content locked */}
+        <Section eyebrow="Your glow-up plan" title="5-part action plan" locked>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {[
+              { Icon: Scissors, label: "Haircut", key: "haircut" },
+              { Icon: Wind, label: "Grooming", key: "grooming" },
+              { Icon: Droplets, label: "Skincare", key: "skincare" },
+              { Icon: Camera, label: "Photography", key: "photography" },
+              { Icon: Smile, label: "Expression", key: "expression" },
+            ].map(({ Icon, label, key }) => (
+              <li
+                key={key}
+                className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4"
+              >
+                <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-white/55" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-white/65">
+                    {label}
+                  </div>
+                  <p
+                    className="mt-1 truncate text-xs text-white/35 select-none"
+                    style={{ filter: "blur(4px)" }}
+                    aria-hidden="true"
+                  >
+                    {(light.glow_up_plan as unknown as Record<string, string> | undefined)?.[key] ||
+                      "Specific routine + products"}
                   </p>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+                <Lock className="h-3 w-3 flex-shrink-0 text-white/35" />
+              </li>
+            ))}
+          </ul>
+        </Section>
 
-        <p className="mt-12 text-center text-[11px] text-white/30">
-          For entertainment. Not a clinical assessment.
-        </p>
+        {/* PAYWALL CTA */}
+        <div className="mx-auto mt-12 max-w-xl">
+          <div className="rounded-2xl border border-white/15 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-6">
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-white/45">
+                Unlock the full report
+              </p>
+              <h3 className="mt-2 text-2xl font-light italic md:text-3xl">
+                One-time · $4.99
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-white/65">
+                {TOTAL_SECTIONS} sections — sub-scores, archetype, strengths,
+                growth areas, celebrity matches, potential, glow-up plan, share
+                card. Same photo. Deeper analysis. No subscription.
+              </p>
+            </div>
+
+            {phase === "preview" && (
+              <button
+                type="button"
+                onClick={goToEmail}
+                className="mt-6 block w-full rounded-full bg-white px-6 py-4 text-sm font-medium text-black transition-colors hover:bg-white/90"
+              >
+                Show me my full reading →
+              </button>
+            )}
+
+            {phase === "email-gate" && (
+              <div className="mt-5">
+                <p className="text-xs text-white/55">
+                  Where should we send your reading link?
+                </p>
+                <input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={emailValue}
+                  onChange={(e) => setEmailValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !emailBusy) onSubmitEmail();
+                  }}
+                  className="mt-2 w-full rounded-lg border border-white/15 bg-black/60 px-4 py-3 text-sm text-white placeholder-white/30 focus:border-white/40 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  disabled={emailBusy}
+                  onClick={onSubmitEmail}
+                  className="mt-3 block w-full rounded-full bg-white px-6 py-3.5 text-sm font-medium text-black hover:bg-white/90 disabled:opacity-50"
+                >
+                  {emailBusy ? "Saving…" : "Continue to unlock →"}
+                </button>
+                <p className="mt-2 text-[11px] text-white/40">
+                  We&rsquo;ll email you the link too, in case you want to come back later.
+                </p>
+              </div>
+            )}
+
+            {showPaywallCTA && (
+              <div className="mt-5 space-y-3">
+                <button
+                  type="button"
+                  onClick={onStartCheckout}
+                  className="block w-full rounded-full bg-white px-6 py-4 text-sm font-medium text-black hover:bg-white/90"
+                >
+                  Unlock full reading — $4.99
+                </button>
+                {!inviteCode ? (
+                  <button
+                    type="button"
+                    onClick={onStartInvitePath}
+                    className="block w-full rounded-full border border-white/15 px-6 py-3 text-sm text-white/85 hover:bg-white/[0.04]"
+                  >
+                    Or invite 3 friends to unlock free
+                  </button>
+                ) : (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/55">
+                      <Users className="h-3 w-3" />
+                      {inviteUnlocked
+                        ? "Unlocked! Refresh to view."
+                        : `Invite friends — ${inviteRedemptions} of 3`}
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 rounded-lg bg-black/40 px-3 py-2">
+                      <input
+                        readOnly
+                        value={inviteUrl || ""}
+                        className="flex-1 bg-transparent text-xs text-white/90 outline-none"
+                      />
+                      <button
+                        onClick={() => {
+                          if (!inviteUrl) return;
+                          navigator.clipboard.writeText(inviteUrl).catch(() => {});
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1500);
+                        }}
+                        className="rounded-md bg-white/10 px-2 py-1 text-[11px] text-white hover:bg-white/20"
+                      >
+                        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <p className="mt-8 text-center text-[11px] text-white/30">
+            For entertainment. Not a clinical assessment.
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
+function Section({
+  eyebrow,
+  title,
+  locked,
+  children,
+}: {
+  eyebrow?: string;
+  title: React.ReactNode;
+  locked?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mx-auto mt-12 max-w-xl">
+      <SectionHeader
+        eyebrow={eyebrow}
+        title={typeof title === "string" ? title : (title as string)}
+        locked={locked}
+      />
+      {children}
+    </section>
+  );
+}
+
 /* ============================================================ */
-/* FULL REPORT VIEW (11 sections)                                 */
+/* FULL REPORT VIEW                                               */
 /* ============================================================ */
 
 function FullReportView({
   full,
-  light,
   token,
   shareEnabled,
   shareUrl,
@@ -625,277 +871,354 @@ function FullReportView({
   onDeletePhotos,
 }: {
   full: FaceFullAnalysis;
-  light: FaceLightAnalysis | null;
   token: string;
   shareEnabled: boolean;
   shareUrl: string | null;
   onToggleShare: () => void;
   onDeletePhotos: () => void;
 }) {
+  const topPercent = Math.max(1, 100 - (full.demographic_band?.percentile ?? 50));
+  const [copiedShare, setCopiedShare] = useState(false);
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-3xl px-5 py-12 md:px-8">
-        {/* 1. Hero score */}
+        {/* HERO */}
         <div className="text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-white/40">
-            Your face rating
+          <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">
+            StoryInColor · Your full reading
           </p>
-          <div className="mt-4 text-7xl font-light tracking-tight md:text-8xl">
-            {full.overall_score.toFixed(1)}
-            <span className="text-3xl text-white/40">/10</span>
+          <h1 className="mt-3 text-2xl font-light italic md:text-3xl">
+            Honest face rating · Unlocked
+          </h1>
+          <div className="mt-8">
+            <AnimatedScore value={full.overall_score} size="lg" />
           </div>
-          <div className="mt-3 text-2xl font-light italic md:text-3xl">
-            {full.tier_label}
-          </div>
-
-          {/* 2. Percentile + locality strip */}
-          <div className="mt-1 text-xs text-white/55">
-            {full.demographic_band.label} · top{" "}
-            {Math.max(1, 100 - full.demographic_band.percentile)}%
+          <div
+            className={`mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-4 py-1.5 text-sm ${scoreColorClass(
+              full.overall_score,
+            )}`}
+          >
+            <span className="font-medium">{full.tier_label}</span>
+            <span className="text-white/30">·</span>
+            <span className="text-white/65">
+              Top {topPercent}% in {full.demographic_band?.label || "your demographic"}
+            </span>
           </div>
         </div>
 
-        {/* 3. Archetype */}
-        <Section title="Your archetype">
-          <div className="text-2xl font-light italic">{full.archetype.name}</div>
-          <p className="mt-2 text-sm leading-relaxed text-white/75">
-            {full.archetype.description}
-          </p>
-        </Section>
+        <div className="mx-auto mt-8 flex justify-center">
+          <CompletionBadge current={TOTAL_SECTIONS} total={TOTAL_SECTIONS} reveal={true} />
+        </div>
 
-        {/* 4. Sub-scores */}
-        <Section title="Sub-scores">
-          <div className="grid gap-2 md:grid-cols-2">
-            {SUB_SCORE_KEYS.map((k: SubScoreKey) => {
-              const v = full.sub_scores[k] ?? 0;
-              const tone =
-                v >= 7.5 ? "ok" : v >= 6.0 ? "mid" : "low";
-              return (
-                <div
-                  key={k}
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3"
-                >
-                  <span className="text-sm text-white/80">
-                    {SUB_SCORE_LABELS[k]}
-                  </span>
-                  <span
-                    className={`text-sm font-medium ${
-                      tone === "ok"
-                        ? "text-emerald-300"
-                        : tone === "mid"
-                          ? "text-amber-200"
-                          : "text-rose-300"
-                    }`}
-                  >
-                    {v.toFixed(1)}
-                  </span>
-                </div>
-              );
-            })}
+        {/* DISTRIBUTION */}
+        <FullSection eyebrow="Distribution" title="Where you sit">
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-5">
+            <BellCurve value={full.overall_score} height={140} />
+            <p className="mt-3 text-center text-sm text-white/65">
+              You scored {full.overall_score.toFixed(1)} —{" "}
+              {full.demographic_band?.label || "your demographic"}, top{" "}
+              {topPercent}%.
+            </p>
           </div>
-        </Section>
+        </FullSection>
 
-        {/* 5. Top strengths */}
-        <Section title="Your strengths">
+        {/* ARCHETYPE */}
+        <FullSection eyebrow="Your archetype" title={full.archetype.name}>
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.01] p-6">
+            <p className="text-[15px] leading-relaxed text-white/85">
+              {full.archetype.description}
+            </p>
+          </div>
+        </FullSection>
+
+        {/* SUB-SCORES */}
+        <FullSection eyebrow="08 sub-scores" title="Calibrated dimensions">
+          <SubScoreGrid scores={full.sub_scores} reveal={true} />
+        </FullSection>
+
+        {/* STRENGTHS */}
+        <FullSection
+          eyebrow={`${full.strengths.length} standout features`}
+          title="Your strengths"
+        >
           <ul className="space-y-3">
             {full.strengths.map((s, i) => (
               <li
                 key={i}
-                className="rounded-xl border border-white/10 bg-emerald-300/[0.03] p-4"
+                className="rounded-2xl border border-emerald-300/15 bg-emerald-300/[0.03] p-5"
               >
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/85">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-base text-white">
                     {SUB_SCORE_LABELS[s.feature as SubScoreKey] || s.feature}
                   </span>
-                  <span className="text-emerald-300">{s.score.toFixed(1)}</span>
+                  <span className="text-lg font-light tabular-nums text-emerald-300">
+                    {s.score.toFixed(1)}
+                  </span>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-white/70">
+                <p className="mt-3 text-sm leading-relaxed text-white/80">
                   {s.observation}
                 </p>
-                <div className="mt-2 text-[11px] text-emerald-300/60">
-                  Top {Math.max(1, 100 - s.percentile_in_demographic)}% of your demographic
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-300/20 bg-emerald-300/[0.04] px-2.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-emerald-300/85">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  Top {Math.max(1, 100 - s.percentile_in_demographic)}% in your demographic
                 </div>
               </li>
             ))}
           </ul>
-        </Section>
+        </FullSection>
 
-        {/* 6. Areas for growth */}
-        <Section title="Areas for growth">
+        {/* AREAS FOR GROWTH */}
+        <FullSection
+          eyebrow={`${full.areas_for_growth.length} growth areas`}
+          title="What's holding your score back"
+        >
           <ul className="space-y-3">
             {full.areas_for_growth.map((g, i) => (
               <li
                 key={i}
-                className="rounded-xl border border-white/10 bg-amber-200/[0.02] p-4"
+                className={`rounded-2xl border p-5 ${
+                  i === 0
+                    ? "border-rose-300/15 bg-rose-300/[0.03]"
+                    : "border-amber-200/15 bg-amber-200/[0.03]"
+                }`}
               >
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/85">{g.area}</span>
-                  <span className="text-amber-200">{g.score.toFixed(1)}</span>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-base text-white capitalize">
+                    {g.area.replace(/_/g, " ")}
+                  </span>
+                  <span
+                    className={`text-lg font-light tabular-nums ${
+                      i === 0 ? "text-rose-300" : "text-amber-200"
+                    }`}
+                  >
+                    {g.score.toFixed(1)}
+                  </span>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-white/70">
+                <p className="mt-3 text-sm leading-relaxed text-white/80">
                   {g.specific_observation}
                 </p>
-                <p className="mt-2 text-[11px] text-amber-200/70">
-                  → {g.actionable}
-                </p>
+                <div
+                  className={`mt-3 rounded-lg border bg-black/30 p-3 text-[13px] leading-relaxed ${
+                    i === 0
+                      ? "border-rose-300/15 text-rose-200/90"
+                      : "border-amber-200/15 text-amber-100/90"
+                  }`}
+                >
+                  <span className="text-[10px] uppercase tracking-[0.16em] opacity-60">
+                    Action plan
+                  </span>
+                  <p className="mt-1">{g.actionable}</p>
+                </div>
               </li>
             ))}
           </ul>
-        </Section>
+        </FullSection>
 
-        {/* 7. Celebrity look-alikes */}
-        {full.celebrity_archetype.matches.length > 0 && (
-          <Section title="You read like…">
-            <div className="grid gap-3 md:grid-cols-3">
+        {/* CELEBRITY LOOK-ALIKES */}
+        {full.celebrity_archetype?.matches?.length > 0 && (
+          <FullSection
+            eyebrow="Look-alikes"
+            title="You read like…"
+          >
+            <div className="grid gap-3 sm:grid-cols-3">
               {full.celebrity_archetype.matches.map((m, i) => (
                 <div
                   key={i}
-                  className="rounded-xl border border-white/10 bg-white/[0.02] p-4"
+                  className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5 text-center"
                 >
-                  <div className="text-base font-medium">{m.name}</div>
-                  <div className="mt-1 text-2xl font-light tracking-tight">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] text-2xl font-light italic text-white">
+                    {m.name?.charAt(0) || "?"}
+                  </div>
+                  <div className="mt-3 text-base text-white">{m.name}</div>
+                  <div className="mt-1 text-2xl font-light tabular-nums text-white/85">
                     {m.match_pct}%
                   </div>
-                  <div className="mt-2 text-[11px] text-white/55">
+                  <p className="mt-2 text-[11px] leading-relaxed text-white/55">
                     {m.shared_features}
-                  </div>
+                  </p>
                 </div>
               ))}
             </div>
-          </Section>
+          </FullSection>
         )}
 
-        {/* 8. Potential */}
-        <Section title="Your potential">
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-            <div className="flex items-baseline gap-6">
-              <div>
-                <div className="text-[11px] uppercase tracking-wider text-white/50">
+        {/* POTENTIAL */}
+        <FullSection eyebrow="Your potential" title="Where you could be in 90 days">
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-300/[0.04] to-white/[0.01] p-6">
+            <div className="flex items-end justify-between gap-3">
+              <div className="flex-1">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-white/45">
                   Now
                 </div>
-                <div className="text-4xl font-light">
+                <div className="mt-1 text-5xl font-light tabular-nums text-white">
                   {full.potential.current_score.toFixed(1)}
                 </div>
               </div>
-              <div className="text-2xl text-white/30">→</div>
-              <div>
-                <div className="text-[11px] uppercase tracking-wider text-emerald-300">
+              <TrendingUp className="mb-2 h-5 w-5 text-emerald-300" />
+              <div className="flex-1 text-right">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-emerald-300/85">
                   Optimized
                 </div>
-                <div className="text-4xl font-light text-emerald-200">
+                <div className="mt-1 text-5xl font-light tabular-nums text-emerald-200">
                   {full.potential.optimized_score.toFixed(1)}
                 </div>
               </div>
             </div>
             {full.potential.gap_drivers.length > 0 && (
-              <p className="mt-3 text-xs text-white/55">
-                Gap drivers: {full.potential.gap_drivers.join(", ")}
-              </p>
+              <div className="mt-5 border-t border-white/10 pt-4">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-white/45">
+                  Closing the gap
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {full.potential.gap_drivers.map((d, i) => (
+                    <span
+                      key={i}
+                      className="rounded-full border border-emerald-300/20 bg-emerald-300/[0.05] px-3 py-1 text-xs text-emerald-200/85 capitalize"
+                    >
+                      {d.replace(/_/g, " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
-        </Section>
+        </FullSection>
 
-        {/* 9. Glow-up plan */}
-        <Section title="Your glow-up plan">
-          <ul className="space-y-2">
+        {/* GLOW-UP PLAN */}
+        <FullSection eyebrow="Action plan" title="Your glow-up plan">
+          <ul className="space-y-2.5">
             {(
               [
-                ["Haircut", full.glow_up_plan.haircut],
-                ["Grooming", full.glow_up_plan.grooming],
-                ["Skincare", full.glow_up_plan.skincare],
-                ["Photography", full.glow_up_plan.photography],
-                ["Expression", full.glow_up_plan.expression],
+                { Icon: Scissors, label: "Haircut", body: full.glow_up_plan.haircut },
+                { Icon: Wind, label: "Grooming", body: full.glow_up_plan.grooming },
+                { Icon: Droplets, label: "Skincare", body: full.glow_up_plan.skincare },
+                { Icon: Camera, label: "Photography", body: full.glow_up_plan.photography },
+                { Icon: Smile, label: "Expression", body: full.glow_up_plan.expression },
               ] as const
-            ).map(([label, value]) => (
+            ).map(({ Icon, label, body }) => (
               <li
                 key={label}
-                className="rounded-lg border border-white/10 bg-white/[0.02] p-4"
+                className="flex gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5"
               >
-                <div className="text-[11px] uppercase tracking-wider text-white/50">
-                  {label}
+                <Icon className="mt-1 h-4 w-4 flex-shrink-0 text-white/65" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-white/65">
+                    {label}
+                  </div>
+                  <p className="mt-1.5 text-sm leading-relaxed text-white/85">
+                    {body}
+                  </p>
                 </div>
-                <p className="mt-1 text-sm text-white/80">{value}</p>
               </li>
             ))}
           </ul>
-        </Section>
+        </FullSection>
 
-        {/* 10. Re-rate appointment */}
-        <Section title="Re-rate yourself">
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm text-white/75">
-            Come back in {full.re_rate.next_recommended_at_days} days. Same face,
-            new score — track your glow-up.
+        {/* RE-RATE */}
+        <FullSection eyebrow="Track your glow-up" title="Re-rate yourself">
+          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <div className="flex items-start gap-3">
+              <Calendar className="mt-1 h-4 w-4 flex-shrink-0 text-white/65" />
+              <div>
+                <p className="text-sm text-white/85">
+                  Come back in {full.re_rate.next_recommended_at_days} days.
+                </p>
+                <p className="mt-0.5 text-xs text-white/45">
+                  Same face, fresh score — track your glow-up.
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-white/30" />
           </div>
-        </Section>
+        </FullSection>
 
-        {/* 11. Share card / share toggle (option C — opt-in) */}
-        <Section title="Share">
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                <Share2 className="h-4 w-4" />
-                <span>Make this reading shareable via public link</span>
+        {/* SHARE TOGGLE */}
+        <FullSection eyebrow="Share" title="Make this rating shareable">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <Share2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-white/65" />
+                <div>
+                  <div className="text-sm text-white/85">
+                    Public link to your score + tier
+                  </div>
+                  <div className="mt-0.5 text-xs text-white/45">
+                    Disabled by default. You decide.
+                  </div>
+                </div>
               </div>
               <button
                 onClick={onToggleShare}
-                className={`rounded-full px-4 py-1.5 text-xs font-medium ${
+                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
                   shareEnabled
-                    ? "bg-emerald-400/20 text-emerald-300"
-                    : "border border-white/20 text-white/70"
+                    ? "bg-emerald-300/20 text-emerald-200"
+                    : "border border-white/20 text-white/70 hover:bg-white/[0.04]"
                 }`}
               >
                 {shareEnabled ? "On" : "Off"}
               </button>
             </div>
             {shareEnabled && shareUrl && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-black/40 px-3 py-2">
+              <div className="mt-4 flex items-center gap-2 rounded-lg bg-black/40 px-3 py-2">
                 <input
                   readOnly
                   value={shareUrl}
                   className="flex-1 bg-transparent text-xs text-white/90 outline-none"
                 />
                 <button
-                  onClick={() => navigator.clipboard.writeText(shareUrl).catch(() => {})}
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareUrl).catch(() => {});
+                    setCopiedShare(true);
+                    setTimeout(() => setCopiedShare(false), 1500);
+                  }}
                   className="rounded-md bg-white/10 px-2 py-1 text-[11px] text-white hover:bg-white/20"
                 >
-                  Copy
+                  {copiedShare ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
                 </button>
               </div>
             )}
           </div>
-        </Section>
+        </FullSection>
 
-        {/* Photo deletion (legal compliance) */}
-        <div className="mt-12 flex justify-center">
+        {/* DELETE PHOTOS */}
+        <div className="mx-auto mt-12 flex justify-center">
           <button
             onClick={onDeletePhotos}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-[11px] text-white/40 hover:text-white"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-[11px] text-white/45 transition-colors hover:border-rose-300/30 hover:text-rose-300/85"
           >
             <Trash2 className="h-3 w-3" />
             Delete my photos from the server
           </button>
         </div>
 
-        <p className="mt-8 text-center text-[11px] text-white/30">
+        <p className="mt-6 text-center text-[11px] text-white/30">
           For entertainment. Not a clinical assessment.
+        </p>
+        {/* Token in DOM for debug only */}
+        <p className="mt-1 hidden text-center text-[10px] text-white/15">
+          {token.slice(0, 8)}…
         </p>
       </div>
     </div>
   );
 }
 
-function Section({
+function FullSection({
+  eyebrow,
   title,
   children,
 }: {
+  eyebrow?: string;
   title: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-10">
-      <h2 className="mb-4 text-xs uppercase tracking-[0.18em] text-white/50">
-        {title}
-      </h2>
+    <section className="mx-auto mt-12 max-w-xl">
+      <SectionHeader eyebrow={eyebrow} title={title} />
       {children}
     </section>
   );
