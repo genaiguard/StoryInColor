@@ -173,7 +173,7 @@ export const AGE_OPTIONS: { id: AgeRange; label: string }[] = [
 ];
 
 export const GOAL_OPTIONS: { id: GoalChip; label: string }[] = [
-  { id: "psl-tier", label: "Where I land on the PSL scale" },
+  { id: "psl-tier", label: "Where I rank overall" },
   { id: "biggest-strength", label: "My biggest strength" },
   { id: "score-blocker", label: "What's holding my score back" },
   { id: "glow-up-plan", label: "My glow-up plan" },
@@ -187,15 +187,18 @@ export const COMPLIMENTS_OPTIONS: { id: ComplimentsFreq; label: string }[] = [
   { id: "very-often", label: "Very often" },
 ];
 
-/** Self-rating slider anchor labels per band (1–10). */
+/** Self-rating slider anchor labels per band (1–10). Plain language so
+ *  the question is legible to anyone, not just looksmaxxing-fluent users.
+ *  PSL vocabulary still appears later in the result tier label and copy
+ *  for the niche audience — but the funnel itself reads as plain English. */
 export const SELF_RATE_ANCHORS = [
-  { min: 1, max: 1.9, label: "Subhuman" },
-  { min: 2, max: 3.9, label: "Low Tier" },
-  { min: 4, max: 5.9, label: "Below average" },
+  { min: 1, max: 1.9, label: "Way below average" },
+  { min: 2, max: 3.9, label: "Below average" },
+  { min: 4, max: 5.9, label: "Just below average" },
   { min: 6, max: 6.9, label: "Average" },
   { min: 7, max: 7.9, label: "Above average" },
-  { min: 8, max: 8.9, label: "Chad" },
-  { min: 9, max: 10, label: "Chadpreet" },
+  { min: 8, max: 8.9, label: "Striking" },
+  { min: 9, max: 10, label: "Top tier" },
 ];
 
 export function selfRateLabelFor(value: number): string {
