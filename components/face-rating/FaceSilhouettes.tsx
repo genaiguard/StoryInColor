@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * Editorial line-art face silhouettes used on the upload screens to make
- * the front/side distinction immediately legible without reading the
- * headline. Per founder direction: "you may wanna render some SVG image
- * in there of a front facial / side picture."
+ * Editorial silhouettes for the upload screens. Apple Face ID minimalism —
+ * single soft oval / single clean profile silhouette, gradient fades, no
+ * cartoon features. The whole point is to communicate "front" vs "side"
+ * at a glance without looking like a kid's drawing.
  */
 
 export function FrontFaceSilhouette({
@@ -16,39 +16,36 @@ export function FrontFaceSilhouette({
     <svg
       viewBox="0 0 200 240"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
       className={className}
       aria-hidden="true"
     >
-      {/* Head outline — soft oval with tapered jaw */}
-      <path d="M 100 28 C 62 28, 36 62, 36 112 C 36 156, 56 198, 100 215 C 144 198, 164 156, 164 112 C 164 62, 138 28, 100 28 Z" />
+      <defs>
+        <linearGradient id="fr-stroke" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0.35" />
+        </linearGradient>
+        <radialGradient id="fr-glow" cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+        </radialGradient>
+      </defs>
 
-      {/* Hairline hint */}
-      <path
-        d="M 56 72 C 78 52, 122 52, 144 72"
-        opacity="0.35"
+      {/* Soft inner glow so the silhouette feels lit, not flat. */}
+      <ellipse cx="100" cy="105" rx="58" ry="76" fill="url(#fr-glow)" />
+
+      {/* Single oval head — that's the whole silhouette. */}
+      <ellipse
+        cx="100"
+        cy="105"
+        rx="58"
+        ry="76"
+        stroke="url(#fr-stroke)"
+        strokeWidth="1.25"
       />
 
-      {/* Brows */}
-      <path d="M 64 96 C 72 92, 86 92, 92 96" opacity="0.5" />
-      <path d="M 108 96 C 114 92, 128 92, 136 96" opacity="0.5" />
-
-      {/* Eyes — almond curves with subtle inner detail */}
-      <path d="M 64 110 C 72 104, 88 104, 94 110 C 88 116, 72 116, 64 110 Z" />
-      <path d="M 106 110 C 112 104, 128 104, 136 110 C 128 116, 112 116, 106 110 Z" />
-
-      {/* Nose bridge to nostrils */}
-      <path d="M 100 122 C 96 144, 94 156, 100 162" />
-      <path d="M 92 162 C 96 166, 104 166, 108 162" opacity="0.6" />
-
-      {/* Mouth */}
-      <path d="M 86 184 C 94 188, 106 188, 114 184" />
-
-      {/* Faint chin curve for depth */}
-      <path d="M 78 200 C 88 208, 112 208, 122 200" opacity="0.3" />
+      {/* Two soft eye dots — that's it for facial features. */}
+      <circle cx="80" cy="100" r="2" fill="currentColor" opacity="0.85" />
+      <circle cx="120" cy="100" r="2" fill="currentColor" opacity="0.85" />
     </svg>
   );
 }
@@ -62,66 +59,54 @@ export function SideProfileSilhouette({
     <svg
       viewBox="0 0 200 240"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
       className={className}
       aria-hidden="true"
     >
+      <defs>
+        <linearGradient id="sd-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0.06" />
+        </linearGradient>
+        <linearGradient id="sd-stroke" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0.4" />
+        </linearGradient>
+      </defs>
+
       {/*
-        Right-facing profile. Single continuous stroke traces:
-        crown → forehead → brow → nose bridge → nose tip → philtrum →
-        upper lip → mouth → lower lip → under-lip dip → chin →
-        under-jaw → neck.
+        Clean filled profile silhouette, facing right. Single closed path.
+        Traces back-of-head → crown → forehead → brow → nose → upper lip →
+        chin → under-jaw → neck. Gentle Bezier curves, no spurious features.
       */}
       <path
         d="
-          M 50 80
-          C 46 50, 70 22, 110 24
-          C 142 26, 156 48, 156 78
-          C 156 88, 152 96, 150 102
-          C 158 110, 168 122, 168 132
-          C 168 138, 162 142, 154 142
-          C 152 150, 156 156, 152 162
-          C 148 168, 152 174, 148 180
-          C 144 186, 152 194, 152 204
-          C 144 208, 124 210, 110 212
-          L 96 218
+          M 70 220
+          L 70 168
+          C 56 152, 50 130, 50 102
+          C 50 60, 78 32, 110 32
+          C 138 32, 152 52, 152 80
+          L 152 100
+          L 156 108
+          C 162 116, 162 124, 156 130
+          L 150 134
+          L 150 144
+          C 150 150, 152 156, 150 162
+          L 146 170
+          C 144 178, 148 184, 150 192
+          C 144 200, 132 206, 122 210
+          L 110 218
+          L 110 240
+          L 70 240
+          Z
         "
+        fill="url(#sd-fill)"
+        stroke="url(#sd-stroke)"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
       />
 
-      {/* Back of head + nape */}
-      <path
-        d="
-          M 50 80
-          C 38 100, 38 140, 56 168
-          C 64 178, 78 192, 88 200
-          L 88 220
-        "
-        opacity="0.85"
-      />
-
-      {/* Hairline at the top */}
-      <path
-        d="M 70 38 C 90 28, 120 26, 142 36"
-        opacity="0.35"
-      />
-
-      {/* Brow line */}
-      <path d="M 132 76 L 154 78" opacity="0.5" />
-
-      {/* Eye in profile — almond, smaller than front view */}
-      <path d="M 132 88 C 138 84, 148 84, 152 88 C 148 92, 138 92, 132 88 Z" />
-
-      {/* Ear suggestion */}
-      <path
-        d="M 90 122 C 84 124, 80 134, 84 144 C 88 150, 96 150, 98 142"
-        opacity="0.5"
-      />
-
-      {/* Mouth notch */}
-      <path d="M 144 158 L 152 158" opacity="0.5" />
+      {/* Single eye notch — minimal acknowledgement. */}
+      <circle cx="132" cy="86" r="1.6" fill="currentColor" opacity="0.85" />
     </svg>
   );
 }

@@ -4,9 +4,17 @@ import * as admin from "firebase-admin";
 import * as crypto from "crypto";
 
 const PENDING_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-const RATE_LIMIT_PER_IP_PER_DAY = 3;
+
+// Rate-limit toggles. Set these env vars in functions/.env for the deployed
+// runtime, or via `firebase functions:config:set` style overrides.
+//   QUIZ_RATE_LIMIT_BYPASS=true       → fail-open on per-IP + global checks
+//   QUIZ_RATE_LIMIT_PER_IP_PER_DAY=N  → per-IP cap (default 3)
+//   QUIZ_GLOBAL_DAILY_CEILING=N       → global cap (default 60)
+const RATE_LIMIT_BYPASS = process.env.QUIZ_RATE_LIMIT_BYPASS === "true";
+const RATE_LIMIT_PER_IP_PER_DAY = Number(
+  process.env.QUIZ_RATE_LIMIT_PER_IP_PER_DAY || "3",
+);
 // Global daily ceiling — hard upper bound on cost across ALL IPs.
-// 60 readings/day × $0.25/call ≈ $15/day worst case. Adjust via env.
 const GLOBAL_DAILY_CEILING = Number(
   process.env.QUIZ_GLOBAL_DAILY_CEILING || "60",
 );
@@ -44,6 +52,9 @@ export async function checkAndIncrementIpRateLimit(
   db: admin.firestore.Firestore,
   ipHash: string,
 ): Promise<{ allowed: boolean; recentCount: number }> {
+  if (RATE_LIMIT_BYPASS) {
+    return { allowed: true, recentCount: 0 };
+  }
   const cutoff = admin.firestore.Timestamp.fromMillis(
     Date.now() - 24 * 60 * 60 * 1000,
   );
@@ -82,6 +93,9 @@ export async function checkAndIncrementIpRateLimit(
 export async function checkGlobalDailyCeiling(
   db: admin.firestore.Firestore,
 ): Promise<{ allowed: boolean; usedToday: number; ceiling: number }> {
+  if (RATE_LIMIT_BYPASS) {
+    return { allowed: true, usedToday: 0, ceiling: GLOBAL_DAILY_CEILING };
+  }
   try {
     const todayKey = (() => {
       const d = new Date();
