@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Upload as UploadIcon, Check } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import { useDropzone } from "react-dropzone";
 import {
   GOAL_OPTIONS,
   GENDER_OPTIONS,
@@ -161,8 +160,8 @@ export default function FaceRatingFlow() {
 
         {state.screen === "gender" && (
           <ChipScreen
-            title="Quick calibration."
-            subtitle="So we score against the right reference group."
+            title="First, who are we reading?"
+            subtitle="Pick one — your reading will be more accurate."
             options={GENDER_OPTIONS}
             onSelect={(id) => {
               setState((s) => ({ ...s, gender: id as Gender }));
@@ -173,8 +172,8 @@ export default function FaceRatingFlow() {
 
         {state.screen === "goal" && (
           <ChipScreen
-            title="What are you here for?"
-            subtitle="One pick. We tune the report."
+            title="What are you hoping to find out?"
+            subtitle="Pick one — your reading will lean here."
             options={GOAL_OPTIONS}
             onSelect={(id) => {
               setState((s) => ({ ...s, goal: id as GoalChip }));
@@ -186,7 +185,7 @@ export default function FaceRatingFlow() {
         {state.screen === "country" && (
           <ChipScreen
             title="Where are you?"
-            subtitle="Used for the percentile calibration."
+            subtitle="So your reading compares you against the right group."
             options={COUNTRIES.map((c) => ({ id: c.code, label: c.name }))}
             onSelect={(id) => {
               setState((s) => ({ ...s, countryCode: id }));
@@ -408,11 +407,21 @@ function UploadScreen({
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const onDrop = useCallback(
-    async (accepted: File[]) => {
-      const file = accepted[0];
+  const handleFile = useCallback(
+    async (file: File | undefined | null) => {
       if (!file) return;
+      // Validation that react-dropzone used to do for us.
+      if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+        setErr("Please upload a JPG, PNG, or WEBP image.");
+        return;
+      }
+      if (file.size > MAX_BYTES) {
+        setErr("File too large — please use under 10MB.");
+        return;
+      }
       setErr(null);
       setBusy(true);
       setProgress(0);
@@ -425,7 +434,7 @@ function UploadScreen({
               ? "webp"
               : "jpg";
         // Unique filename per upload so re-uploads don't collide with the
-        // create-only storage rule. M5.
+        // create-only storage rule.
         const subId = uuidv4().slice(0, 8);
         const path = `pending/${token}/input-${slot}-${subId}.${ext}`;
         const storage = await getConfiguredStorage();
@@ -454,13 +463,8 @@ function UploadScreen({
     [existingToken, onUploaded, slot],
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: ACCEPTED,
-    maxSize: MAX_BYTES,
-    multiple: false,
-    onDrop,
-  });
-
+  // Native label+input pattern — far more reliable than react-dropzone's
+  // synthetic click. Drag + drop preserved with separate handlers.
   return (
     <div className="mx-auto w-full max-w-xl">
       <h1 className="text-3xl font-light italic leading-tight tracking-tight md:text-5xl">
@@ -468,15 +472,38 @@ function UploadScreen({
       </h1>
       <p className="mt-3 text-sm text-white/70">{hint}</p>
 
-      <div
-        {...getRootProps()}
+      <label
+        htmlFor={`face-upload-${slot}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (!isDragActive) setIsDragActive(true);
+        }}
+        onDragLeave={() => setIsDragActive(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragActive(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f) void handleFile(f);
+        }}
         className={`mt-8 flex aspect-square w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors ${
           isDragActive
             ? "border-white bg-white/[0.06]"
             : "border-white/20 bg-white/[0.02] hover:border-white/40"
         }`}
       >
-        <input {...getInputProps()} />
+        <input
+          ref={inputRef}
+          id={`face-upload-${slot}`}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="sr-only"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void handleFile(f);
+            // Reset so re-selecting the same file fires onChange again.
+            e.target.value = "";
+          }}
+        />
         {busy ? (
           <div className="flex flex-col items-center gap-3 text-white/70">
             <Loader2 className="h-7 w-7 animate-spin" />
@@ -486,12 +513,12 @@ function UploadScreen({
           <div className="flex flex-col items-center gap-3 text-white/70">
             <UploadIcon className="h-7 w-7" />
             <p className="text-sm">
-              {isDragActive ? "Drop here" : "Drag & drop, or click to choose"}
+              {isDragActive ? "Drop here" : "Tap to choose, or drag & drop"}
             </p>
             <p className="text-xs text-white/40">JPG, PNG, WEBP — up to 10MB</p>
           </div>
         )}
-      </div>
+      </label>
       {err && (
         <p role="alert" className="mt-4 text-sm text-rose-300">
           {err}
