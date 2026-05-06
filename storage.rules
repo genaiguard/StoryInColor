@@ -29,22 +29,28 @@ service firebase.storage {
       allow write: if request.auth != null;
     }
 
-    // Quiz funnel pending storage — unauthenticated upload (input photo)
-    // and read of the blurred preview, but full output is gated behind a
-    // server-only move to users/{uid}/generations/. Per QUIZ-PIVOT-SPEC.md §8.3.
+    // Quiz funnel + face-rating pending storage. UUID-shape required on
+    // {token} so attackers can't fill the bucket at arbitrary token paths
+    // (BUG-REVIEW.md C4).
+    //
+    // Anonymous create allowed for:
+    //   - input.* (legacy quiz)
+    //   - input-front.*, input-side.* (face-rating per PIVOT-2.md)
+    //
+    // Photo deletion goes through deleteFaceRatingPhoto admin callable;
+    // direct client delete is NOT exposed (token enumeration would
+    // otherwise let an attacker delete arbitrary uploads).
     match /pending/{token}/{fileName} {
-      // Anonymous upload of input.* (jpg, png, webp). Size + content-type
-      // bounded. Match by prefix on filename.
-      allow create: if fileName.matches('input\\..+')
+      allow create: if token.matches('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+                    && (fileName.matches('input\\..+')
+                       || fileName.matches('input-front[a-z0-9-]*\\..+')
+                       || fileName.matches('input-side[a-z0-9-]*\\..+'))
                     && request.resource.size < 10 * 1024 * 1024
                     && request.resource.contentType.matches('image/.*');
 
-      // Blurred preview is publicly readable (it's blurred + low-res +
-      // short-lived). Reveal screen fetches via Firebase download URL.
+      // Blurred preview is publicly readable (legacy quiz only).
       allow read: if fileName == 'blurred.jpg';
 
-      // Full output (output.png) and any other file: server-only.
-      // Admin SDK reads + writes bypass these rules entirely.
       allow read, update, delete: if false;
     }
   }

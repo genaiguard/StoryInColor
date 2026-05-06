@@ -78,7 +78,20 @@ export async function handleQuizPurchase(
     console.warn(`[QuizWebhook] Pending reading ${token} not found.`);
     return { ok: false, granted: false, reason: "pending-not-found" };
   }
-  const pending = pendingSnap.data() as PendingReadingDoc;
+  const pending = pendingSnap.data() as PendingReadingDoc & {
+    type?: string;
+    frontPhotoStoragePath?: string;
+  };
+  // H9-mirror: legacy quiz webhook handler must NOT operate on face-rating docs.
+  if (
+    pending.type === "face-rating" ||
+    !!pending.frontPhotoStoragePath
+  ) {
+    console.warn(
+      `[QuizWebhook] token=${token} is a face-rating doc; refusing.`,
+    );
+    return { ok: false, granted: false, reason: "wrong-type" };
+  }
 
   // Idempotency: dedupe on Stripe event id (mirrors credit_purchase logic).
   const markerRef = db.collection("processedStripeEvents").doc(stripeEventId);

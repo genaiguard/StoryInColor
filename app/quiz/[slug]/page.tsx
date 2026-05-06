@@ -1,36 +1,23 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { QUIZ_REGISTRY, QUIZ_SLUGS } from "@/lib/quiz/registry";
-import { getToolBySlug } from "@/lib/tools/registry";
-import QuizFlow from "@/components/quiz/QuizFlow";
+import { QUIZ_SLUGS } from "@/lib/quiz/registry";
+import LegacyQuizRedirect from "@/components/face-rating/LegacyQuizRedirect";
 
 type Params = { slug: string };
+
+// Per PIVOT-2.md §8 #1: replace the legacy /quiz funnel with /face-rating.
+// We retain generateStaticParams so existing /quiz/<slug>/ URLs still
+// resolve to a page (rather than 404), but render a redirect that bounces
+// the user to /face-rating with their UTM/ref params preserved.
 
 export function generateStaticParams(): Array<Params> {
   return QUIZ_SLUGS.map((slug) => ({ slug }));
 }
 
-export function generateMetadata({
-  params,
-}: {
-  params: Params;
-}): Metadata {
-  const tool = getToolBySlug(params.slug);
-  if (!tool) return { title: "StoryInColor" };
-  return {
-    title: `${tool.name} — Reading | StoryInColor`,
-    description: tool.heroCopy,
-    robots: {
-      // Quiz funnel routes are paid-traffic surfaces, not SEO. Keep them
-      // out of the index. Per QUIZ-PIVOT-SPEC.md §11.3.
-      index: false,
-      follow: false,
-    },
-  };
-}
+export const metadata: Metadata = {
+  title: "Face Rating | StoryInColor",
+  robots: { index: false, follow: false },
+};
 
-export default function QuizPage({ params }: { params: Params }) {
-  const config = QUIZ_REGISTRY[params.slug];
-  if (!config) notFound();
-  return <QuizFlow config={config} />;
+export default function QuizPage(_: { params: Params }) {
+  return <LegacyQuizRedirect />;
 }

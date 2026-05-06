@@ -15,6 +15,7 @@ import { CREDIT_PACKAGES } from './credit-packages';
 import { dispatchServerConversion } from './conversions/dispatch';
 import type { ServerUserData } from './conversions/types';
 import { handleQuizPurchase } from './quiz-webhook-handler';
+import { handleFaceRatingPurchase } from './face-rating-webhook-handler';
 
 // Quiz funnel callables (additive — see QUIZ-PIVOT-SPEC.md §8.1).
 // Re-exporting from index so `firebase deploy --only functions` picks them up.
@@ -29,6 +30,19 @@ export {
   dispatchDailyReflections,
   generateReflectionPreview,
 } from './daily-reflections';
+
+// Face Rating callables (PIVOT-2.md — replaces /quiz funnel).
+export { analyzeFaceUnauth } from './analyze-face-unauth';
+export { getFaceFullReport } from './analyze-face-full';
+export {
+  captureFaceRatingEmail,
+  createFaceRatingCheckoutSession,
+  setFaceRatingShareEnabled,
+  getFaceRatingPaywallStatus,
+  getOrCreateFaceRatingInviteCode,
+  redeemFaceRatingInvite,
+  deleteFaceRatingPhoto,
+} from './face-rating-checkout';
 
 // Version log - update this to verify deployments
 console.log('Cloud Functions initializing - OpenAI Integration Version');
@@ -319,6 +333,24 @@ export const stripeWebhook = onRequest(
                       // Return 500 so Stripe retries — handleQuizPurchase
                       // is idempotent on Stripe event id.
                       res.status(500).send({ received: false, error: 'Transient failure processing quiz purchase; please retry.' });
+                      return;
+                  }
+              } else if (session.metadata?.type === 'face_rating_purchase') {
+                  // Face Rating purchase (PIVOT-2.md). Materializes account,
+                  // claims pending reading, kicks off Stage 2 analysis.
+                  // Idempotent on event.id.
+                  console.log(`[Webhook] Processing face_rating_purchase`);
+                  try {
+                      const handlerResult = await handleFaceRatingPurchase({
+                          event,
+                          session,
+                      });
+                      console.log(`[FaceWebhook] result:`, JSON.stringify(handlerResult));
+                      res.status(200).send({ received: true, type: 'face_rating_purchase', ...handlerResult });
+                      return;
+                  } catch (frErr) {
+                      console.error(`[FaceWebhook Error]`, frErr);
+                      res.status(500).send({ received: false, error: 'Transient failure processing face-rating purchase; please retry.' });
                       return;
                   }
                   } else {

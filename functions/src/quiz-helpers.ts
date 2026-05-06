@@ -131,9 +131,11 @@ export async function incrementGlobalDailyCounter(
   }
 }
 
-/** Validate token format (UUID-like, lowercase hex + dashes). */
+/** Validate token format (UUID-like, lowercase hex + dashes).
+ *  M2: case-sensitive — Firestore doc ids ARE case-sensitive, so allowing
+ *  uppercase here would create false positives that 404 downstream. */
 export function isValidToken(token: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
     token,
   );
 }

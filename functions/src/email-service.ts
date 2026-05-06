@@ -678,3 +678,147 @@ export const sendQuizReadingReadyEmail = async ({
     return false;
   }
 };
+
+/* -------------------------------------------------------------------- */
+/* FACE RATING — reading-ready email (PIVOT-2.md)                        */
+/* -------------------------------------------------------------------- */
+
+function withFaceRatingReadyUtm(rawUrl: string): string {
+  const params = new URLSearchParams({
+    utm_source: "email",
+    utm_medium: "transactional",
+    utm_campaign: "face_rating_ready",
+  });
+  const sep = rawUrl.includes("?") ? "&" : "?";
+  return `${rawUrl}${sep}${params.toString()}`;
+}
+
+function generateFaceRatingReadyTemplate({
+  tierLabel,
+  overallScore,
+  unlockUrl,
+}: {
+  tierLabel: string;
+  overallScore: number | null;
+  unlockUrl: string;
+}): string {
+  const scoreLine =
+    typeof overallScore === "number"
+      ? `<div style="font-size:48px;line-height:1;font-weight:300;letter-spacing:-1px;color:#fff;">${overallScore.toFixed(1)}<span style="font-size:20px;color:#888;">/10</span></div>`
+      : "";
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your face rating is ready</title></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;">
+  <tr><td align="center" style="padding:48px 16px;">
+    <table width="100%" style="max-width:520px;" cellpadding="0" cellspacing="0">
+      <tr><td style="padding:0 24px 32px;">
+        <p style="margin:0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#888;">StoryInColor · Face Rating</p>
+        <h1 style="margin:18px 0 12px;font-weight:300;font-size:30px;letter-spacing:-0.5px;line-height:1.2;font-style:italic;">The reading found you.</h1>
+        <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#bbb;">Your honest face rating is ready. We're holding it for 24 hours.</p>
+        ${scoreLine}
+        <p style="margin:18px 0 0;font-size:14px;color:#aaa;">Tier: <strong style="color:#fff;">${tierLabel}</strong></p>
+        <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#bbb;">Sub-scores, archetype, percentile, strengths, growth areas, celebrity look-alikes, and your glow-up plan are waiting behind the unlock.</p>
+        <table cellpadding="0" cellspacing="0" style="margin:32px 0 0;"><tr><td>
+          <a href="${unlockUrl}" style="display:inline-block;padding:14px 28px;background:#fff;color:#0a0a0a;text-decoration:none;border-radius:999px;font-size:14px;font-weight:500;">Unlock my full reading</a>
+        </td></tr></table>
+        <p style="margin:32px 0 0;font-size:12px;line-height:1.6;color:#666;">For entertainment. Not a clinical assessment.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+}
+
+function generateFaceRatingReadyText({
+  tierLabel,
+  overallScore,
+  unlockUrl,
+}: {
+  tierLabel: string;
+  overallScore: number | null;
+  unlockUrl: string;
+}): string {
+  return [
+    "Your honest face rating is ready.",
+    "",
+    typeof overallScore === "number"
+      ? `Score: ${overallScore.toFixed(1)}/10`
+      : "",
+    `Tier: ${tierLabel}`,
+    "",
+    "Sub-scores, archetype, percentile, strengths, growth areas, celebrity look-alikes, and your glow-up plan are waiting behind the unlock.",
+    "",
+    `Unlock: ${unlockUrl}`,
+    "",
+    "We're holding it for 24 hours.",
+    "",
+    "— StoryInColor",
+    "For entertainment. Not a clinical assessment.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export const sendFaceRatingReadyEmail = async ({
+  email,
+  tierLabel,
+  overallScore,
+  unlockUrl,
+}: {
+  email: string;
+  tierLabel: string;
+  overallScore: number | null;
+  unlockUrl: string;
+}): Promise<boolean> => {
+  try {
+    const ses = configureSES();
+    const trackedUnlockUrl = withFaceRatingReadyUtm(unlockUrl);
+    const html = generateFaceRatingReadyTemplate({
+      tierLabel,
+      overallScore,
+      unlockUrl: trackedUnlockUrl,
+    });
+    const text = generateFaceRatingReadyText({
+      tierLabel,
+      overallScore,
+      unlockUrl: trackedUnlockUrl,
+    });
+    const firstName = (() => {
+      const local = email.split("@")[0] || "";
+      const cleaned = local.replace(/[._-]/g, " ").trim();
+      const firstWord = cleaned.split(/\s+/)[0] || "";
+      if (firstWord.length < 2 || firstWord.length > 20) return "";
+      if (!/^[a-zA-Z]+$/.test(firstWord)) return "";
+      const generic = new Set([
+        "info", "hello", "support", "contact", "admin", "team",
+        "loop", "test", "noreply", "no", "demo", "sales", "billing",
+      ]);
+      if (generic.has(firstWord.toLowerCase())) return "";
+      return firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase();
+    })();
+    const subject = firstName
+      ? `${firstName}, your face rating is ready`
+      : `Your face rating is ready`;
+    const params = {
+      Source: senderEmail.value(),
+      Destination: { ToAddresses: [email] },
+      Message: {
+        Subject: { Data: subject },
+        Body: {
+          Html: { Data: html },
+          Text: { Data: text },
+        },
+      },
+    };
+    const result = await ses.send(new SendEmailCommand(params));
+    console.log(
+      `[AWS SES] Face rating ready sent to ${email}, MessageId: ${result.MessageId}`,
+    );
+    return true;
+  } catch (err) {
+    console.error("[AWS SES] Face rating ready send error:", err);
+    return false;
+  }
+};

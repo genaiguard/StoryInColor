@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { QUIZ_REGISTRY, QUIZ_SLUGS } from "@/lib/quiz/registry";
-import UnlockedView from "./unlocked-view";
+import { QUIZ_SLUGS } from "@/lib/quiz/registry";
+import LegacyQuizRedirect from "@/components/face-rating/LegacyQuizRedirect";
 
 type Params = { slug: string };
 
@@ -12,21 +9,10 @@ export function generateStaticParams() {
 }
 
 export const metadata: Metadata = {
-  title: "Your reading — StoryInColor",
+  title: "Face Rating | StoryInColor",
   robots: { index: false, follow: false },
 };
 
-export default function UnlockedPage({ params }: { params: Params }) {
-  if (!QUIZ_REGISTRY[params.slug]) notFound();
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-black">
-          <Loader2 className="h-7 w-7 animate-spin text-white" />
-        </div>
-      }
-    >
-      <UnlockedView slug={params.slug} />
-    </Suspense>
-  );
+export default function LegacyUnlockedPage(_: { params: Params }) {
+  return <LegacyQuizRedirect />;
 }

@@ -27,6 +27,21 @@ if (!KEY) {
 const stripe = new Stripe(KEY, { apiVersion: "2026-04-22.dahlia" });
 
 const PRODUCTS = [
+  // ----- PIVOT 2.0: face-rating product -----
+  // Single SKU, one-time only. Price locked at CAC × 1.40 ($3.57 measured CAC,
+  // last 7d Meta — see PIVOT-2.md §5). Highest-volume choice per founder.
+  {
+    name: "StoryInColor — Face Rating",
+    description: "One full face rating with PSL tier, sub-scores, archetype, percentile, strengths, growth areas, celebrity look-alikes, glow-up plan, and 14-day free re-rate of the same face. One-time purchase.",
+    metadata: { source: "face_rating", tier: "single" },
+    price: {
+      lookup_key: "face_rating_single_v1",
+      unit_amount: 499, // $4.99
+      currency: "usd",
+      // one-time
+    },
+  },
+  // ----- LEGACY quiz funnel (kept for portability; no traffic post-pivot) -----
   {
     name: "StoryInColor — Single reading",
     description: "One editorial AI reading. One-time purchase.",

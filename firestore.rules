@@ -94,6 +94,29 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Face Rating shared readings — public read (display fields ONLY:
+    // shareId, tierLabel, overallScore, archetypeName, createdAt). The
+    // pendingToken is intentionally NOT stored here (per BUG-REVIEW.md
+    // C1). Server-only writes.
+    match /sharedFaceReadings/{shareId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Server-only mapping: shareId -> pendingToken. Admin-only on read AND
+    // write. Lets the server resolve owner identity from a shareId without
+    // exposing the token publicly (per BUG-REVIEW.md C1).
+    match /sharedFaceReadingsInternal/{shareId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Face rating invite codes — server-only.
+    match /faceInviteCodes/{inviteCode} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
     // Reading Profile — owner reads + admin. Owner can update specific
     // user-editable fields (preferredTone, reflections cadence/enabled,
     // lastUpdatedAt) but NOT archetypes, readings, quizAnswers, or

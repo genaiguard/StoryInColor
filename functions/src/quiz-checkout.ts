@@ -117,7 +117,20 @@ export const captureQuizEmail = onCall(
     if (!snap.exists) {
       throw new HttpsError("not-found", "Pending reading not found or expired.");
     }
-    const pending = snap.data() as PendingReadingDoc;
+    const pending = snap.data() as PendingReadingDoc & {
+      type?: string;
+      frontPhotoStoragePath?: string;
+    };
+    // H4: legacy quiz callable must NOT operate on face-rating docs.
+    if (
+      pending.type === "face-rating" ||
+      !!pending.frontPhotoStoragePath
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This token is not a quiz reading.",
+      );
+    }
     if (pending.status === "expired") {
       throw new HttpsError(
         "failed-precondition",
@@ -201,7 +214,20 @@ export const createQuizCheckoutSession = onCall(
     if (!snap.exists) {
       throw new HttpsError("not-found", "Pending reading not found.");
     }
-    const pending = snap.data() as PendingReadingDoc;
+    const pending = snap.data() as PendingReadingDoc & {
+      type?: string;
+      frontPhotoStoragePath?: string;
+    };
+    // H4: legacy quiz checkout cannot operate on face-rating docs.
+    if (
+      pending.type === "face-rating" ||
+      !!pending.frontPhotoStoragePath
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        "This token is not a quiz reading.",
+      );
+    }
     if (pending.status === "expired") {
       throw new HttpsError(
         "failed-precondition",
@@ -320,7 +346,17 @@ export const getQuizPaywallStatus = onCall(
     if (!snap.exists) {
       return { status: "not-found" as const };
     }
-    const pending = snap.data() as PendingReadingDoc;
+    const pending = snap.data() as PendingReadingDoc & {
+      type?: string;
+      frontPhotoStoragePath?: string;
+    };
+    // H4: hide face-rating docs from the legacy quiz status endpoint.
+    if (
+      pending.type === "face-rating" ||
+      !!pending.frontPhotoStoragePath
+    ) {
+      return { status: "not-found" as const };
+    }
     return {
       status: pending.status,
       claimedByUid: pending.claimedByUid,
