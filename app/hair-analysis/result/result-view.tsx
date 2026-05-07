@@ -52,18 +52,13 @@ export default function HairAnalysisResultView() {
   const [emailValue, setEmailValue] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
-  const [ownerSecret, setOwnerSecret] = useState<string | undefined>(undefined);
+  const [ownerSecret] = useState<string | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    const recalled = token ? recallHairOwnerSecret(token) : undefined;
+    if (recalled) return recalled;
+    return loadHairAnalysisState()?.ownerSecret;
+  });
   const [copiedBrief, setCopiedBrief] = useState(false);
-
-  // Recall ownerSecret on mount
-  useEffect(() => {
-    if (token) {
-      const recalled = recallHairOwnerSecret(token);
-      if (recalled) { setOwnerSecret(recalled); return; }
-    }
-    const s = loadHairAnalysisState();
-    if (s?.ownerSecret) setOwnerSecret(s.ownerSecret);
-  }, [token]);
 
   // Initial fetch
   useEffect(() => {
@@ -147,13 +142,14 @@ export default function HairAnalysisResultView() {
       } catch { /* lazy-create on click */ }
     })();
     return () => { cancelled = true; };
-  }, [phase]);
+  }, [phase, token, stripeClientSecret]);
 
   // Polling loop
   useEffect(() => {
     if (phase !== "polling") return;
     let cancelled = false;
     let attempts = 0;
+    let timeoutId: ReturnType<typeof setTimeout>;
     const poll = async () => {
       attempts += 1;
       try {
@@ -178,11 +174,11 @@ export default function HairAnalysisResultView() {
       } catch { /* keep polling */ }
       if (!cancelled) {
         if (attempts >= 30) { setErrMsg("Generation is taking longer than usual. Please refresh in a minute."); return; }
-        setTimeout(poll, 3000);
+        timeoutId = setTimeout(poll, 3000);
       }
     };
     poll();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; clearTimeout(timeoutId); };
   }, [phase, token, ownerSecret]);
 
   const submitEmail = useCallback(async () => {
