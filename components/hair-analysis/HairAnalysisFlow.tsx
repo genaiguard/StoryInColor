@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft, Upload as UploadIcon, Check } from "lucide-react";
+import { ProgressBar } from "@/components/face-rating/primitives/ProgressBar";
 import { v4 as uuidv4 } from "uuid";
 import {
   GOAL_OPTIONS,
@@ -194,162 +196,165 @@ export default function HairAnalysisFlow() {
   /* ------------------------------------------------------------------ */
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Progress bar */}
-      {screen !== "intro" && screen !== "loader" && screen !== "reveal" && (
-        <div className="fixed left-0 top-0 z-50 h-[2px] w-full bg-white/10">
-          <div
-            className="h-full bg-white/60 transition-all duration-500"
-            style={{ width: `${progress * 100}%` }}
-          />
+    <div className="relative flex min-h-screen flex-col bg-black text-white">
+      <ProgressBar value={progress} />
+
+      <header className="px-4 py-4 md:px-6">
+        {screen !== "intro" && screen !== "loader" ? (
+          <button
+            type="button"
+            onClick={back}
+            className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-white/40 transition-colors hover:text-white/80"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back
+          </button>
+        ) : (
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-white/40 transition-colors hover:text-white/80"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Exit
+          </Link>
+        )}
+      </header>
+
+      {/* Affirmation overlay */}
+      {affirmation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <p className="text-lg font-light tracking-wide text-white/90">{affirmation}</p>
         </div>
       )}
 
-      <div className="mx-auto max-w-md px-5 py-16">
+      <main className="relative z-10 flex flex-1 flex-col justify-center px-5 pb-12 md:px-10">
+        <div className="mx-auto w-full max-w-xl">
 
-        {/* Back button */}
-        {screen !== "intro" && screen !== "loader" && screen !== "reveal" && (
-          <button
-            onClick={back}
-            className="mb-8 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-white/40 hover:text-white/70"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back
-          </button>
-        )}
+          {screen === "intro" && (
+            <IntroScreen onStart={advance} />
+          )}
 
-        {/* Affirmation overlay */}
-        {affirmation && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-            <p className="text-lg font-light tracking-wide text-white/90">{affirmation}</p>
-          </div>
-        )}
+          {screen === "q1-goal" && (
+            <QuestionScreen
+              eyebrow="01 / 07"
+              title="What's your #1 goal right now?"
+              options={GOAL_OPTIONS}
+              selected={state.goal}
+              onSelect={(v: HairGoal) => {
+                setState((s) => ({ ...s, goal: v }));
+                showAffirmation(() => advance());
+              }}
+            />
+          )}
 
-        {/* ---- SCREENS ---- */}
+          {screen === "q2-avoid" && (
+            <QuestionScreen
+              eyebrow="02 / 07"
+              title="What's the one thing we should never do to your hair?"
+              options={AVOID_OPTIONS}
+              selected={state.avoid}
+              onSelect={(v: HairAvoid) => {
+                setState((s) => ({ ...s, avoid: v }));
+                showAffirmation(() => advance());
+              }}
+            />
+          )}
 
-        {screen === "intro" && (
-          <IntroScreen onStart={() => advance()} />
-        )}
+          {screen === "q3-social" && (
+            <QuestionScreen
+              eyebrow="03 / 07"
+              title="How important is it to you that others notice?"
+              options={SOCIAL_OPTIONS}
+              selected={state.social}
+              onSelect={(v: HairSocialMotivation) => {
+                setState((s) => ({ ...s, social: v }));
+                showAffirmation(() => advance());
+              }}
+            />
+          )}
 
-        {screen === "q1-goal" && (
-          <QuestionScreen
-            eyebrow="01 / 07"
-            title="What's your #1 goal right now?"
-            options={GOAL_OPTIONS}
-            selected={state.goal}
-            onSelect={(v: HairGoal) => {
-              setState((s) => ({ ...s, goal: v }));
-              showAffirmation(() => advance());
-            }}
-          />
-        )}
+          {screen === "q4-self" && (
+            <QuestionScreen
+              eyebrow="04 / 07"
+              title="Is there a version of yourself you're trying to get back to — or move toward?"
+              options={SELF_DIRECTION_OPTIONS}
+              selected={state.selfDirection}
+              onSelect={(v: HairSelfDirection) => {
+                setState((s) => ({ ...s, selfDirection: v }));
+                showAffirmation(() => advance());
+              }}
+            />
+          )}
 
-        {screen === "q2-avoid" && (
-          <QuestionScreen
-            eyebrow="02 / 07"
-            title="What's the one thing we should never do to your hair?"
-            options={AVOID_OPTIONS}
-            selected={state.avoid}
-            onSelect={(v: HairAvoid) => {
-              setState((s) => ({ ...s, avoid: v }));
-              showAffirmation(() => advance());
-            }}
-          />
-        )}
+          {screen === "q5-blocker" && (
+            <QuestionScreen
+              eyebrow="05 / 07"
+              title="What's been holding you back from changing your hair?"
+              options={BLOCKER_OPTIONS}
+              selected={state.blocker}
+              onSelect={(v: HairBlocker) => {
+                setState((s) => ({ ...s, blocker: v }));
+                showAffirmation(() => advance());
+              }}
+            />
+          )}
 
-        {screen === "q3-social" && (
-          <QuestionScreen
-            eyebrow="03 / 07"
-            title="How important is it to you that others notice?"
-            options={SOCIAL_OPTIONS}
-            selected={state.social}
-            onSelect={(v: HairSocialMotivation) => {
-              setState((s) => ({ ...s, social: v }));
-              showAffirmation(() => advance());
-            }}
-          />
-        )}
+          {screen === "q6-feeling" && (
+            <QuestionScreen
+              eyebrow="06 / 07"
+              title="How do you want to feel when you leave the salon?"
+              options={FEELING_OPTIONS}
+              selected={state.feeling}
+              onSelect={(v: HairFeeling) => {
+                setState((s) => ({ ...s, feeling: v }));
+                showAffirmation(() => advance());
+              }}
+            />
+          )}
 
-        {screen === "q4-self" && (
-          <QuestionScreen
-            eyebrow="04 / 07"
-            title="Is there a version of yourself you're trying to get back to — or move toward?"
-            options={SELF_DIRECTION_OPTIONS}
-            selected={state.selfDirection}
-            onSelect={(v: HairSelfDirection) => {
-              setState((s) => ({ ...s, selfDirection: v }));
-              showAffirmation(() => advance());
-            }}
-          />
-        )}
+          {screen === "q7-impact" && (
+            <QuestionScreen
+              eyebrow="07 / 07"
+              title="How much do you think the right hairstyle could change things for you?"
+              options={IMPACT_OPTIONS}
+              selected={state.impact}
+              onSelect={(v: HairImpact) => {
+                setState((s) => ({ ...s, impact: v }));
+                showAffirmation(() => advance());
+              }}
+            />
+          )}
 
-        {screen === "q5-blocker" && (
-          <QuestionScreen
-            eyebrow="05 / 07"
-            title="What's been holding you back from changing your hair?"
-            options={BLOCKER_OPTIONS}
-            selected={state.blocker}
-            onSelect={(v: HairBlocker) => {
-              setState((s) => ({ ...s, blocker: v }));
-              showAffirmation(() => advance());
-            }}
-          />
-        )}
+          {screen === "lockin" && (
+            <LockInScreen onContinue={advance} />
+          )}
 
-        {screen === "q6-feeling" && (
-          <QuestionScreen
-            eyebrow="06 / 07"
-            title="How do you want to feel when you leave the salon?"
-            options={FEELING_OPTIONS}
-            selected={state.feeling}
-            onSelect={(v: HairFeeling) => {
-              setState((s) => ({ ...s, feeling: v }));
-              showAffirmation(() => advance());
-            }}
-          />
-        )}
+          {screen === "photo-upload" && (
+            <PhotoUploadScreen
+              photoPreview={photoPreview}
+              uploadErr={uploadErr}
+              uploadBusy={uploadBusy}
+              fileInputRef={fileInputRef}
+              onDrop={handleDrop}
+              onFileChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFile(f);
+              }}
+              onSubmit={() => {
+                if (photoFile) advance();
+              }}
+            />
+          )}
 
-        {screen === "q7-impact" && (
-          <QuestionScreen
-            eyebrow="07 / 07"
-            title="How much do you think the right hairstyle could change things for you?"
-            options={IMPACT_OPTIONS}
-            selected={state.impact}
-            onSelect={(v: HairImpact) => {
-              setState((s) => ({ ...s, impact: v }));
-              showAffirmation(() => advance());
-            }}
-          />
-        )}
+          {screen === "loader" && (
+            <LoaderScreen
+              stepIndex={loaderStep}
+              subMsgIndex={loaderSubMsg}
+            />
+          )}
 
-        {screen === "lockin" && (
-          <LockInScreen onContinue={advance} />
-        )}
-
-        {screen === "photo-upload" && (
-          <PhotoUploadScreen
-            photoPreview={photoPreview}
-            uploadErr={uploadErr}
-            uploadBusy={uploadBusy}
-            fileInputRef={fileInputRef}
-            onDrop={handleDrop}
-            onFileChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleFile(f);
-            }}
-            onSubmit={() => {
-              if (photoFile) advance();
-            }}
-          />
-        )}
-
-        {screen === "loader" && (
-          <LoaderScreen
-            stepIndex={loaderStep}
-            subMsgIndex={loaderSubMsg}
-          />
-        )}
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
