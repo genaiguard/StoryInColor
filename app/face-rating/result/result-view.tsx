@@ -72,7 +72,7 @@ const TOTAL_SECTIONS = 11;
 
 export default function FaceRatingResultView() {
   const searchParams = useSearchParams();
-  const { initialized } = useFirebase();
+  const { initialized, user, loading: authLoading } = useFirebase();
   const token = searchParams.get("token") || "";
   const sessionId = searchParams.get("session_id") || "";
 
@@ -106,16 +106,31 @@ export default function FaceRatingResultView() {
   }, [token]);
 
   // Initial fetch.
+  //
+  // Branching logic:
+  //   1. Already unlocked → show full report.
+  //   2. Returning from Stripe checkout (sessionId present) → polling.
+  //   3. Signed-in user with ownerSecret → silently try unlockFaceWithCredit.
+  //      - Success: jump to polling (Stage 2 will finish in the background).
+  //      - INSUFFICIENT_CREDITS: skip the email gate (we already have their
+  //        email from auth) and route directly to the paywall.
+  //   4. Anonymous (or no ownerSecret) → original preview → email-gate →
+  //      paywall flow stays unchanged.
+  //
+  // Wait for Firebase auth to finish loading before deciding — otherwise a
+  // signed-in user can briefly see the email gate while user resolves.
   useEffect(() => {
-    if (!initialized) return;
+    if (!initialized || authLoading) return;
     if (!token) {
       setErrMsg("Missing token. Please start over.");
       return;
     }
+    let cancelled = false;
     (async () => {
       try {
         const fn = httpsCallable(getFunctions(), "getFaceFullReport");
         const res = await fn({ token, ownerSecret });
+        if (cancelled) return;
         const data = res.data as {
           status: "locked" | "unlocked";
           lightAnalysis?: FaceLightAnalysis;
@@ -132,22 +147,68 @@ export default function FaceRatingResultView() {
             setShareUrl(`https://storyincolor.com/r?id=${data.shareId}`);
           }
           setPhase("full");
-        } else if (sessionId) {
+          return;
+        }
+        if (sessionId) {
           setPhase("polling");
-        } else if (data.lightAnalysis) {
-          if (data.emailCaptured) {
-            setPhase("paywall");
-          } else {
-            setPhase("preview");
-          }
-        } else {
+          return;
+        }
+        if (!data.lightAnalysis) {
           setErrMsg("This reading wasn't found. Please start over.");
+          return;
+        }
+        // Signed-in fast paths — only attempt if we have an ownerSecret
+        // (otherwise the server-side guard will reject and we'd just bounce
+        // back to the email gate anyway).
+        if (user && ownerSecret) {
+          try {
+            const unlockFn = httpsCallable(
+              getFunctions(),
+              "unlockFaceWithCredit",
+            );
+            await unlockFn({ token, ownerSecret });
+            if (cancelled) return;
+            setPhase("polling");
+            return;
+          } catch (err) {
+            // INSUFFICIENT_CREDITS or any other failed-precondition →
+            // fall through to silent paywall (skip email gate). Other
+            // errors (auth/internal) bubble up so the user sees them.
+            const msg = err instanceof Error ? err.message : String(err);
+            const isInsufficient = /INSUFFICIENT_CREDITS/i.test(msg);
+            const isAlreadyClaimedByOther = /already claimed/i.test(msg);
+            if (isInsufficient) {
+              setPhase("paywall");
+              return;
+            }
+            if (isAlreadyClaimedByOther) {
+              // Edge case — show error rather than silently charge.
+              setErrMsg(
+                "This reading is already linked to a different account.",
+              );
+              return;
+            }
+            // Fall through to preview/paywall on unexpected errors so the
+            // user still sees their reading rather than a hard error.
+            console.warn("[FaceRatingResult] credit-unlock failed:", err);
+          }
+        }
+        // Default flow — anonymous or signed-in fallback.
+        if (data.emailCaptured || user) {
+          setPhase("paywall");
+        } else {
+          setPhase("preview");
         }
       } catch (e) {
-        setErrMsg(e instanceof Error ? e.message : String(e));
+        if (!cancelled) {
+          setErrMsg(e instanceof Error ? e.message : String(e));
+        }
       }
     })();
-  }, [initialized, token, sessionId, ownerSecret]);
+    return () => {
+      cancelled = true;
+    };
+  }, [initialized, authLoading, user, token, sessionId, ownerSecret]);
 
   // Pre-create Stripe session as soon as the user reaches the paywall.
   useEffect(() => {

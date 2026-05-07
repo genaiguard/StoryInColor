@@ -334,9 +334,6 @@ function IntroScreen({ onBegin }: { onBegin: () => void }) {
           >
             Get my honest rating
           </button>
-          <p className="mt-3 text-xs text-white/50">
-            Honest means honest. We don&rsquo;t inflate. · $4.99 one-time to unlock.
-          </p>
         </div>
       </div>
     </div>

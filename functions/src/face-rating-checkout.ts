@@ -19,6 +19,13 @@ import { isValidEmail, isValidToken } from "./face-rating-helpers";
 import { isFaceRatingEnabled } from "./face-rating-types";
 import type { PendingFaceReadingDoc } from "./face-rating-types";
 import { sendFaceRatingReadyEmail } from "./email-service";
+import { runFaceStage2ForToken } from "./analyze-face-full";
+
+// Bound to unlockFaceWithCredit so the Stage 2 OpenAI run has the secret
+// available. defineSecret is idempotent — calling it again with the same
+// name in this module returns the same secret reference used by
+// analyze-face-full.ts, so the runtime binding stays consistent.
+const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const AWS_ACCESS_KEY_ID = defineSecret("AWS_ACCESS_KEY_ID");
@@ -181,7 +188,22 @@ export const createFaceRatingCheckoutSession = onCall(
         "This reading has expired. Please start over.",
       );
     }
-    if (!pending.email) {
+    // Authenticated callers can skip the email-capture step — we already
+    // have a verified email on their Firebase Auth profile. Persist it on
+    // the pending doc so the webhook handler's existing email→uid linkage
+    // still works.
+    let checkoutEmail: string | undefined = pending.email;
+    if (!checkoutEmail) {
+      const authEmail = request.auth?.token?.email;
+      if (typeof authEmail === "string" && authEmail.length > 0) {
+        checkoutEmail = authEmail;
+        await ref.update({
+          email: checkoutEmail,
+          emailCapturedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+    }
+    if (!checkoutEmail) {
       throw new HttpsError(
         "failed-precondition",
         "Email must be captured before checkout.",
@@ -216,7 +238,7 @@ export const createFaceRatingCheckoutSession = onCall(
       ui_mode: "embedded_page",
       mode: "payment",
       line_items: [{ price: priceId, quantity: 1 }],
-      customer_email: pending.email,
+      customer_email: checkoutEmail,
       return_url: `${successUrl || "https://storyincolor.com/face-rating/result"}?token=${token}&session_id={CHECKOUT_SESSION_ID}`,
       redirect_on_completion: "if_required",
       branding_settings: {
@@ -692,6 +714,201 @@ export const deleteFaceRatingPhoto = onCall(
       frontPhotoStoragePath: admin.firestore.FieldValue.delete(),
       sidePhotoStoragePath: admin.firestore.FieldValue.delete(),
     });
+    return { success: true };
+  },
+);
+
+/* -------------------------------------------------------------------- */
+/* unlockFaceWithCredit — signed-in user spends 1 credit to unlock the   */
+/* full reading without going through Stripe checkout.                   */
+/*                                                                       */
+/* Mirrors the webhook-handler claim flow:                               */
+/*   - Validates ownerSecret (caller must be the original session)       */
+/*   - Atomically deducts 1 credit + claims the pending doc              */
+/*   - Writes job + generation records under users/{uid}/jobs so the     */
+/*     dashboard renders the reading next to image-based readings        */
+/*   - Kicks off Stage 2 OpenAI call after the transaction commits       */
+/*                                                                       */
+/* Raises failed-precondition with code "INSUFFICIENT_CREDITS" so the    */
+/* client can fall back to Stripe checkout silently (no email gate).     */
+/* -------------------------------------------------------------------- */
+
+interface UnlockWithCreditRequest {
+  token?: string;
+  ownerSecret?: string;
+}
+
+export const unlockFaceWithCredit = onCall(
+  {
+    secrets: [OPENAI_API_KEY],
+    timeoutSeconds: 60,
+    memory: "1GiB",
+    invoker: "public",
+  },
+  async (request) => {
+    if (!isFaceRatingEnabled()) {
+      throw new HttpsError("unavailable", "Face rating is currently disabled.");
+    }
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in required to unlock with a credit.",
+      );
+    }
+    const { token, ownerSecret } = (request.data ??
+      {}) as UnlockWithCreditRequest;
+    if (typeof token !== "string" || !isValidToken(token)) {
+      throw new HttpsError("invalid-argument", "Invalid token.");
+    }
+
+    const uid = request.auth.uid;
+    const authEmail =
+      typeof request.auth.token.email === "string"
+        ? request.auth.token.email
+        : null;
+    const pendingRef = db.collection("pendingReadings").doc(token);
+    const userCreditsRef = db.collection("userCredits").doc(uid);
+    const generationId = `face-rating-${token}`;
+    const usageEventRef = userCreditsRef
+      .collection("usageEvents")
+      .doc(`deduct-${generationId}`);
+    const jobRef = db
+      .collection("users")
+      .doc(uid)
+      .collection("jobs")
+      .doc(generationId);
+    const genRef = db
+      .collection("users")
+      .doc(uid)
+      .collection("generations")
+      .doc(generationId);
+    const userRef = db.collection("users").doc(uid);
+
+    const txnResult = await db.runTransaction(async (tx) => {
+      const pendingSnap = await tx.get(pendingRef);
+      if (!pendingSnap.exists) {
+        throw new HttpsError("not-found", "Reading not found.");
+      }
+      const pending = pendingSnap.data() as PendingFaceReadingDoc;
+      if (!isFaceRatingDoc(pending)) {
+        throw new HttpsError(
+          "failed-precondition",
+          "This token is not a face-rating reading.",
+        );
+      }
+      if (pending.status === "expired") {
+        throw new HttpsError(
+          "failed-precondition",
+          "This reading has expired.",
+        );
+      }
+      requireOwnerSecret(pending, ownerSecret);
+
+      // Idempotent: re-running for the same uid is a no-op.
+      if (pending.status === "claimed") {
+        if (pending.claimedByUid === uid) {
+          return { ok: true, alreadyClaimed: true };
+        }
+        throw new HttpsError(
+          "failed-precondition",
+          "This reading is already claimed by a different account.",
+        );
+      }
+
+      // Read credit balance + usage-event marker (idempotency).
+      const credSnap = await tx.get(userCreditsRef);
+      const eventSnap = await tx.get(usageEventRef);
+      const balance = credSnap.exists
+        ? ((credSnap.data()?.balance ?? 0) as number)
+        : 0;
+      if (!eventSnap.exists && balance < 1) {
+        throw new HttpsError(
+          "failed-precondition",
+          "INSUFFICIENT_CREDITS",
+        );
+      }
+
+      // Deduct 1 credit (skip if event already exists — replay protection).
+      if (!eventSnap.exists) {
+        if (!credSnap.exists) {
+          // Should be impossible (balance check above) but guard for race.
+          throw new HttpsError(
+            "failed-precondition",
+            "INSUFFICIENT_CREDITS",
+          );
+        }
+        tx.update(userCreditsRef, {
+          balance: admin.firestore.FieldValue.increment(-1),
+          used: admin.firestore.FieldValue.increment(1),
+          lastUpdated: admin.firestore.Timestamp.now(),
+        });
+        tx.set(usageEventRef, {
+          type: "deduct",
+          toolId: "face-rating",
+          jobId: generationId,
+          cost: 1,
+          date: admin.firestore.Timestamp.now(),
+        });
+      }
+
+      // Claim the pending doc.
+      const pendingUpdates: admin.firestore.UpdateData<PendingFaceReadingDoc> = {
+        claimedByUid: uid,
+        claimedAt: admin.firestore.FieldValue.serverTimestamp() as unknown as admin.firestore.Timestamp,
+        status: "claimed",
+        paidViaCredit: true,
+      };
+      if (!pending.email && authEmail) {
+        pendingUpdates.email = authEmail;
+        pendingUpdates.emailCapturedAt =
+          admin.firestore.FieldValue.serverTimestamp() as unknown as admin.firestore.Timestamp;
+      }
+      tx.update(pendingRef, pendingUpdates);
+
+      // Mirror dashboard records (same shape as webhook handler).
+      const baseRecord = {
+        generationId,
+        jobId: generationId,
+        userId: uid,
+        toolId: "face-rating",
+        kind: "face-rating",
+        pendingReadingToken: token,
+        tierLabel: pending.lightAnalysis?.tier_label || null,
+        overallScore: pending.lightAnalysis?.overall_score ?? null,
+        sourceFlow: "face_rating_credit",
+        status: "complete" as const,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      tx.set(jobRef, baseRecord);
+      tx.set(genRef, baseRecord);
+
+      // Touch the user doc (best-effort — webhook handler does the same).
+      const userSnap = await tx.get(userRef);
+      if (userSnap.exists) {
+        tx.update(userRef, {
+          lastFaceRatingAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      return { ok: true, alreadyClaimed: false };
+    });
+
+    // Stage 2 outside the transaction (OpenAI latency is unbounded).
+    // Failures here aren't fatal — getFaceFullReport lazy-runs Stage 2 on
+    // the polling loop if it hasn't completed yet.
+    if (!txnResult.alreadyClaimed) {
+      try {
+        const stage2 = await runFaceStage2ForToken(token);
+        if (!stage2.ok) {
+          console.warn(
+            `[unlockFaceWithCredit] Stage 2 not complete (will retry on poll): ${stage2.reason}`,
+          );
+        }
+      } catch (err) {
+        console.warn("[unlockFaceWithCredit] Stage 2 dispatch failed:", err);
+      }
+    }
+
     return { success: true };
   },
 );

@@ -122,6 +122,11 @@ export interface PendingFaceReadingDoc {
   /** Set after webhook processes payment. */
   claimedByUid?: string;
   claimedAt?: FirebaseFirestore.Timestamp;
+  /** True if the unlock was paid by spending an existing credit (logged-in
+   *  user with balance ≥ 1) rather than a fresh Stripe checkout. The
+   *  credit ledger still records the deduction; this flag exists so the
+   *  webhook handler / refund logic can distinguish the two paths. */
+  paidViaCredit?: boolean;
   /** Sharable URL — opt-in toggle (option C). */
   shareId?: string; // 8-char alphanumeric
   shareEnabled?: boolean;

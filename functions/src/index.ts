@@ -36,6 +36,7 @@ export {
   redeemFaceRatingInvite,
   deleteFaceRatingPhoto,
   claimFaceRatingAccount,
+  unlockFaceWithCredit,
 } from './face-rating-checkout';
 
 // Version log - update this to verify deployments
