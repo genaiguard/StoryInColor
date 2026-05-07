@@ -241,14 +241,20 @@ export const unlockHairWithCredit = onCall(
 
     if (doc.status === "claimed") return { success: true };
 
-    // Deduct 1 credit — throws INSUFFICIENT_CREDITS if balance < 1
-    await deductCreditsTx({ userId: uid, cost: 1, jobId: token, toolId: "hair-analysis" });
-
-    await ref.update({
-      status: "claimed",
-      paidViaCredit: true,
-      claimedByUid: uid,
-      claimedAt: admin.firestore.FieldValue.serverTimestamp(),
+    // Deduct 1 credit and mark claimed atomically — throws INSUFFICIENT_CREDITS if balance < 1
+    await deductCreditsTx({
+      userId: uid,
+      cost: 1,
+      jobId: token,
+      toolId: "hair-analysis",
+      onTransaction: (tx) => {
+        tx.update(ref, {
+          status: "claimed",
+          paidViaCredit: true,
+          claimedByUid: uid,
+          claimedAt: admin.firestore.FieldValue.serverTimestamp(),
+        } as FirebaseFirestore.UpdateData<import("./hair-analysis-types").PendingHairAnalysisDoc>);
+      },
     });
 
     return { success: true };

@@ -16,8 +16,11 @@ export async function deductCreditsTx(params: {
   cost: number;
   jobId: string;
   toolId: string;
+  /** Optional callback invoked inside the Firestore transaction — use for
+   *  atomic side-effects (e.g. marking a reading doc as claimed). */
+  onTransaction?: (tx: admin.firestore.Transaction) => void;
 }): Promise<void> {
-  const { userId, cost, jobId, toolId } = params;
+  const { userId, cost, jobId, toolId, onTransaction } = params;
   const credRef = db.collection("userCredits").doc(userId);
   const eventRef = credRef.collection("usageEvents").doc(`deduct-${jobId}`);
 
@@ -42,6 +45,7 @@ export async function deductCreditsTx(params: {
       cost,
       date: admin.firestore.Timestamp.now(),
     });
+    if (onTransaction) onTransaction(tx);
   });
 }
 

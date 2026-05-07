@@ -109,38 +109,42 @@ export const analyzeHairUnauth = onCall(
       throw new HttpsError("resource-exhausted", "Daily limit reached. Try again tomorrow.");
     }
 
-    // Idempotency check
+    // Atomic create — if a concurrent call already started this token, return
+    // its ownerSecret rather than overwriting it with a fresh one.
     const pendingRef = db.collection("pendingReadings").doc(token);
-    const existingSnap = await pendingRef.get();
-    if (existingSnap.exists) {
-      const existing = existingSnap.data() as PendingHairAnalysisDoc;
-      if (existing.status === "ready" || existing.status === "claimed") {
-        return {
-          success: true,
-          token,
-          ownerSecret: existing.ownerSecret,
-          status: existing.status,
-        };
-      }
-    }
-
     const ownerSecret = crypto.randomBytes(32).toString("hex");
     const expiresAt = makeExpiresAt();
 
-    await pendingRef.set({
-      type: "hair-analysis",
-      token,
-      status: "processing",
-      ipHash,
-      ownerSecret,
-      photoStoragePath,
-      goal, avoid, social, selfDirection, blocker, feeling, impact,
-      transformationLevel,
-      ...(fbEventId ? { fbEventId } : {}),
-      ...(attribution ? { attribution } : {}),
-      createdAt: admin.firestore.FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
-      expiresAt,
-    } satisfies Partial<PendingHairAnalysisDoc>);
+    try {
+      await pendingRef.create({
+        type: "hair-analysis",
+        token,
+        status: "processing",
+        ipHash,
+        ownerSecret,
+        photoStoragePath,
+        goal, avoid, social, selfDirection, blocker, feeling, impact,
+        transformationLevel,
+        ...(fbEventId ? { fbEventId } : {}),
+        ...(attribution ? { attribution } : {}),
+        createdAt: admin.firestore.FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
+        expiresAt,
+      } satisfies Partial<PendingHairAnalysisDoc>);
+    } catch (createErr: unknown) {
+      // Doc already exists — return early if terminal, otherwise another call
+      // is in-flight; let the client poll the result page.
+      const code = (createErr as { code?: number })?.code;
+      if (code === 6 /* ALREADY_EXISTS */) {
+        const snap = await pendingRef.get();
+        const existing = snap.data() as PendingHairAnalysisDoc | undefined;
+        if (existing?.status === "ready" || existing?.status === "claimed") {
+          return { success: true, token, ownerSecret: existing.ownerSecret, status: existing.status };
+        }
+        // Still processing — client should navigate to result page and poll
+        return { success: true, token, ownerSecret: existing?.ownerSecret ?? ownerSecret, status: "processing" };
+      }
+      throw createErr;
+    }
 
     try {
       // 1) Download + resize input photo
@@ -262,9 +266,7 @@ async function splitAndStore(
   token: string,
   styles: string[],
 ): Promise<string[]> {
-  const cellPaths: string[] = [];
-
-  await Promise.all(
+  return Promise.all(
     Array.from({ length: COLS * ROWS }, async (_, i) => {
       const col = i % COLS;
       const row = Math.floor(i / COLS);
@@ -282,15 +284,12 @@ async function splitAndStore(
       await bucket.file(cellPath).save(cellBuffer, {
         contentType: "image/webp",
         metadata: {
-          // Token-based public download URL (same pattern as generateForTool)
           firebaseStorageDownloadTokens: crypto.randomUUID(),
         },
       });
-      cellPaths[i] = cellPath;
+      return cellPath;
     }),
   );
-
-  return cellPaths;
 }
 
 async function detectFaceShape(
