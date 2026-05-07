@@ -27,6 +27,17 @@ export {
 // Face Rating callables (PIVOT-2.md — the unauth $4.99 face-rating funnel).
 export { analyzeFaceUnauth } from './analyze-face-unauth';
 export { getFaceFullReport } from './analyze-face-full';
+
+// Hair Analysis callables (new architecture — mirrors face-rating pattern).
+export { analyzeHairUnauth } from './analyze-hair-unauth';
+export {
+  captureHairEmail,
+  createHairCheckoutSession,
+  getHairReport,
+  unlockHairWithCredit,
+  claimHairAccount,
+  deleteHairPhoto,
+} from './hair-analysis-checkout';
 export {
   captureFaceRatingEmail,
   createFaceRatingCheckoutSession,
