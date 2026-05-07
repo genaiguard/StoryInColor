@@ -20,7 +20,9 @@ export function HairStyleGrid({
   revealAll = false,
   previewIndex = 0,
 }: HairStyleGridProps) {
-  const urlMap = Object.fromEntries(cells.map((c, i) => [i, c.url]));
+  // Map by label so cells that arrive out of order still land in the right slot.
+  const urlByLabel = Object.fromEntries(cells.map((c) => [c.label, c.url]));
+  const urlMap = Object.fromEntries(styleLabels.map((label, i) => [i, urlByLabel[label]]));
 
   return (
     <div className="grid grid-cols-2 gap-2">

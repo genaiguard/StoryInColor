@@ -372,7 +372,8 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
       </h1>
       <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/55">
         Answer 7 quick questions. Upload one photo. We generate 8 looks
-        tailored to your face shape and goals — one free, the rest unlocked for $4.99.
+        tailored to your face shape and goals. See one instantly — then decide
+        if you want to see what the rest look like on you.
       </p>
       <button
         onClick={onStart}

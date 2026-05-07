@@ -15,6 +15,7 @@ import { CREDIT_PACKAGES } from './credit-packages';
 import { dispatchServerConversion } from './conversions/dispatch';
 import type { ServerUserData } from './conversions/types';
 import { handleFaceRatingPurchase } from './face-rating-webhook-handler';
+import { handleHairAnalysisPurchase } from './hair-analysis-webhook-handler';
 
 // Shared infrastructure — same Firestore TTL cleanup is used for the
 // face-rating pendingReadings docs.
@@ -336,6 +337,18 @@ export const stripeWebhook = onRequest(
                   } catch (frErr) {
                       console.error(`[FaceWebhook Error]`, frErr);
                       res.status(500).send({ received: false, error: 'Transient failure processing face-rating purchase; please retry.' });
+                      return;
+                  }
+              } else if (session.metadata?.type === 'hair_analysis_purchase') {
+                  console.log(`[Webhook] Processing hair_analysis_purchase`);
+                  try {
+                      const handlerResult = await handleHairAnalysisPurchase({ event, session });
+                      console.log(`[HairWebhook] result:`, JSON.stringify(handlerResult));
+                      res.status(200).send({ received: true, type: 'hair_analysis_purchase', ...handlerResult });
+                      return;
+                  } catch (hairErr) {
+                      console.error(`[HairWebhook Error]`, hairErr);
+                      res.status(500).send({ received: false, error: 'Transient failure processing hair-analysis purchase; please retry.' });
                       return;
                   }
                   } else {

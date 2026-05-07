@@ -135,7 +135,7 @@ export const createHairCheckoutSession = onCall(
       return_url: successUrl
         ? `${successUrl}?session_id={CHECKOUT_SESSION_ID}&token=${token}`
         : `https://storyincolor.com/hair-analysis/result?session_id={CHECKOUT_SESSION_ID}&token=${token}`,
-      metadata: { token, product: "hair-analysis" },
+      metadata: { token, type: "hair_analysis_purchase" },
     } as unknown as Stripe.Checkout.SessionCreateParams);
 
     await ref.update({ stripeCheckoutSessionId: session.id });
