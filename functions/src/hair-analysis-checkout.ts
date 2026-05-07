@@ -125,18 +125,33 @@ export const createHairCheckoutSession = onCall(
       return { success: true, alreadyClaimed: true };
     }
 
-    const stripe = new StripeImport(STRIPE_SECRET_KEY.value(), { apiVersion: "2024-12-18.acacia" } as Parameters<typeof StripeImport>[1]);
+    const stripe = new StripeImport(STRIPE_SECRET_KEY.value(), { apiVersion: "2026-04-22.dahlia" } as Parameters<typeof StripeImport>[1]);
     const priceId = await getStripePrice(stripe);
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      ui_mode: "embedded_page",
       mode: "payment",
       line_items: [{ price: priceId, quantity: 1 }],
-      ui_mode: "embedded",
       return_url: successUrl
         ? `${successUrl}?session_id={CHECKOUT_SESSION_ID}&token=${token}`
         : `https://storyincolor.com/hair-analysis/result?session_id={CHECKOUT_SESSION_ID}&token=${token}`,
+      redirect_on_completion: "if_required",
+      branding_settings: {
+        display_name: "StoryInColor",
+        background_color: "#0a0a0a",
+        button_color: "#ffffff",
+        font_family: "inter",
+        border_style: "rounded",
+      },
+      payment_method_options: {
+        card: {
+          request_three_d_secure: "automatic",
+        },
+      },
       metadata: { token, type: "hair_analysis_purchase" },
-    } as unknown as Stripe.Checkout.SessionCreateParams);
+    };
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     await ref.update({ stripeCheckoutSessionId: session.id });
 
