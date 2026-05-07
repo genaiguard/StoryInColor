@@ -358,8 +358,11 @@ function PreviewView({
             StoryInColor · Hairstyle Analysis
           </p>
           <h1 className="mt-3 text-2xl font-light italic md:text-3xl">
-            8 looks generated for you.
+            Your analysis is ready.
           </h1>
+          <p className="mt-2 text-sm text-white/50">
+            Built for your face. These don&rsquo;t exist anywhere else.
+          </p>
         </div>
 
         {/* Face shape */}
@@ -375,8 +378,8 @@ function PreviewView({
         {/* Grid */}
         <div className="mt-8">
           <SectionHeader
-            eyebrow={`${lockedCount} more looks locked`}
-            title="Your hairstyle report"
+            eyebrow="You can already read the names"
+            title="Don't you want to see them?"
             locked={lockedCount > 0}
           />
           {styleLabels.length > 0 && (
@@ -393,15 +396,17 @@ function PreviewView({
         <div className="mt-10 rounded-2xl border border-white/15 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-6">
           <div className="text-center">
             <p className="text-[10px] uppercase tracking-[0.22em] text-white/45">
-              One purchase, all 8 looks
+              Generated for your face · one-time unlock
             </p>
             <h3 className="mt-2 text-2xl font-light italic md:text-3xl">
-              $4.99 · one-time
+              See who you could be.
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-white/65">
-              Stylists charge $150–$250 for a consultation like this.
-              Unlock all {styleLabels.length || 8} looks + a stylist brief
-              you can show at your next appointment.
+              You already answered the questions. You uploaded your photo.
+              The AI spent 30+ seconds building these specifically for you.
+              All {styleLabels.length || 8} looks + a brief you can hand your
+              stylist — for $4.99 instead of the $150–$250 they charge for this
+              conversation.
             </p>
           </div>
 
@@ -410,20 +415,20 @@ function PreviewView({
               onClick={goToEmail}
               className="mt-6 block w-full rounded-full bg-white px-6 py-4 text-sm font-medium text-black hover:bg-white/90"
             >
-              Unlock all {styleLabels.length || 8} looks →
+              Show me all {styleLabels.length || 8} looks →
             </button>
           )}
 
           {phase === "email-gate" && (
             <div className="mt-5">
               <p className="text-xs text-white/55">
-                Where should we send your looks link?
+                Save your looks so you don&rsquo;t lose them.
               </p>
               <input
                 type="email"
                 inputMode="email"
                 autoComplete="email"
-                placeholder="you@example.com"
+                placeholder="your@email.com"
                 value={emailValue}
                 onChange={(e) => setEmailValue(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !emailBusy) onSubmitEmail(); }}
@@ -434,10 +439,10 @@ function PreviewView({
                 onClick={onSubmitEmail}
                 className="mt-3 block w-full rounded-full bg-white px-6 py-3.5 text-sm font-medium text-black hover:bg-white/90 disabled:opacity-50"
               >
-                {emailBusy ? "Saving…" : "Continue to unlock →"}
+                {emailBusy ? "Saving…" : "Keep my looks →"}
               </button>
               <p className="mt-2 text-[11px] text-white/40">
-                We&rsquo;ll email you the link so you can come back later.
+                We&rsquo;ll send you a link so you can come back anytime.
               </p>
             </div>
           )}
