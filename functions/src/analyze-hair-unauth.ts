@@ -136,8 +136,8 @@ export const analyzeHairUnauth = onCall(
       photoStoragePath,
       goal, avoid, social, selfDirection, blocker, feeling, impact,
       transformationLevel,
-      fbEventId,
-      attribution: attribution ?? undefined,
+      ...(fbEventId ? { fbEventId } : {}),
+      ...(attribution ? { attribution } : {}),
       createdAt: admin.firestore.FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
       expiresAt,
     } satisfies Partial<PendingHairAnalysisDoc>);

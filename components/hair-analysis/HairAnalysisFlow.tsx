@@ -126,8 +126,6 @@ export default function HairAnalysisFlow() {
       const fileRef = storageRef(storage, storagePath);
       await uploadBytes(fileRef, photoFile);
 
-      goTo("loader");
-
       const transformationLevel = deriveTransformationLevel(
         state.goal,
         state.selfDirection,
@@ -177,7 +175,7 @@ export default function HairAnalysisFlow() {
 
   // Trigger submit once we hit loader and have a file
   useEffect(() => {
-    if (screen === "loader" && photoFile && !state.pendingToken) {
+    if (screen === "loader" && photoFile && !state.pendingToken && !uploadBusy) {
       submitPhoto();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -325,7 +323,7 @@ export default function HairAnalysisFlow() {
         )}
 
         {screen === "lockin" && (
-          <LockInScreen onContinue={() => advance()} />
+          <LockInScreen onContinue={advance} />
         )}
 
         {screen === "photo-upload" && (
