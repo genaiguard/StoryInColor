@@ -5,7 +5,6 @@ Disallow: /r
 Disallow: /admin
 Disallow: /dashboard
 Disallow: /credits
-Disallow: /login
 Disallow: /auth
 
 Sitemap: https://storyincolor.com/sitemap.xml
